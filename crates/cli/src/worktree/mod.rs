@@ -385,7 +385,7 @@ pub const STALE_AFTER_DAYS: i64 = 30;
 /// the marker's timestamp.
 pub const CONFLICT_GRACE_PERIOD_DAYS: i64 = 90;
 
-/// `worktreeCleanup.enabled`, resolved once per `sweep`/`remove` invocation
+/// `worktree.cleanup.enabled`, resolved once per `sweep`/`remove` invocation
 /// rather than per worktree inside the loop.
 pub struct SweepPolicy {
     pub enabled: bool,
@@ -398,16 +398,16 @@ pub fn resolve_policy(
     home: &Path,
     repo_slug: Option<&str>,
 ) -> Result<SweepPolicy, crate::config::ConfigError> {
-    let (enabled, _) = crate::config::resolve("worktreeCleanup.enabled", home, repo_slug)?;
+    let (enabled, _) = crate::config::resolve("worktree.cleanup.enabled", home, repo_slug)?;
     Ok(SweepPolicy {
-        enabled: require_bool("worktreeCleanup.enabled", &enabled)?,
+        enabled: require_bool("worktree.cleanup.enabled", &enabled)?,
     })
 }
 
 /// A hand-edited or externally-written tier file can carry a `Value` of the
 /// wrong type for a key `config::resolve` never itself type-checks: fail
 /// closed with [`ConfigError::WrongType`] rather than silently defaulting,
-/// since a wrong-typed `worktreeCleanup.enabled` defaulting to `true` would
+/// since a wrong-typed `worktree.cleanup.enabled` defaulting to `true` would
 /// re-open the destructive gate the value was meant to close.
 fn require_bool(key: &str, value: &serde_json::Value) -> Result<bool, crate::config::ConfigError> {
     value
@@ -704,9 +704,9 @@ pub(crate) const REPORT_LOCK_NO_OWNER: &str = "locked with no readable owner pid
 pub(crate) const REPORT_LOCKED_LIVE: &str = "locked by a live process, skipping";
 pub(crate) const REPORT_WOULD_REMOVE: &str = "would remove (dry run)";
 pub(crate) const REPORT_REMOVED: &str = "removed";
-/// The line for a repo whose `worktreeCleanup.enabled` is false.
+/// The line for a repo whose `worktree.cleanup.enabled` is false.
 pub(crate) const REPORT_CLEANUP_DISABLED: &str =
-    "worktree remove: worktreeCleanup.enabled is false, nothing to do";
+    "worktree remove: worktree.cleanup.enabled is false, nothing to do";
 
 /// The tail of a report line for a worktree that was removed.
 fn removed_suffix() -> String {
@@ -1055,7 +1055,7 @@ pub fn sweep_removing(
     let policy = resolve_policy(home, repo_slug).map_err(|err| err.to_string())?;
     if !policy.enabled {
         return Ok(vec![
-            "worktree sweep: worktreeCleanup.enabled is false, nothing to do".to_string(),
+            "worktree sweep: worktree.cleanup.enabled is false, nothing to do".to_string(),
         ]);
     }
 
@@ -1399,7 +1399,7 @@ mod tests {
         let f = Fixture::new();
         crate::config::write::set(
             crate::config::write::Tier::Global,
-            "worktreeCleanup.enabled",
+            "worktree.cleanup.enabled",
             &serde_json::Value::Bool(false),
             &f.home,
             None,

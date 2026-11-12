@@ -23,7 +23,7 @@ Set a key with `playbook config set <key> <value>` and read it with `playbook co
 | `pr.draft` | `true` | `true`, `false` |
 | `pr.rules` | `default` | `default`, `warn`, `off` |
 | `pr.ticketPatterns` | `["[A-Z][A-Z0-9]+-[0-9]+"]` | see the config keys page |
-| `worktreeCleanup.enabled` | `true` | `true`, `false` |
+| `worktree.cleanup.enabled` | `true` | `true`, `false` |
 | `mode` | `ask` | `ask`, `auto` |
 | `effort.max` | `auto` | `auto`, `low`, `medium`, `high`, `xhigh`, `max` |
 | `effort.auto` | `off` | `off`, `suggest`, `on` |
@@ -56,17 +56,17 @@ Set a key with `playbook config set <key> <value>` and read it with `playbook co
 | `attribution.enabled` | `false` | `true`, `false` |
 | `hooks.proseLint.mode` | `warn` | `warn`, `block`, `off` |
 | `hooks.policyGuard.enabled` | `false` | `true`, `false` |
-| `update.mode` | `notify` | `notify`, `auto`, `off` |
-| `update.plugin` | `auto` | `auto`, `ask`, `off` |
+| `upgrade.mode` | `notify` | `notify`, `auto`, `off` |
+| `upgrade.plugin` | `auto` | `auto`, `ask`, `off` |
 | `watch.enabled` | `false` | `true`, `false` |
 | `watch.repos` | `[]` | see the config keys page |
 | `watch.autonomy` | `propose` | `off`, `propose`, `auto` |
 | `watch.pollSeconds` | `60` | a number, see the config keys page for the range |
-| `watch.maxCatchupHours` | `72` | a number, see the config keys page for the range |
+| `watch.catchup.maxHours` | `72` | a number, see the config keys page for the range |
 | `watch.allowedAuthors` | `[]` | see the config keys page |
 | `watch.tokenEnv` | empty | see the config keys page |
-| `watch.limits.actionsPerDay` | `50` | a number, see the config keys page for the range |
-| `watch.limits.usdPerDay` | `5` | a number, see the config keys page for the range |
+| `watch.limits.dailyActions` | `50` | a number, see the config keys page for the range |
+| `watch.limits.dailyUsd` | `5` | a number, see the config keys page for the range |
 | `gc.enabled` | `true` | `true`, `false` |
 | `effort.agents.<name>`, `effort.commands.<name>`, `effort.skills.<name>` | `auto` | `auto`, `low`, `medium`, `high`, `xhigh`, `max` |
 | `watch.rule.<id>` | empty | one rule as JSON text |
@@ -916,7 +916,7 @@ Example: `playbook memory stats --json`
 
 Bring playbook's own files up to date with this binary
 
-Runs the migrations that write only playbook's own files, then records this binary as the one that ran them. The ones that run once start only after an upgrade, and the checks that repair a file run every time. A migration waits for the release named in its `since`. Nothing runs after a downgrade. It never writes Claude Code settings. It ends with the list of what still needs you, one bullet per item with why it matters and the command that fixes it: `playbook setup` for a change to Claude Code settings or a shell file, and its own fix for a report. The session start then stops repeating a report it printed. A run also updates the playbook plugin through `claude plugin update`, then says to restart Claude Code. A missing `claude` command or a failed update prints the command to run and does not change the exit code. `--no-plugin` or `playbook config set update.plugin off` turns this off. `update`, the install script and `doctor --fix` run the same step.
+Runs the migrations that write only playbook's own files, then records this binary as the one that ran them. The ones that run once start only after an upgrade, and the checks that repair a file run every time. A migration waits for the release named in its `since`. Nothing runs after a downgrade. It never writes Claude Code settings. It ends with the list of what still needs you, one bullet per item with why it matters and the command that fixes it: `playbook setup` for a change to Claude Code settings or a shell file, and its own fix for a report. The session start then stops repeating a report it printed. A run also updates the playbook plugin through `claude plugin update`, then says to restart Claude Code. A missing `claude` command or a failed update prints the command to run and does not change the exit code. `--no-plugin` or `playbook config set upgrade.plugin off` turns this off. `update`, the install script and `doctor --fix` run the same step.
 
 Exit codes: 0 when it finished or had nothing to do, 1 when the record could not be read or written, a migration failed, or another playbook process held the lock.
 
@@ -925,7 +925,7 @@ Example: `playbook migrate --status`
 - `--status`: List each migration with its release, scope and state, writing nothing
 - `--dry-run`: Show the migrations a run would start and what needs you, writing nothing
 - `--json`: Print JSON for tools
-- `--no-plugin`: Leave the playbook plugin in Claude Code as it is. By default a run updates it with `claude plugin update`, unless the config key `update.plugin` is `off`
+- `--no-plugin`: Leave the playbook plugin in Claude Code as it is. By default a run updates it with `claude plugin update`, unless the config key `upgrade.plugin` is `off`
 
 ### `playbook mode`
 
@@ -1037,7 +1037,7 @@ Install the playbook plugin and its marketplace into Claude Code
 
 For a playbook that did not come from Homebrew, such as one from the install script, a container, a home server platform like Umbrel or a nix profile. Needs `claude` on PATH. Adds the `amplifiedengineer/marketplace` marketplace unless Claude Code lists it already, and leaves one listed under the old `pragmatic-engineer` name as it is. Turns on `autoUpdate` for the marketplace in `~/.claude/settings.json`, and keeps an explicit `false`. Then installs `playbook@amplifiedengineer`. Claude Code updates a plugin with its marketplace, so that one flag also keeps the plugin up to date; there is no per-plugin key.
 
-You asked for it, so `update.plugin` set to `off`, `PLAYBOOK_SKIP_PLUGIN_UPDATE` and a CI environment do not stop it. Prints one line per step. A second run reports every step as done and changes nothing. Exits 1 when `claude` is not on PATH or a step fails.
+You asked for it, so `upgrade.plugin` set to `off`, `PLAYBOOK_SKIP_PLUGIN_UPDATE` and a CI environment do not stop it. Prints one line per step. A second run reports every step as done and changes nothing. Exits 1 when `claude` is not on PATH or a step fails.
 
 Restart Claude Code or run /reload-plugins after an install.
 
@@ -1049,7 +1049,7 @@ Example: `playbook plugin install`
 
 Upgrade only the playbook plugin and its marketplace
 
-Refreshes the marketplace, then runs `claude plugin update` for every installed playbook plugin id, `playbook@amplifiedengineer` and the old `playbook@pragmatic-engineer`. You asked for it, so `update.plugin` set to `off`, `PLAYBOOK_SKIP_PLUGIN_UPDATE` and a CI environment do not stop it. Prints one line per plugin. Exits 1 when an upgrade fails, `claude` is not on PATH, or the marketplace refresh failed while the plugin lags; an up to date plugin, one the marketplace has not published yet and a missing plugin exit 0.
+Refreshes the marketplace, then runs `claude plugin update` for every installed playbook plugin id, `playbook@amplifiedengineer` and the old `playbook@pragmatic-engineer`. You asked for it, so `upgrade.plugin` set to `off`, `PLAYBOOK_SKIP_PLUGIN_UPDATE` and a CI environment do not stop it. Prints one line per plugin. Exits 1 when an upgrade fails, `claude` is not on PATH, or the marketplace refresh failed while the plugin lags; an up to date plugin, one the marketplace has not published yet and a missing plugin exit 0.
 
 Restart Claude Code or run /reload-plugins after an upgrade.
 
@@ -1451,7 +1451,7 @@ Before it asks anything, setup prints a plan of each part and the files it edits
 
 Example: `playbook setup --no-hooks --system-prompt`
 
-- `--plugin`: Install or update the playbook plugin in Claude Code with the `claude` command. Given by name it runs even without a terminal, with `update.plugin` off or in CI
+- `--plugin`: Install or update the playbook plugin in Claude Code with the `claude` command. Given by name it runs even without a terminal, with `upgrade.plugin` off or in CI
 - `--no-plugin`: Leave the playbook plugin as it is
 - `--hooks`: Wire every playbook hook into settings.json (guards, session and worktree hooks)
 - `--no-hooks`: Add no playbook hook entries, including the guards in the shared settings
@@ -1566,7 +1566,7 @@ Upgrade playbook to a published release, and its plugin with it
 
 Looks up the latest release and compares it with this binary. When it is newer, shows both versions and asks you to confirm in a terminal; `--yes` skips the question. With no terminal and no `--yes`, it prints the hint and changes nothing. After you confirm, it downloads the release, checks its SHA256 sum and, when `gh` is installed, its build attestation, then swaps the binary and keeps the old one as a backup. In auto mode it refuses unless you pass `--yes`.
 
-Then it runs the plugin step of `playbook plugin install` and `playbook plugin upgrade` so the plugin matches the new binary: it adds the marketplace when it is missing, turns on `autoUpdate` for it, and installs or updates the plugin. Pass `--no-plugin` or set `update.plugin` to `off` to skip that step. To change only the plugin, run `playbook plugin upgrade`.
+Then it runs the plugin step of `playbook plugin install` and `playbook plugin upgrade` so the plugin matches the new binary: it adds the marketplace when it is missing, turns on `autoUpdate` for it, and installs or updates the plugin. Pass `--no-plugin` or set `upgrade.plugin` to `off` to skip that step. To change only the plugin, run `playbook plugin upgrade`.
 
 A Homebrew install is never replaced: `upgrade` checks for a newer release, says Homebrew owns the binary, and tells you to run `brew upgrade playbook`. It exits 0.
 
@@ -1579,7 +1579,7 @@ Example: `playbook upgrade --check`
 - `--pre`: Consider pre-releases when picking the latest
 - `--yes`: Skip the confirmation question, and confirm the upgrade when auto mode is on
 - `--json`: Print one JSON object in the shared envelope, and exit 0 whatever the result
-- `--no-plugin`: Leave the playbook plugin in Claude Code as it is. By default `upgrade` installs or updates it, unless the config key `update.plugin` is `off`
+- `--no-plugin`: Leave the playbook plugin in Claude Code as it is. By default `upgrade` installs or updates it, unless the config key `upgrade.plugin` is `off`
 
 ### `playbook usage`
 

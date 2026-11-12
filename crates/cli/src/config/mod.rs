@@ -274,7 +274,7 @@ pub struct IgnoredValue {
 
 /// Keys that once held a boolean and now hold words: the word a stored
 /// `true` and a stored `false` mean.
-const LEGACY_BOOL_WORDS: &[(&str, &str, &str)] = &[("update.plugin", "auto", "off")];
+const LEGACY_BOOL_WORDS: &[(&str, &str, &str)] = &[("upgrade.plugin", "auto", "off")];
 
 /// The word a legacy boolean stored under `key` stands for.
 fn legacy_word(key: &str, value: &Value) -> Option<&'static str> {
@@ -449,16 +449,31 @@ mod tests {
         fs::create_dir_all(&root).unwrap();
 
         for (stored, word) in [(true, "auto"), (false, "off")] {
-            store::put(&root, Tier::Global, None, "update.plugin", &json!(stored)).unwrap();
+            store::put(&root, Tier::Global, None, "upgrade.plugin", &json!(stored)).unwrap();
 
             // Act
-            let (value, source, ignored) = resolve_valid("update.plugin", &home, None).unwrap();
+            let (value, source, ignored) = resolve_valid("upgrade.plugin", &home, None).unwrap();
 
             // Assert
             assert_eq!(value, json!(word), "{stored}");
             assert_eq!(source, Source::Global, "{stored}");
             assert!(ignored.is_none(), "{stored}");
         }
+    }
+
+    #[test]
+    fn a_legacy_boolean_reads_as_its_word_under_the_upgrade_plugin_name() {
+        // Arrange
+        let cases = [(true, "auto"), (false, "off")];
+
+        for (stored, word) in cases {
+            // Act
+            let read = legacy_word("upgrade.plugin", &json!(stored));
+
+            // Assert
+            assert_eq!(read, Some(word), "{stored}");
+        }
+        assert_eq!(legacy_word("update.plugin", &json!(false)), None);
     }
 
     #[test]

@@ -11,7 +11,7 @@ use std::io::{self, IsTerminal};
 /// The flags, each part as a `--x` and `--no-x` pair. The last one given wins.
 #[derive(Args, Debug, Default, Clone, PartialEq, Eq)]
 pub struct Flags {
-    /// Install or update the playbook plugin in Claude Code with the `claude` command. Given by name it runs even without a terminal, with `update.plugin` off or in CI
+    /// Install or update the playbook plugin in Claude Code with the `claude` command. Given by name it runs even without a terminal, with `upgrade.plugin` off or in CI
     #[arg(long, overrides_with = "no_plugin")]
     pub plugin: bool,
     /// Leave the playbook plugin as it is
@@ -1403,10 +1403,10 @@ mod tests {
                 expected: true,
             },
             Row {
-                name: "update.plugin off defaults to no",
+                name: "upgrade.plugin off defaults to no",
                 flags: Flags::default(),
                 terminal: true,
-                blocked: Some("update.plugin is off"),
+                blocked: Some("upgrade.plugin is off"),
                 expected: false,
             },
             Row {
@@ -1423,7 +1423,7 @@ mod tests {
                     ..Flags::default()
                 },
                 terminal: false,
-                blocked: Some("update.plugin is off"),
+                blocked: Some("upgrade.plugin is off"),
                 expected: true,
             },
         ];

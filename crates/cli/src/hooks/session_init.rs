@@ -636,7 +636,7 @@ pub fn worktree_sweep_due(marker_mtime_epoch: Option<i64>, now_epoch: i64) -> bo
 
 /// Runs `playbook worktree sweep` at most once every
 /// [`WORKTREE_SWEEP_INTERVAL_SECS`], skipping entirely, with no sweep
-/// attempt and no marker write, when `worktreeCleanup.enabled` resolves
+/// attempt and no marker write, when `worktree.cleanup.enabled` resolves
 /// false: writing the marker in that case would make enabling the policy
 /// later wait out a stale marker before its first real sweep. Degrades
 /// silently on any failure (config error, no repo, sweep error), matching

@@ -48,7 +48,7 @@ Expected:
 
 - Each issue got the `triage` label once and exactly one comment with the text `Thanks, we will look.` (the `label-new` and `thanks` rules). A second run of the loop adds neither.
 - The `pick-label` rule left a proposal per issue (`proposed` in `watch status`) and wrote nothing to GitHub. Approve one with `playbook watch approve ID` and expect `item ID done` and one more label from the list. The class stays held by the trust ladder until 10 approvals over 28 days, so a rule set to `auto` would still propose.
-- The 2 issues created during the sleep are handled after the wake-up, with no `stale` record, because the gap is under `watch.maxCatchupHours`.
+- The 2 issues created during the sleep are handled after the wake-up, with no `stale` record, because the gap is under `watch.catchup.maxHours`.
 - `playbook watch status` shows no dead items, and `today` is under the limits.
 - `playbook watch log` holds one record per decision: for every issue and rule an outcome (`queued_auto`, `proposed`, `done`), nothing missing and nothing twice.
 

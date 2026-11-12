@@ -5,7 +5,7 @@
 //! `playbook upgrade` and `playbook migrate` (ADR 0034, 2026-10-19
 //! amendment). It runs `claude plugin update <id>` for the playbook plugin
 //! only, never for another plugin. A missing CLI, a failed update, a plugin
-//! that is off in Claude Code or `update.plugin` set to off never fails
+//! that is off in Claude Code or `upgrade.plugin` set to off never fails
 //! the command: the result names the command to run by hand.
 //!
 //! [`sync`] adds an install of a missing plugin for a caller that allows it,
@@ -20,7 +20,7 @@ use std::process::Output;
 use std::time::Duration;
 
 /// The config key that turns the plugin update off.
-pub const CONFIG_KEY: &str = "update.plugin";
+pub const CONFIG_KEY: &str = "upgrade.plugin";
 
 /// Set by `playbook upgrade` for the new binary's `migrate`, which then
 /// leaves the plugin to the update itself, so it runs once.
@@ -290,7 +290,7 @@ fn run_claude(
     })
 }
 
-/// What `update.plugin` asks for.
+/// What `upgrade.plugin` asks for.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Mode {
     Auto,
@@ -322,7 +322,7 @@ fn mode_from(value: Option<&serde_json::Value>) -> Mode {
     value.and_then(parse_mode).unwrap_or(Mode::Auto)
 }
 
-/// The `update.plugin` mode for `home`. The raw stored value is read, not
+/// The `upgrade.plugin` mode for `home`. The raw stored value is read, not
 /// the enum-checked one, because a `true` or `false` from before the key
 /// took words is still valid here.
 pub fn mode(home: &Path) -> Mode {
@@ -419,7 +419,7 @@ impl Probe {
 pub struct SyncOpts {
     /// Install the plugin when none is installed.
     pub allow_install: bool,
-    /// Ignore [`setup_blocked`] and `update.plugin` set to off, for a caller
+    /// Ignore [`setup_blocked`] and `upgrade.plugin` set to off, for a caller
     /// the user asked to touch the plugin.
     pub force: bool,
     /// Print one stderr line before each `claude` call, so a slow call is
@@ -443,7 +443,7 @@ pub fn setup_blocked(home: &Path) -> Option<&'static str> {
 
 fn blocked_by(home: &Path, env: &dyn Fn(&str) -> Option<String>) -> Option<&'static str> {
     if mode(home) == Mode::Off {
-        return Some("update.plugin is off");
+        return Some("upgrade.plugin is off");
     }
     if env(SKIP_ENV).is_some_and(|v| v == SKIP_VALUE) {
         return Some("PLAYBOOK_SKIP_PLUGIN_UPDATE is set");
@@ -475,7 +475,7 @@ fn lags(version: Option<&str>, running: &str) -> bool {
     version.is_none_or(|v| behind(v, running))
 }
 
-/// Updates the playbook plugin, unless `update.plugin` is off, the plugin
+/// Updates the playbook plugin, unless `upgrade.plugin` is off, the plugin
 /// is not installed, or it is off in Claude Code.
 pub fn run(probe: &Probe) -> Outcome {
     sync(probe, SyncOpts::default())
@@ -878,7 +878,7 @@ impl Ensured {
 }
 
 /// `playbook plugin install`: runs [`ensure`] as an explicit request, so
-/// `update.plugin` set to off, the skip variable and a CI environment do not
+/// `upgrade.plugin` set to off, the skip variable and a CI environment do not
 /// stop it, and prints the result. Returns the exit code: 1 on a missing
 /// `claude` or a failed step, else 0. With `json` it prints the shared
 /// envelope and returns 0.
@@ -1115,7 +1115,7 @@ fn command_line(outcome: &Outcome) -> Option<String> {
 
 /// `playbook plugin upgrade`: refreshes the marketplace and runs
 /// `claude plugin update` for every installed playbook plugin id. It is an
-/// explicit request, so `update.plugin` set to off, the skip variable and a
+/// explicit request, so `upgrade.plugin` set to off, the skip variable and a
 /// CI environment do not stop it.
 pub fn upgrade_command(probe: &Probe) -> CommandReport {
     upgrade_command_at(probe, env!("CARGO_PKG_VERSION"))
@@ -1229,7 +1229,7 @@ pub fn run_for_command(home: &Path, no_plugin: bool) -> Option<Outcome> {
 
 /// The plugin step of `playbook upgrade`: [`ensure`] with an install or an
 /// update, judged against `running`, the version the upgrade installed. It
-/// follows `update.plugin`, `--no-plugin` and [`SKIP_ENV`], so it is the same
+/// follows `upgrade.plugin`, `--no-plugin` and [`SKIP_ENV`], so it is the same
 /// step `playbook plugin install` and `playbook plugin upgrade` run, minus
 /// their force. `None` when it was not asked to run.
 pub fn run_for_upgrade(home: &Path, no_plugin: bool, running: &str) -> Option<Ensured> {
@@ -1348,7 +1348,7 @@ pub enum Due {
 /// never writes the marker.
 pub fn due_from(i: &DueInputs<'_>, now: u64) -> Due {
     if i.mode == Mode::Off {
-        return Due::NotDue("update.plugin is off");
+        return Due::NotDue("upgrade.plugin is off");
     }
     if i.skip_env == Some(SKIP_VALUE) {
         return Due::NotDue("the skip variable is set");
@@ -2267,7 +2267,7 @@ mod tests {
         // Assert
         let (off, config_off) = (off.line().unwrap(), config_off.line().unwrap());
         assert!(off.contains("turned off in Claude Code"), "{off}");
-        assert!(config_off.contains("update.plugin is off"), "{config_off}");
+        assert!(config_off.contains("upgrade.plugin is off"), "{config_off}");
         assert_eq!(calls(&home), "");
     }
 
@@ -2631,7 +2631,7 @@ mod tests {
                     ..base()
                 },
                 T0,
-                not_due("update.plugin is off"),
+                not_due("upgrade.plugin is off"),
             ),
             (
                 "skip env 1",
@@ -2695,7 +2695,7 @@ mod tests {
                     ..base()
                 },
                 T0,
-                not_due("update.plugin is off"),
+                not_due("upgrade.plugin is off"),
             ),
         ];
         for (name, inputs, now, expected) in cases {
@@ -3117,7 +3117,7 @@ mod tests {
             (
                 "config off",
                 blocked_by(&off, &no_env),
-                Some("update.plugin is off"),
+                Some("upgrade.plugin is off"),
             ),
         ];
 
@@ -3230,7 +3230,10 @@ mod tests {
         );
 
         // Assert
-        assert_eq!(held, Outcome::LeftAlone("update.plugin is off".to_string()));
+        assert_eq!(
+            held,
+            Outcome::LeftAlone("upgrade.plugin is off".to_string())
+        );
         assert!(matches!(forced, Outcome::Installed { .. }), "{forced:?}");
     }
 

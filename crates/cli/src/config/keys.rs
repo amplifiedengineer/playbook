@@ -54,7 +54,7 @@ pub const KNOWN_KEYS: &[&str] = &[
     "pr.draft",
     "pr.rules",
     "pr.ticketPatterns",
-    "worktreeCleanup.enabled",
+    "worktree.cleanup.enabled",
     "mode",
     "effort.max",
     "effort.auto",
@@ -87,17 +87,17 @@ pub const KNOWN_KEYS: &[&str] = &[
     "attribution.enabled",
     "hooks.proseLint.mode",
     "hooks.policyGuard.enabled",
-    "update.mode",
-    "update.plugin",
+    "upgrade.mode",
+    "upgrade.plugin",
     "watch.enabled",
     "watch.repos",
     "watch.autonomy",
     "watch.pollSeconds",
-    "watch.maxCatchupHours",
+    "watch.catchup.maxHours",
     "watch.allowedAuthors",
     "watch.tokenEnv",
-    "watch.limits.actionsPerDay",
-    "watch.limits.usdPerDay",
+    "watch.limits.dailyActions",
+    "watch.limits.dailyUsd",
     "gc.enabled",
 ];
 
@@ -207,6 +207,30 @@ pub const KEY_RENAMES: &[KeyRename] = &[
         old: "auto.sessionCeilingUsd",
         new: "auto.budget.ceilingUsd",
     },
+    KeyRename {
+        old: "worktreeCleanup.enabled",
+        new: "worktree.cleanup.enabled",
+    },
+    KeyRename {
+        old: "watch.maxCatchupHours",
+        new: "watch.catchup.maxHours",
+    },
+    KeyRename {
+        old: "watch.limits.actionsPerDay",
+        new: "watch.limits.dailyActions",
+    },
+    KeyRename {
+        old: "watch.limits.usdPerDay",
+        new: "watch.limits.dailyUsd",
+    },
+    KeyRename {
+        old: "update.mode",
+        new: "upgrade.mode",
+    },
+    KeyRename {
+        old: "update.plugin",
+        new: "upgrade.plugin",
+    },
 ];
 
 /// The table unit tests run against, because the real one has no row that
@@ -260,18 +284,18 @@ pub fn is_retired(key: &str) -> bool {
 
 /// The per-user settings, which live only in the global tier.
 pub const USER_KEYS: &[&str] = &[
-    "update.mode",
-    "update.plugin",
+    "upgrade.mode",
+    "upgrade.plugin",
     "systemPrompt.enabled",
     "attribution.enabled",
     "hooks.policyGuard.enabled",
     "watch.enabled",
     "watch.repos",
     "watch.pollSeconds",
-    "watch.maxCatchupHours",
+    "watch.catchup.maxHours",
     "watch.tokenEnv",
-    "watch.limits.actionsPerDay",
-    "watch.limits.usdPerDay",
+    "watch.limits.dailyActions",
+    "watch.limits.dailyUsd",
     "usage.telemetry",
 ];
 
@@ -314,7 +338,7 @@ pub const LOCAL_ONLY_KEYS: &[&str] = &[
     "handoff.onClear",
     "pr.rules",
     "pr.ticketPatterns",
-    "worktreeCleanup.enabled",
+    "worktree.cleanup.enabled",
     "mode",
     "memory.source",
     "models.haiku",
@@ -334,17 +358,17 @@ pub const LOCAL_ONLY_KEYS: &[&str] = &[
     "attribution.enabled",
     "hooks.proseLint.mode",
     "hooks.policyGuard.enabled",
-    "update.mode",
-    "update.plugin",
+    "upgrade.mode",
+    "upgrade.plugin",
     "watch.enabled",
     "watch.repos",
     "watch.autonomy",
     "watch.pollSeconds",
-    "watch.maxCatchupHours",
+    "watch.catchup.maxHours",
     "watch.allowedAuthors",
     "watch.tokenEnv",
-    "watch.limits.actionsPerDay",
-    "watch.limits.usdPerDay",
+    "watch.limits.dailyActions",
+    "watch.limits.dailyUsd",
     "gc.enabled",
 ];
 
@@ -406,7 +430,7 @@ pub fn default_value(key: &str) -> Option<Value> {
         "pr.ticketPatterns" => Some(Value::Array(vec![Value::String(
             "[A-Z][A-Z0-9]+-[0-9]+".to_string(),
         )])),
-        "worktreeCleanup.enabled" => Some(Value::Bool(true)),
+        "worktree.cleanup.enabled" => Some(Value::Bool(true)),
         "mode" => Some(Value::String("ask".to_string())),
         "effort.max" => Some(Value::String("auto".to_string())),
         "effort.auto" => Some(Value::String("off".to_string())),
@@ -435,16 +459,16 @@ pub fn default_value(key: &str) -> Option<Value> {
         "attribution.enabled" => Some(Value::Bool(false)),
         "hooks.proseLint.mode" => Some(Value::String("warn".to_string())),
         "hooks.policyGuard.enabled" => Some(Value::Bool(false)),
-        "update.mode" => Some(Value::String("notify".to_string())),
-        "update.plugin" => Some(Value::String("auto".to_string())),
+        "upgrade.mode" => Some(Value::String("notify".to_string())),
+        "upgrade.plugin" => Some(Value::String("auto".to_string())),
         "watch.enabled" => Some(Value::Bool(false)),
         "watch.repos" | "watch.allowedAuthors" => Some(Value::Array(Vec::new())),
         "watch.autonomy" => Some(Value::String("propose".to_string())),
         "watch.pollSeconds" => Some(Value::Number(60.into())),
-        "watch.maxCatchupHours" => Some(Value::Number(72.into())),
+        "watch.catchup.maxHours" => Some(Value::Number(72.into())),
         "watch.tokenEnv" => Some(Value::String(String::new())),
-        "watch.limits.actionsPerDay" => Some(Value::Number(50.into())),
-        "watch.limits.usdPerDay" => Some(Value::Number(5.into())),
+        "watch.limits.dailyActions" => Some(Value::Number(50.into())),
+        "watch.limits.dailyUsd" => Some(Value::Number(5.into())),
         "gc.enabled" => Some(Value::Bool(true)),
         _ => None,
     }
@@ -469,8 +493,8 @@ pub fn allowed_enum_values(key: &str) -> Option<&'static [&'static str]> {
         "usage.telemetry" => Some(&["auto", "off"]),
         "docs.convert" => Some(&["auto", "off"]),
         "hooks.proseLint.mode" => Some(&["warn", "block", "off"]),
-        "update.mode" => Some(&["notify", "auto", "off"]),
-        "update.plugin" => Some(&["auto", "ask", "off"]),
+        "upgrade.mode" => Some(&["notify", "auto", "off"]),
+        "upgrade.plugin" => Some(&["auto", "ask", "off"]),
         "watch.autonomy" => Some(&["off", "propose", "auto"]),
         "pr.rules" => Some(&["default", "warn", "off"]),
         _ => None,
@@ -502,17 +526,11 @@ pub fn model_override_error(key: &str, value: &str) -> Option<String> {
 
 /// Keys that predate the shape rule and keep their name until renamed.
 #[cfg(test)]
-const LEGACY_KEY_NAMES: &[&str] = &[
-    "worktreeCleanup.enabled",
-    "systemPrompt.enabled",
-    "watch.maxCatchupHours",
-    "watch.limits.actionsPerDay",
-    "watch.limits.usdPerDay",
-];
+const LEGACY_KEY_NAMES: &[&str] = &[];
 
 /// Non-leaf segments that are allowed to be camelCase.
 #[cfg(test)]
-const COMPOUND_GROUPS: &[&str] = &["proseLint", "policyGuard"];
+const COMPOUND_GROUPS: &[&str] = &["proseLint", "policyGuard", "systemPrompt"];
 
 /// The exact size of `KNOWN_KEYS`; each Segment that cuts keys lowers it.
 #[cfg(test)]
@@ -817,7 +835,7 @@ mod tests {
     #[test]
     fn update_plugin_defaults_to_auto_and_takes_three_values() {
         // Arrange
-        let key = "update.plugin";
+        let key = "upgrade.plugin";
 
         // Act
         let default = default_value(key);

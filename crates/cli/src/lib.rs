@@ -427,7 +427,7 @@ pub enum Command {
     /// Then it runs the plugin step of `playbook plugin install` and
     /// `playbook plugin upgrade` so the plugin matches the new binary: it adds
     /// the marketplace when it is missing, turns on `autoUpdate` for it, and
-    /// installs or updates the plugin. Pass `--no-plugin` or set `update.plugin`
+    /// installs or updates the plugin. Pass `--no-plugin` or set `upgrade.plugin`
     /// to `off` to skip that step. To change only the plugin, run
     /// `playbook plugin upgrade`.
     ///
@@ -478,7 +478,7 @@ pub enum Command {
         from: Option<String>,
         /// Leave the playbook plugin in Claude Code as it is. By default
         /// `upgrade` installs or updates it, unless the config key
-        /// `update.plugin` is `off`
+        /// `upgrade.plugin` is `off`
         #[arg(long)]
         no_plugin: bool,
     },
@@ -565,7 +565,7 @@ pub enum Command {
     /// `claude plugin update`, then says to restart Claude Code. A missing
     /// `claude` command or a failed update prints the command to run and
     /// does not change the exit code. `--no-plugin` or
-    /// `playbook config set update.plugin off` turns this off.
+    /// `playbook config set upgrade.plugin off` turns this off.
     /// `update`, the install script and `doctor --fix` run the same step.
     ///
     /// Exit codes: 0 when it finished or had nothing to do, 1 when the record
@@ -585,7 +585,7 @@ pub enum Command {
         json: bool,
         /// Leave the playbook plugin in Claude Code as it is. By default a
         /// run updates it with `claude plugin update`, unless the config key
-        /// `update.plugin` is `off`
+        /// `upgrade.plugin` is `off`
         #[arg(long)]
         no_plugin: bool,
     },
@@ -1228,7 +1228,7 @@ pub enum PluginCommand {
     /// Claude Code updates a plugin with its marketplace, so that one flag
     /// also keeps the plugin up to date; there is no per-plugin key.
     ///
-    /// You asked for it, so `update.plugin` set to `off`,
+    /// You asked for it, so `upgrade.plugin` set to `off`,
     /// `PLAYBOOK_SKIP_PLUGIN_UPDATE` and a CI environment do not stop it.
     /// Prints one line per step. A second run reports every step as done and
     /// changes nothing. Exits 1 when `claude` is not on PATH or a step fails.
@@ -1246,7 +1246,7 @@ pub enum PluginCommand {
     ///
     /// Refreshes the marketplace, then runs `claude plugin update` for every
     /// installed playbook plugin id, `playbook@amplifiedengineer` and the old
-    /// `playbook@pragmatic-engineer`. You asked for it, so `update.plugin` set
+    /// `playbook@pragmatic-engineer`. You asked for it, so `upgrade.plugin` set
     /// to `off`, `PLAYBOOK_SKIP_PLUGIN_UPDATE` and a CI environment do not
     /// stop it. Prints one line per plugin. Exits 1 when an upgrade fails,
     /// `claude` is not on PATH, or the marketplace refresh failed while the

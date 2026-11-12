@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Igor Santos
 // SPDX-License-Identifier: Apache-2.0
 
-//! The release check that runs at the start of a command. `update.mode`
+//! The release check that runs at the start of a command. `upgrade.mode`
 //! picks `notify` (the default), `auto` or `off`. The last result lives in the
 //! `state` table under `update-check/cache`, so a command reads one row and
 //! never waits on the network: a stale row starts a detached
@@ -34,7 +34,7 @@ const APPLY_GRACE_SECS: u64 = 15 * 60;
 /// Hours a release check stays fresh before a command starts a new one.
 pub const INTERVAL_HOURS: u64 = 24;
 
-/// What `update.mode` asks for. This is separate from the playbook
+/// What `upgrade.mode` asks for. This is separate from the playbook
 /// permission mode (`ask` or `auto`) that `Env::auto_mode` reads.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UpdateMode {
@@ -67,20 +67,20 @@ impl Settings {
         self.mode != UpdateMode::Off && (stderr_tty || self.mode == UpdateMode::Auto)
     }
 
-    /// Reads only `update.mode`, through a read-only connection that
+    /// Reads only `upgrade.mode`, through a read-only connection that
     /// creates and changes nothing, for a piped run that stops unless the
     /// mode is `auto`.
     pub fn peek_mode(root: &Path) -> UpdateMode {
-        crate::config::store::global_read_only(root, "update.mode")
+        crate::config::store::global_read_only(root, "upgrade.mode")
             .and_then(|v| v.as_str().map(UpdateMode::parse))
             .unwrap_or(UpdateMode::Notify)
     }
 
-    /// Reads `update.mode` from the global tier, where `config set` puts this
+    /// Reads `upgrade.mode` from the global tier, where `config set` puts this
     /// per-user key. An unreadable store or a bad value falls back to the
     /// default.
     pub fn read(home: &Path) -> Settings {
-        let mode = crate::config::resolve_valid("update.mode", home, None)
+        let mode = crate::config::resolve_valid("upgrade.mode", home, None)
             .ok()
             .and_then(|(v, _, _)| v.as_str().map(UpdateMode::parse))
             .unwrap_or(UpdateMode::Notify);
@@ -331,7 +331,7 @@ pub fn notice_text(latest: &str, current: &str, homebrew: bool, tail: Tail) -> S
         Tail::Nothing => String::new(),
         Tail::Skipped(reason) => format!(" (auto update skipped: {reason})"),
         Tail::Hint => {
-            ". To update on its own: playbook config set --global update.mode auto".to_string()
+            ". To update on its own: playbook config set --global upgrade.mode auto".to_string()
         }
     };
     format!("playbook {latest} is available (you have {current}). Run: {fix}{tail}")
@@ -474,7 +474,7 @@ impl UpdateMode {
 /// the last background check started and what it found, and in `auto` mode
 /// why a newer release is held back.
 pub fn status_line(mode: UpdateMode, cache: Result<&Cache, &str>, probe: &Probe) -> String {
-    let mut line = format!("update.mode is {}", mode.label());
+    let mut line = format!("upgrade.mode is {}", mode.label());
     if mode == UpdateMode::Off {
         line.push_str(", so no background release check runs");
         return line;
@@ -612,7 +612,7 @@ pub fn on_start(command: &Command, args: &[OsString]) {
 }
 
 /// The body of the hidden `playbook upgrade --refresh-check`: refresh the
-/// cache, then run the auto update when `update.mode` is `auto`. A failed
+/// cache, then run the auto update when `upgrade.mode` is `auto`. A failed
 /// refresh stops there, so an offline machine leaves no warning.
 pub fn run_refresh() {
     let home = crate::common::home_dir();
@@ -711,7 +711,7 @@ mod tests {
     fn line(version: &str) -> String {
         format!(
             "playbook {version} is available (you have 0.26.0). Run: playbook upgrade. \
-             To update on its own: playbook config set --global update.mode auto"
+             To update on its own: playbook config set --global upgrade.mode auto"
         )
     }
 
@@ -1009,7 +1009,7 @@ mod tests {
 
         // Act
         put("update.checkIntervalHours", 6.into());
-        put("update.mode", "off".into());
+        put("upgrade.mode", "off".into());
         let set = Settings::read(&home);
 
         // Assert
@@ -1074,25 +1074,25 @@ mod tests {
         brew.install.homebrew = true;
         assert_eq!(
             status_line(UpdateMode::Auto, Ok(&cache), &brew),
-            "update.mode is auto; last background check started 2026-10-15T00:37:06Z, \
+            "upgrade.mode is auto; last background check started 2026-10-15T00:37:06Z, \
              latest release found 0.27.0, auto update held: Homebrew manages this install"
         );
         assert_eq!(
             status_line(UpdateMode::Notify, Ok(&cache), &brew),
-            "update.mode is notify; last background check started 2026-10-15T00:37:06Z, \
+            "upgrade.mode is notify; last background check started 2026-10-15T00:37:06Z, \
              latest release found 0.27.0"
         );
         assert_eq!(
             status_line(UpdateMode::Notify, Ok(&Cache::default()), &probe(NOW)),
-            "update.mode is notify; no background release check has run yet"
+            "upgrade.mode is notify; no background release check has run yet"
         );
         assert_eq!(
             status_line(UpdateMode::Auto, Err("disk I/O error"), &probe(NOW)),
-            "update.mode is auto; the release check cache could not be read: disk I/O error"
+            "upgrade.mode is auto; the release check cache could not be read: disk I/O error"
         );
         assert_eq!(
             status_line(UpdateMode::Off, Ok(&cache), &probe(NOW)),
-            "update.mode is off, so no background release check runs"
+            "upgrade.mode is off, so no background release check runs"
         );
     }
 

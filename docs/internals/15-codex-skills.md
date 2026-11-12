@@ -28,7 +28,7 @@ Each folder is a real copy. A symlink would break when an update replaces the pl
 - A skill keeps every file, including `references/`. The `name:` in `SKILL.md` becomes `playbook-<s>`.
 - A command keeps only `name` and `description` in its frontmatter. The body gets a short preamble: this is the playbook command for Codex, run it as `$playbook-<c>`, and what to do when a step names a tool Codex lacks.
 - Codex truncates a skill's main prompt at 8,000 bytes on one read path. A rendered `SKILL.md` over that keeps its frontmatter, the preamble and one line telling the agent to read `references/playbook-body.md`. The full body goes in that file.
-- In every copied `.md`: `/playbook:<n>` becomes `$playbook-<n>`, `playbook:<n>` becomes `playbook-<n>`, and `../skills/<n>/` becomes `../playbook-<n>/`. This applies only when `<n>` is a name the plugin ships and the match ends at a word boundary. Other text, such as a URL or the key `update.plugin`, stays as written.
+- In every copied `.md`: `/playbook:<n>` becomes `$playbook-<n>`, `playbook:<n>` becomes `playbook-<n>`, and `../skills/<n>/` becomes `../playbook-<n>/`. This applies only when `<n>` is a name the plugin ships and the match ends at a word boundary. Other text, such as a URL or the key `upgrade.plugin`, stays as written.
 
 ## Ownership
 

@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2026 Igor Santos
 // SPDX-License-Identifier: Apache-2.0
 
-//! The `plugin-update-mode` migration: a stored `update.plugin` boolean moves
-//! to `auto` or `off`, once. A word stays, and a store without the key gets no
-//! write.
+//! The `plugin-update-mode` migration: a stored boolean under the old name
+//! `update.plugin` (now `upgrade.plugin`) moves to `auto` or `off`, once. A word
+//! stays, and a store without the key gets no write.
 //!
 //! The migration says `since: "next"`, so a dev build never runs it on its
 //! own. These tests run the registry entry through the library with its
@@ -114,10 +114,11 @@ fn every_tier_moves_and_a_word_stays() {
 
     // Assert
     assert!(!report.failed, "{:?}", report.warnings);
-    let doc = store::export(&root(&home)).unwrap();
-    assert_eq!(doc["global"][KEY], json!("auto"), "{doc}");
-    assert_eq!(doc["repos"][SLUG][KEY], json!("off"), "{doc}");
-    assert_eq!(doc["orgs"]["acme"][KEY], json!("ask"), "{doc}");
+    // Export hides the old name, so read the rows of that name directly.
+    let found = store::lookup(&root(&home), KEY, Some(SLUG)).unwrap();
+    assert_eq!(found.global, Some(json!("auto")));
+    assert_eq!(found.repo, Some(json!("off")));
+    assert_eq!(found.org, Some(json!("ask")));
 }
 
 #[test]

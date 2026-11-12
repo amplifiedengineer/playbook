@@ -1817,7 +1817,7 @@ fn update_rows(rows: &[Value]) -> String {
         .iter()
         .filter(|r| {
             let m = r["message"].as_str().unwrap_or_default();
-            m.starts_with("update.mode is") || m.contains("is available (you have")
+            m.starts_with("upgrade.mode is") || m.contains("is available (you have")
         })
         .collect();
     text(&rows)
@@ -1843,7 +1843,7 @@ fn doctor_shows_the_release_check_and_warns_only_for_a_newer_release() {
 
     // Assert
     assert!(
-        newer_rows.contains("INFO update.mode is notify; last background check started"),
+        newer_rows.contains("INFO upgrade.mode is notify; last background check started"),
         "{newer_rows}"
     );
     assert!(
@@ -1858,7 +1858,7 @@ fn doctor_says_when_no_release_check_has_run() {
     let b = Box::new("update-fresh");
     let rows = update_rows(&b.run(&[], "/bin/zsh", None));
     assert!(
-        rows.contains("update.mode is notify; no background release check has run yet"),
+        rows.contains("upgrade.mode is notify; no background release check has run yet"),
         "{rows}"
     );
     assert!(!rows.contains("WARN"), "{rows}");

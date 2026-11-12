@@ -72,7 +72,7 @@ Otherwise go on to Step 4.
    playbook setup --dry-run; echo '--- explain ---'; playbook setup --explain; echo '--- plugin ---'; playbook setup --dry-run --yes | grep -A1 '^plugin'; echo '--- security ---'; playbook config get security.defaults; echo '--- attribution ---'; playbook config get attribution.enabled
    ```
 
-3. Read the plugin probe. A line `plugin (off)` means setup is blocked from touching the plugin here (`update.plugin` is off, a CI environment, or `PLAYBOOK_SKIP_PLUGIN_UPDATE` is set). Print "plugin: left as it is, because setup is blocked here. To run it anyway: playbook setup --only plugin", drop the plugin question and add no plugin flag. Otherwise the plugin default is Yes.
+3. Read the plugin probe. A line `plugin (off)` means setup is blocked from touching the plugin here (`upgrade.plugin` is off, a CI environment, or `PLAYBOOK_SKIP_PLUGIN_UPDATE` is set). Print "plugin: left as it is, because setup is blocked here. To run it anyway: playbook setup --only plugin", drop the plugin question and add no plugin flag. Otherwise the plugin default is Yes.
 4. Read the dry run output. A line that starts with `telemetry: already` or `telemetry: switched off` means setup would not ask about telemetry. Print that line and drop the telemetry question.
 5. Read the explain output. For each part it prints a `What it does:` line.
 6. Ask the remaining questions with the AskUserQuestion tool, in table order, at most four questions per call. For each question:
@@ -80,7 +80,7 @@ Otherwise go on to Step 4.
    - There are two options, Yes and No. The default option comes first, and its label ends with " (Recommended)". For `attribution`, the default is Yes when the attribution probe printed true, because the user chose ON before.
    - The Yes description is the part's `What it does:` line from sub-step 5.
    - The No description is the If no column.
-   - An answer whose label starts with Yes means the part's `--x` flag. An answer whose label starts with No means its `--no-x` flag. `--plugin` forces the plugin past `update.plugin` off and CI, so pass it only for an answer the user gave, never for a dropped question or a `--yes` run.
+   - An answer whose label starts with Yes means the part's `--x` flag. An answer whose label starts with No means its `--no-x` flag. `--plugin` forces the plugin past `upgrade.plugin` off and CI, so pass it only for an answer the user gave, never for a dropped question or a `--yes` run.
 
 ## Step 5: Summary and confirm
 
@@ -126,7 +126,7 @@ The same flags as `playbook setup`, with the same text as `playbook setup --help
 
 | Flag | What it does |
 | --- | --- |
-| `--plugin` | Install or update the playbook plugin in Claude Code with the `claude` command. Given by name it runs even without a terminal, with `update.plugin` off or in CI |
+| `--plugin` | Install or update the playbook plugin in Claude Code with the `claude` command. Given by name it runs even without a terminal, with `upgrade.plugin` off or in CI |
 | `--no-plugin` | Leave the playbook plugin as it is |
 | `--hooks` | Wire every playbook hook into settings.json (guards, session and worktree hooks) |
 | `--no-hooks` | Add no playbook hook entries, including the guards in the shared settings |

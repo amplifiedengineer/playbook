@@ -171,14 +171,14 @@ fn update_keys_go_to_the_global_tier_without_the_flag_and_refuse_org() {
     let org = run_playbook(
         &repo,
         &home,
-        &["config", "set", "update.mode", "off", "--org"],
+        &["config", "set", "upgrade.mode", "off", "--org"],
     );
-    let plain = run_playbook(&repo, &home, &["config", "set", "update.mode", "auto"]);
+    let plain = run_playbook(&repo, &home, &["config", "set", "upgrade.mode", "auto"]);
 
     // Assert
     assert!(plain.status.success(), "stderr: {}", stderr_of(&plain));
     assert_eq!(
-        stored(&home)["global"]["update.mode"],
+        stored(&home)["global"]["upgrade.mode"],
         Value::String("auto".into())
     );
     assert!(empty(&home, "repos") && empty(&home, "orgs"));
@@ -195,13 +195,13 @@ fn a_stale_repo_tier_update_key_is_not_reported_as_the_value() {
         &home.join(".config").join("playbook"),
         playbook::config::write::Tier::Repo,
         Some("test-owner/test-repo"),
-        "update.mode",
+        "upgrade.mode",
         &Value::String("off".into()),
     )
     .unwrap();
 
     // Act
-    let out = run_playbook(&repo, &home, &["config", "get", "update.mode"]);
+    let out = run_playbook(&repo, &home, &["config", "get", "upgrade.mode"]);
 
     // Assert
     let stdout = stdout_of(&out);
@@ -358,8 +358,11 @@ fn list_shows_known_keys_with_value_and_source_tier() {
     assert!(stdout.contains("pr.review.enabled"), "{stdout}");
     assert!(stdout.contains("pr.review.type"), "{stdout}");
     assert!(stdout.contains("(source: default)"), "{stdout}");
-    assert!(stdout.contains("worktreeCleanup.enabled"), "{stdout}");
-    assert!(stdout.contains("worktreeCleanup.enabled: true"), "{stdout}");
+    assert!(stdout.contains("worktree.cleanup.enabled"), "{stdout}");
+    assert!(
+        stdout.contains("worktree.cleanup.enabled: true"),
+        "{stdout}"
+    );
     assert!(
         !stdout.contains("worktreeCleanup.staleAfterDays"),
         "{stdout}"
@@ -490,7 +493,7 @@ fn set_writes_valid_auto_and_fix_values_including_a_fractional_budget() {
         ("auto.budget.ceilingUsd", "0"),
         ("auto.budget.ceilingUsd", "200"),
         ("auto.budget.ceilingUsd", "4000"),
-        ("watch.limits.usdPerDay", "0.5"),
+        ("watch.limits.dailyUsd", "0.5"),
         ("fix.maxFiles", "99"),
         ("fix.maxLines", "1"),
     ];

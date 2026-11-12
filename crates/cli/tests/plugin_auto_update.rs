@@ -350,7 +350,7 @@ fn a_plugin_turned_off_in_claude_code_is_not_updated() {
 #[test]
 fn update_plugin_off_does_not_call_claude() {
     let f = Fixture::new(true, 0);
-    f.set_config("update.plugin", "off");
+    f.set_config("upgrade.plugin", "off");
 
     let out = f.config_list(true, &[]);
 
@@ -365,14 +365,14 @@ fn the_notice_leaves_standard_output_as_it_was() {
     let quiet = Fixture::new(true, 0);
 
     // Act
-    let with_update = updating.run(&["config", "get", "update.plugin"], true, "", &[]);
-    let without = quiet.run(&["config", "get", "update.plugin"], false, "", &[]);
+    let with_update = updating.run(&["config", "get", "upgrade.plugin"], true, "", &[]);
+    let without = quiet.run(&["config", "get", "upgrade.plugin"], false, "", &[]);
 
     // Assert
     assert_eq!(updating.calls(), EXPECTED_CALL);
     assert_eq!(
         stdout(&with_update),
-        "update.plugin: auto (source: default)\n"
+        "upgrade.plugin: auto (source: default)\n"
     );
     assert_eq!(stdout(&with_update), stdout(&without));
 }
@@ -469,7 +469,7 @@ fn a_behind_marker_waits_a_day_to_the_minute() {
 fn ask_yes_runs_the_update() {
     // Arrange
     let f = Fixture::new(true, 0);
-    f.set_config("update.plugin", "ask");
+    f.set_config("upgrade.plugin", "ask");
 
     // Act
     let out = f.run(&["config", "list"], true, "y\n", &[]);
@@ -489,7 +489,7 @@ fn ask_yes_runs_the_update() {
 fn ask_no_claims_the_version_and_prints_the_manual_command() {
     // Arrange
     let f = Fixture::new(true, 0);
-    f.set_config("update.plugin", "ask");
+    f.set_config("upgrade.plugin", "ask");
 
     // Act
     let declined = f.run(&["config", "list"], true, "n\n", &[]);
@@ -505,7 +505,7 @@ fn ask_no_claims_the_version_and_prints_the_manual_command() {
 #[test]
 fn ask_with_an_unclear_reply_claims_nothing_so_the_question_comes_back() {
     let f = Fixture::new(true, 0);
-    f.set_config("update.plugin", "ask");
+    f.set_config("upgrade.plugin", "ask");
 
     let unclear = f.run(&["config", "list"], true, "maybe\n", &[]);
     let eof = f.run(&["config", "list"], true, "", &[]);
@@ -519,7 +519,7 @@ fn ask_with_an_unclear_reply_claims_nothing_so_the_question_comes_back() {
 #[test]
 fn ask_yes_after_another_process_took_the_claim_does_not_update() {
     let f = Fixture::new(true, 0);
-    f.set_config("update.plugin", "ask");
+    f.set_config("upgrade.plugin", "ask");
     f.set_marker(&format!("{VERSION} running {}", now()));
 
     let out = f.run(&["config", "list"], true, "y\n", &[]);
@@ -531,7 +531,7 @@ fn ask_yes_after_another_process_took_the_claim_does_not_update() {
 #[test]
 fn ask_without_a_terminal_on_stdin_asks_nothing_and_claims_nothing() {
     let f = Fixture::new(true, 0);
-    f.set_config("update.plugin", "ask");
+    f.set_config("upgrade.plugin", "ask");
 
     // Only stderr is a terminal, so the Ask arm is reached with stdin piped.
     let out = f.run(
@@ -756,7 +756,7 @@ fn the_hook_starts_the_update_and_the_next_session_shows_it_once() {
 fn ask_mode_adds_no_background_line_and_starts_nothing() {
     // Arrange
     let f = Fixture::new(true, 0);
-    f.set_config("update.plugin", "ask");
+    f.set_config("upgrade.plugin", "ask");
 
     // Act
     let out = f.session(&[]);

@@ -1546,7 +1546,7 @@ fn orphan_rows(env: &Env, data: &Path) -> Vec<Row> {
     .hint("the code index is a cache and safe to delete; check other clones before deleting gate records")]
 }
 
-/// The release check (`update.mode`): the mode and the last check, and a
+/// The release check (`upgrade.mode`): the mode and the last check, and a
 /// warning with the fix when the check found a newer release.
 fn update_rows(env: &Env) -> Vec<Row> {
     let status = crate::update::check::status_at(&env.home);

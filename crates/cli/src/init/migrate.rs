@@ -3620,4 +3620,91 @@ mod tests {
             Some(serde_json::json!(crate::config::keys::AUTO_BUDGET_USD))
         );
     }
+
+    #[test]
+    fn the_real_worktree_watch_and_upgrade_renames_move_every_tier_once() {
+        use crate::config::keys::KEY_RENAMES;
+        use crate::config::{store, write};
+        let rows = [
+            ("worktreeCleanup.enabled", "worktree.cleanup.enabled"),
+            ("watch.maxCatchupHours", "watch.catchup.maxHours"),
+            ("watch.limits.actionsPerDay", "watch.limits.dailyActions"),
+            ("watch.limits.usdPerDay", "watch.limits.dailyUsd"),
+            ("update.mode", "upgrade.mode"),
+            ("update.plugin", "upgrade.plugin"),
+        ];
+        let tiers = [
+            (write::Tier::Global, None, "global"),
+            (write::Tier::Org, Some("acme/app"), "org"),
+            (write::Tier::Repo, Some("acme/app"), "repo"),
+        ];
+        for (old, new) in rows {
+            // Arrange
+            let h = home("rename-real-worktree-watch");
+            let root = playbook_root_from(&h);
+            for (tier, scope, label) in tiers {
+                store::put(&root, tier, scope, old, &serde_json::json!(label)).unwrap();
+            }
+
+            // Act
+            let first = move_renamed_rows(&ctx(&h), KEY_RENAMES);
+            let second = move_renamed_rows(&ctx(&h), KEY_RENAMES);
+
+            // Assert
+            let found = store::lookup(&root, new, Some("acme/app")).unwrap();
+            assert_eq!(found.global, Some(serde_json::json!("global")), "{new}");
+            assert_eq!(found.org, Some(serde_json::json!("org")), "{new}");
+            assert_eq!(found.repo, Some(serde_json::json!("repo")), "{new}");
+            assert!(store::stored_values(&root, old).unwrap().is_empty());
+            assert!(matches!(first, Outcome::Done(ref r) if r.detail.contains('3')));
+            assert!(matches!(second, Outcome::Done(ref r) if r.detail.contains("no stored")));
+        }
+    }
+
+    #[test]
+    fn a_legacy_plugin_boolean_becomes_a_word_and_then_lands_under_the_new_name() {
+        use crate::config::keys::KEY_RENAMES;
+        use crate::config::{store, write};
+        // Arrange: the boolean move runs before the rename, so it sees the old name
+        let h = home("plugin-bool-then-rename");
+        let root = playbook_root_from(&h);
+        store::put(
+            &root,
+            write::Tier::Global,
+            None,
+            "update.plugin",
+            &serde_json::json!(false),
+        )
+        .unwrap();
+        store::put(
+            &root,
+            write::Tier::Org,
+            Some("acme/app"),
+            "update.plugin",
+            &serde_json::json!(false),
+        )
+        .unwrap();
+        store::put(
+            &root,
+            write::Tier::Repo,
+            Some("acme/app"),
+            "update.plugin",
+            &serde_json::json!(false),
+        )
+        .unwrap();
+
+        // Act
+        let moved = plugin_update_mode(&ctx(&h));
+        let renamed = move_renamed_rows(&ctx(&h), KEY_RENAMES);
+
+        // Assert
+        assert!(matches!(moved, Outcome::Done(_)));
+        assert!(matches!(renamed, Outcome::Done(_)));
+        let found = store::lookup(&root, "upgrade.plugin", Some("acme/app")).unwrap();
+        let off = Some(serde_json::json!("off"));
+        assert_eq!(
+            (found.global, found.org, found.repo),
+            (off.clone(), off.clone(), off)
+        );
+    }
 }

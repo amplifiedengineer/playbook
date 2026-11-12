@@ -2044,7 +2044,7 @@ fn session_init_sweeps_again_when_marker_is_stale() {
 
 #[test]
 fn session_init_skips_sweep_entirely_when_policy_disabled() {
-    // Arrange: worktreeCleanup.enabled set false at the repo tier, no prior
+    // Arrange: worktree.cleanup.enabled set false at the repo tier, no prior
     // marker.
     let work = scratch_dir("sweep-disabled");
     let repo_dir = work.join("repo");
@@ -2055,7 +2055,7 @@ fn session_init_skips_sweep_entirely_when_policy_disabled() {
     let home = home.canonicalize().expect("home should resolve");
     let wu_path = build_sweepable_wu_worktree(&repo_dir, &home, "acme", "sweep-d");
     let set_out = Command::new(playbook_bin())
-        .args(["config", "set", "worktreeCleanup.enabled", "false"])
+        .args(["config", "set", "worktree.cleanup.enabled", "false"])
         .current_dir(&repo_dir)
         .env("HOME", &home)
         .output()

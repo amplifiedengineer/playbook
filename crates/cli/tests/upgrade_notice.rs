@@ -265,9 +265,9 @@ fn no_plugin_a_false_config_key_or_a_failed_update_leave_the_exit_code_alone() {
     let dry_run = h.playbook(&["migrate", "--dry-run"], "", None);
     let calls_after_opt_out = h.claude_calls();
     let failed = h.playbook(&["migrate"], "", None);
-    let set = h.playbook(&["config", "set", "update.plugin", "off"], "", None);
+    let set = h.playbook(&["config", "set", "upgrade.plugin", "off"], "", None);
     let off = h.playbook(&["migrate"], "", None);
-    let bad = h.playbook(&["config", "set", "update.plugin", "sometimes"], "", None);
+    let bad = h.playbook(&["config", "set", "upgrade.plugin", "sometimes"], "", None);
 
     // Assert
     assert_eq!(
@@ -290,7 +290,7 @@ fn no_plugin_a_false_config_key_or_a_failed_update_leave_the_exit_code_alone() {
         String::from_utf8_lossy(&set.stderr)
     );
     assert!(
-        String::from_utf8_lossy(&off.stdout).contains("plugin: not updated, update.plugin is off"),
+        String::from_utf8_lossy(&off.stdout).contains("plugin: not updated, upgrade.plugin is off"),
         "{}",
         String::from_utf8_lossy(&off.stdout)
     );
@@ -301,9 +301,40 @@ fn no_plugin_a_false_config_key_or_a_failed_update_leave_the_exit_code_alone() {
     assert_ne!(
         bad.status.code(),
         Some(0),
-        "update.plugin takes auto, ask or off"
+        "upgrade.plugin takes auto, ask or off"
     );
     assert_eq!(dry_run.status.code(), Some(0));
+}
+
+#[test]
+fn a_stored_old_plugin_row_of_off_still_stops_the_plugin_step() {
+    let Some(old) = older_line() else {
+        return;
+    };
+    // Arrange: the row an older binary stored, under the old name
+    let h = Home::new("plugin-old-row-off");
+    let stale = h.plugin(&old, &old);
+    h.install(&stale, &old);
+    h.fake_claude(None, 1);
+    playbook::config::store::put(
+        &playbook::common::paths::playbook_root_from(&h.home),
+        playbook::config::write::Tier::Global,
+        None,
+        "update.plugin",
+        &serde_json::json!("off"),
+    )
+    .unwrap();
+
+    // Act
+    let off = h.playbook(&["migrate"], "", None);
+
+    // Assert
+    let text = String::from_utf8_lossy(&off.stdout);
+    assert!(
+        text.contains("plugin: not updated, upgrade.plugin is off"),
+        "{text}"
+    );
+    assert_eq!(h.claude_calls(), "");
 }
 
 #[test]

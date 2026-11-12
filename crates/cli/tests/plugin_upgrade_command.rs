@@ -169,7 +169,7 @@ fn an_update_ignores_the_config_opt_out() {
     f.install(&[NEW_ID]);
     let mut set = isolated::playbook_in(&f.home);
     assert!(set
-        .args(["config", "set", "update.plugin", "off"])
+        .args(["config", "set", "upgrade.plugin", "off"])
         .status()
         .unwrap()
         .success());

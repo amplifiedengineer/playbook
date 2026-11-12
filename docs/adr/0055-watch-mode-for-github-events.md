@@ -372,3 +372,13 @@ On 2026-11-04 the maintainer delegated these questions and took the recommended 
 3. `propose` goes through the local queue and `watch approve`. Proposals are not mirrored to GitHub first.
 4. The ladder for `auto` is accepted: 10 approved proposals of a class over 28 days with none failed or rolled back. `label` and fixed text comments are exempt from day one. Every other class waits for the ladder.
 5. A polling latency of 60 seconds is enough. S12 (webhooks) stays last.
+
+## Note 2026-11-13: new names
+
+Three config keys were renamed. The old names still read and write for now.
+
+| Old key | New key |
+|---|---|
+| `watch.maxCatchupHours` | `watch.catchup.maxHours` |
+| `watch.limits.actionsPerDay` | `watch.limits.dailyActions` |
+| `watch.limits.usdPerDay` | `watch.limits.dailyUsd` |

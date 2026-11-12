@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Igor Santos
 // SPDX-License-Identifier: Apache-2.0
 
-//! `update.mode = auto`: the detached `update --refresh-check` installs a
+//! `upgrade.mode = auto`: the detached `update --refresh-check` installs a
 //! newer release through the same verified path as `playbook upgrade`, then
 //! leaves a report in the cache for the next command to print. The command
 //! that started it keeps running on the old binary. Any reason not to update
@@ -172,7 +172,7 @@ impl Attest for Unattended<'_> {
     }
 }
 
-/// Runs the auto update when `update.mode` is `auto`, the cache names a
+/// Runs the auto update when `upgrade.mode` is `auto`, the cache names a
 /// newer release and nothing holds it back. One version is tried at most
 /// once a day. The result goes into the cache for the next command to
 /// print; nothing is printed here.
@@ -322,7 +322,7 @@ fn failure_prefix(version: &str) -> String {
 /// The one warning a failed auto update leaves, with the fix.
 pub fn failure_line(version: &str, err: &str) -> String {
     format!(
-        "{} {}. Run: playbook upgrade, or set update.mode to notify",
+        "{} {}. Run: playbook upgrade, or set upgrade.mode to notify",
         failure_prefix(version),
         err.trim_end_matches('.')
     )

@@ -976,7 +976,7 @@ fn sweep_no_ops_when_worktree_cleanup_is_disabled() {
     let set_out = run_playbook(
         &repo_root,
         &home,
-        &["config", "set", "worktreeCleanup.enabled", "false"],
+        &["config", "set", "worktree.cleanup.enabled", "false"],
     );
     assert!(set_out.status.success(), "stderr: {}", stderr_of(&set_out));
 
@@ -996,7 +996,7 @@ fn sweep_no_ops_when_worktree_cleanup_is_disabled() {
     );
     let stdout = stdout_of(&out);
     assert!(
-        stdout.contains("worktreeCleanup.enabled is false"),
+        stdout.contains("worktree.cleanup.enabled is false"),
         "sweep should report the policy as disabled, got: {stdout}"
     );
 
@@ -1012,7 +1012,7 @@ fn remove_no_ops_when_worktree_cleanup_is_disabled() {
     let set_out = run_playbook(
         &repo_root,
         &home,
-        &["config", "set", "worktreeCleanup.enabled", "false"],
+        &["config", "set", "worktree.cleanup.enabled", "false"],
     );
     assert!(set_out.status.success(), "stderr: {}", stderr_of(&set_out));
 
@@ -1036,7 +1036,7 @@ fn remove_no_ops_when_worktree_cleanup_is_disabled() {
     );
     let stdout = stdout_of(&out);
     assert!(
-        stdout.contains("worktreeCleanup.enabled is false"),
+        stdout.contains("worktree.cleanup.enabled is false"),
         "remove should report the policy as disabled, got: {stdout}"
     );
 

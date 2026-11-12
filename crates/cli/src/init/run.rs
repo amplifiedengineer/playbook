@@ -79,7 +79,7 @@ pub struct InitPaths {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PluginRun {
     Skip,
-    /// Run it, but let `update.plugin` off, CI and the skip variable stop it.
+    /// Run it, but let `upgrade.plugin` off, CI and the skip variable stop it.
     Guarded,
     /// The user named the part with `--plugin` or `--only plugin`, so the
     /// guards do not stop it.

@@ -173,14 +173,19 @@ fn init_connection(root: &Path) -> Result<Connection, SchemaError> {
 }
 
 /// The global tier value of `key`, read through a read-only connection that
-/// changes nothing on disk. `None` when the database, the table or the row is
-/// missing or cannot be read.
+/// changes nothing on disk. A row stored under an old name of `key` counts
+/// when there is none under `key`. `None` when the database, the table or the
+/// row is missing or cannot be read.
 pub fn global_read_only(root: &Path, key: &str) -> Option<Value> {
     let path = db_path(root);
     if !path.is_file() {
         return None;
     }
     let conn = crate::state::open_read_only(&path).ok()?;
+    global_row(&conn, key).or_else(|| keys::old_names(key).find_map(|old| global_row(&conn, old)))
+}
+
+fn global_row(conn: &Connection, key: &str) -> Option<Value> {
     let raw: String = conn
         .query_row(
             "SELECT value_json FROM config WHERE tier = 'global' AND scope = '' AND key = ?1",
@@ -941,7 +946,7 @@ mod tests {
         let r = root("store-replace-none");
 
         // Act
-        let changed = replace_value(&r, "update.plugin", &json!(false), &json!("off")).unwrap();
+        let changed = replace_value(&r, "upgrade.plugin", &json!(false), &json!("off")).unwrap();
 
         // Assert
         assert_eq!(changed, 0);
@@ -952,12 +957,12 @@ mod tests {
     fn replace_value_rewrites_only_the_matching_values_in_every_tier() {
         // Arrange
         let r = root("store-replace-value");
-        put(&r, Tier::Global, None, "update.plugin", &json!(false)).unwrap();
+        put(&r, Tier::Global, None, "upgrade.plugin", &json!(false)).unwrap();
         put(
             &r,
             Tier::Repo,
             Some("acme/app"),
-            "update.plugin",
+            "upgrade.plugin",
             &json!(false),
         )
         .unwrap();
@@ -965,17 +970,17 @@ mod tests {
             &r,
             Tier::Org,
             Some("acme/app"),
-            "update.plugin",
+            "upgrade.plugin",
             &json!("ask"),
         )
         .unwrap();
 
         // Act
-        let changed = replace_value(&r, "update.plugin", &json!(false), &json!("off")).unwrap();
+        let changed = replace_value(&r, "upgrade.plugin", &json!(false), &json!("off")).unwrap();
 
         // Assert
         assert_eq!(changed, 2);
-        let got = lookup(&r, "update.plugin", Some("acme/app")).unwrap();
+        let got = lookup(&r, "upgrade.plugin", Some("acme/app")).unwrap();
         assert_eq!(got.global, Some(json!("off")));
         assert_eq!(got.repo, Some(json!("off")));
         assert_eq!(got.org, Some(json!("ask")));
@@ -1334,9 +1339,9 @@ mod tests {
     #[test]
     fn import_refuses_a_per_user_key_outside_the_global_section() {
         let r = root("store-import-user-key");
-        let org = json!({"orgs": {"acme": {"update.mode": "off"}}});
-        let repo = json!({"repos": {"acme/w": {"update.plugin": "off"}}});
-        let global = json!({"global": {"update.mode": "off"}});
+        let org = json!({"orgs": {"acme": {"upgrade.mode": "off"}}});
+        let repo = json!({"repos": {"acme/w": {"upgrade.plugin": "off"}}});
+        let global = json!({"global": {"upgrade.mode": "off"}});
         assert!(matches!(import(&r, &org), Err(ConfigError::GlobalOnly(_))));
         assert!(matches!(import(&r, &repo), Err(ConfigError::GlobalOnly(_))));
         assert_eq!(import(&r, &global).unwrap(), 1);
@@ -1345,12 +1350,34 @@ mod tests {
     #[test]
     fn a_read_only_global_lookup_changes_nothing_on_disk() {
         let r = root("store-global-read-only");
-        assert_eq!(global_read_only(&r, "update.mode"), None);
+        assert_eq!(global_read_only(&r, "upgrade.mode"), None);
         assert!(!db_path(&r).exists());
-        put(&r, Tier::Global, None, "update.mode", &json!("auto")).unwrap();
+        put(&r, Tier::Global, None, "upgrade.mode", &json!("auto")).unwrap();
         put(&r, Tier::Org, Some("acme/w"), "pr.draft", &json!(false)).unwrap();
-        assert_eq!(global_read_only(&r, "update.mode"), Some(json!("auto")));
+        assert_eq!(global_read_only(&r, "upgrade.mode"), Some(json!("auto")));
         assert_eq!(global_read_only(&r, "pr.draft"), None);
+    }
+
+    #[test]
+    fn a_read_only_global_lookup_falls_back_to_a_row_under_the_old_key() {
+        // Arrange: the unit test rename table maps `legacy.draftPr` to `pr.draft`.
+        let r = root("store-global-read-only-old-key");
+        drop(open(&r).unwrap());
+        let conn = Connection::open(db_path(&r)).unwrap();
+        conn.execute(
+            "INSERT INTO config VALUES ('global', '', 'legacy.draftPr', 'false', 1)",
+            [],
+        )
+        .unwrap();
+        drop(conn);
+
+        // Act and assert: the old row answers while the new key has no row.
+        assert_eq!(global_read_only(&r, "pr.draft"), Some(json!(false)));
+        assert_eq!(global_read_only(&r, "upgrade.mode"), None);
+
+        // The row under the new name wins once it exists.
+        put(&r, Tier::Global, None, "pr.draft", &json!(true)).unwrap();
+        assert_eq!(global_read_only(&r, "pr.draft"), Some(json!(true)));
     }
 
     /// Every file under the data folder with its size and bytes.

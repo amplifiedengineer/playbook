@@ -140,7 +140,7 @@ impl Settings {
             enabled: get("watch.enabled")?.as_bool().unwrap_or(false),
             repos,
             poll_seconds: get("watch.pollSeconds")?.as_i64().unwrap_or(60),
-            max_catchup_seconds: get("watch.maxCatchupHours")?.as_i64().unwrap_or(72) * 3600,
+            max_catchup_seconds: get("watch.catchup.maxHours")?.as_i64().unwrap_or(72) * 3600,
             token_env: get("watch.tokenEnv")?
                 .as_str()
                 .filter(|s| !s.is_empty())
@@ -153,8 +153,8 @@ impl Settings {
                 lines: get("fix.maxLines")?.as_i64().unwrap_or(500),
             },
             caps: GlobalCaps {
-                actions_per_day: get("watch.limits.actionsPerDay")?.as_i64().unwrap_or(50),
-                usd_per_day: get("watch.limits.usdPerDay")?.as_f64().unwrap_or(5.0),
+                actions_per_day: get("watch.limits.dailyActions")?.as_i64().unwrap_or(50),
+                usd_per_day: get("watch.limits.dailyUsd")?.as_f64().unwrap_or(5.0),
             },
         })
     }
