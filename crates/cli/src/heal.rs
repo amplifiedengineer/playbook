@@ -729,7 +729,11 @@ mod tests {
         ] {
             assert!(!runs_on_start(&parse(args)), "{args:?}");
         }
-        for args in [&["mode", "status"][..], &["plans"], &["config", "list"]] {
+        for args in [
+            &["mode", "status"][..],
+            &["plan", "list"],
+            &["config", "list"],
+        ] {
             assert!(runs_on_start(&parse(args)), "{args:?}");
         }
     }

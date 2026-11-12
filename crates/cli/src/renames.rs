@@ -17,6 +17,11 @@ pub struct Rename {
 /// Every renamed command path.
 pub const COMMAND_RENAMES: &[Rename] = &[
     Rename {
+        old: "plans",
+        new: "plan list",
+        extra: &[],
+    },
+    Rename {
         old: "deliver",
         new: "pr create",
         extra: &[],

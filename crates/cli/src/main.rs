@@ -1964,6 +1964,22 @@ fn real_main() {
             }
         }
         Command::Plan {
+            sub: PlanCommand::List { json },
+        } => {
+            let Some(dir) = storage::kind_dir(storage::Kind::Plans) else {
+                println!("PLAN_PATH_ERROR: could not resolve the plans folder; this repo needs a git 'origin' remote");
+                std::process::exit(1);
+            };
+            let root = playbook::manifest::check::toplevel()
+                .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
+            let plans = playbook::plans::list(&dir, &root);
+            if json {
+                println!("{}", playbook::plans::to_json(&plans));
+            } else {
+                println!("{}", playbook::plans::render(&plans));
+            }
+        }
+        Command::Plan {
             sub: PlanCommand::Checkpoint { slug, write },
         } => {
             let Some(dir) = storage::kind_dir(storage::Kind::Plans) else {
@@ -2302,20 +2318,6 @@ fn real_main() {
                 println!("{}", review::lens::render(&merged));
             }
         },
-        Command::Plans { json } => {
-            let Some(dir) = storage::kind_dir(storage::Kind::Plans) else {
-                println!("PLAN_PATH_ERROR: could not resolve the plans folder; this repo needs a git 'origin' remote");
-                std::process::exit(1);
-            };
-            let root = playbook::manifest::check::toplevel()
-                .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
-            let plans = playbook::plans::list(&dir, &root);
-            if json {
-                println!("{}", playbook::plans::to_json(&plans));
-            } else {
-                println!("{}", playbook::plans::render(&plans));
-            }
-        }
         Command::Path { kind, create } => {
             if matches!(kind, playbook::PathKind::PluginRoot) {
                 match playbook::plugin_root::resolve_here() {

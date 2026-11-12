@@ -1,4 +1,4 @@
-command playbook subcommands=setup,init,hooks,uninstall,gc,upgrade,plugin,version,completions,deps,doc,doctor,migrate,mode,config,sync,state,skills,effort,route,cc,ccd,usage,sessions,watch,eval,pr,worktree,memory,handoff,hook,statusline,settings,manifest,agents,gate,code,sanitize,ci,path,plan,glossary,tools,commands,adr,prose,atlassian,learn,commit,review,segment,plans,trust aliases=- groups=Cli[-]
+command playbook subcommands=setup,init,hooks,uninstall,gc,upgrade,plugin,version,completions,deps,doc,doctor,migrate,mode,config,sync,state,skills,effort,route,cc,ccd,usage,sessions,watch,eval,pr,worktree,memory,handoff,hook,statusline,settings,manifest,agents,gate,code,sanitize,ci,path,plan,glossary,tools,commands,adr,prose,atlassian,learn,commit,review,segment,trust aliases=- groups=Cli[-]
 command playbook setup subcommands=- aliases=- groups=Setup[-],Flags[plugin,no_plugin,hooks,no_hooks,statusline,no_statusline,security,no_security,path,no_path,aliases,no_aliases,system_prompt,no_system_prompt,telemetry,no_telemetry,collector_service,no_collector_service,claude_override,no_claude_override,disk_ballast,no_disk_ballast,short_name,no_short_name,completions,no_completions,policy_guard,no_policy_guard,attribution,no_attribution,attribution_off,no_attribution_off,codex_hooks,no_codex_hooks,only,yes,dry_run,explain]
 arg playbook setup id=plugin long=plugin short=- value_names=PLUGIN possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
 arg playbook setup id=no_plugin long=no-plugin short=- value_names=NO_PLUGIN possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
@@ -546,7 +546,9 @@ arg playbook ci id=dir long=dir short=- value_names=DIR possible=- defaults=- al
 command playbook path subcommands=- aliases=- groups=Path[kind,create]
 arg playbook path id=kind long=- short=- value_names=KIND possible=plans,implement,worktrees,handoff,data,plugin-root defaults=- aliases=- required=true hidden=false global=false action=Set num_args=- parser=playbook::PathKind conflicts=-
 arg playbook path id=create long=create short=- value_names=CREATE possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
-command playbook plan subcommands=checkpoint,cleanup,brief aliases=- groups=Plan[-]
+command playbook plan subcommands=list,checkpoint,cleanup,brief aliases=- groups=Plan[-]
+command playbook plan list subcommands=- aliases=- groups=List[json]
+arg playbook plan list id=json long=json short=- value_names=JSON possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
 command playbook plan checkpoint subcommands=- aliases=- groups=Checkpoint[slug,write]
 arg playbook plan checkpoint id=slug long=- short=- value_names=SLUG possible=- defaults=- aliases=- required=true hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
 arg playbook plan checkpoint id=write long=write short=- value_names=WRITE possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
@@ -648,7 +650,5 @@ arg playbook segment branch id=land long=land short=- value_names=LAND possible=
 command playbook segment size subcommands=- aliases=- groups=Size[base,dir]
 arg playbook segment size id=base long=base short=- value_names=BASE possible=- defaults=- aliases=- required=true hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
 arg playbook segment size id=dir long=dir short=- value_names=DIR possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=std::path::PathBuf conflicts=-
-command playbook plans subcommands=- aliases=- groups=Plans[json]
-arg playbook plans id=json long=json short=- value_names=JSON possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
 command playbook trust subcommands=- aliases=- groups=Trust[path]
 arg playbook trust id=path long=- short=- value_names=PATH possible=- defaults=- aliases=- required=true hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-

@@ -1004,14 +1004,6 @@ pub enum Command {
         #[command(subcommand)]
         sub: SegmentCommand,
     },
-    /// List the plans and ADR blueprints `/playbook:implement` can run
-    ///
-    /// Prints `path<TAB>[status]<TAB>title` per file, or `NO_PLANS`.
-    Plans {
-        /// Print JSON instead of text
-        #[arg(long)]
-        json: bool,
-    },
     /// Mark a directory as trusted in Claude Code
     ///
     /// Writes to `~/.claude.json` so Claude Code's first-launch trust prompt
@@ -1811,6 +1803,14 @@ pub enum PrCommand {
 /// `playbook plan` subcommands.
 #[derive(Subcommand, Debug)]
 pub enum PlanCommand {
+    /// List the plans and ADR blueprints `/playbook:implement` can run
+    ///
+    /// Prints `path<TAB>[status]<TAB>title` per file, or `NO_PLANS`.
+    List {
+        /// Print JSON instead of text
+        #[arg(long)]
+        json: bool,
+    },
     /// Print a topic's checkpoint path, or save the checkpoint
     ///
     /// Without `--write` it creates the plans directory and prints the path, then
@@ -3207,7 +3207,7 @@ mod tests {
         );
         assert_eq!(init.deprecation_notice(false), None);
         assert_eq!(setup.deprecation_notice(true), None);
-        assert_eq!(parse(&["plans"]).deprecation_notice(true), None);
+        assert_eq!(parse(&["plan", "list"]).deprecation_notice(true), None);
     }
 
     #[test]
