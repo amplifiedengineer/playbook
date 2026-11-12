@@ -1642,18 +1642,36 @@ fn real_main() {
                     let pr_arg = pr.map(|n| n.to_string());
                     let rules =
                         |scope| review::suggest::run(pr_arg.as_deref(), base.as_deref(), scope);
-                    let outcome = match pr::triage::collect(pr, base.as_deref()) {
-                        Ok(facts) => pr::triage::triage(
-                            &pr::triage::ClaudeRunner,
+                    let outcome = match pr::review::triage::collect(pr, base.as_deref()) {
+                        Ok(facts) => pr::review::triage::triage(
+                            &pr::review::triage::ClaudeRunner,
                             &rules,
                             &facts,
                             scope,
                             model,
                         ),
-                        Err(err) => pr::triage::failed(format!("could not collect the PR: {err}")),
+                        Err(err) => {
+                            pr::review::triage::failed(format!("could not collect the PR: {err}"))
+                        }
                     };
-                    println!("{}", pr::triage::render(&outcome));
+                    println!("{}", pr::review::triage::render(&outcome));
                 }
+                PrCommand::Review {
+                    sub: PrReviewCommand::Post { pr, findings, json },
+                } => finish_review(pr::review::post::run(&pr, &findings), json),
+                PrCommand::Review {
+                    sub:
+                        PrReviewCommand::Submit {
+                            pr,
+                            id,
+                            event,
+                            body,
+                            json,
+                        },
+                } => finish_review(
+                    pr::review::submit::run(&pr, &id, event, body.as_deref()),
+                    json,
+                ),
             }
         }
         Command::Route {
@@ -3168,4 +3186,20 @@ fn commit_signoff_on() -> bool {
     )
     .map(|(v, _, _)| v != serde_json::Value::Bool(false))
     .unwrap_or(true)
+}
+
+/// Print a review call's result: the envelope and exit 0 with `--json`, else
+/// the plain lines and the plain exit code.
+fn finish_review(result: Result<pr::review::Done, pr::review::Failure>, json: bool) {
+    if json {
+        println!("{}", pr::review::to_envelope(&result));
+        return;
+    }
+    match result {
+        Ok(done) => println!("{}", done.render()),
+        Err(failure) => {
+            eprintln!("error: {}", failure.error);
+            std::process::exit(failure.code);
+        }
+    }
 }

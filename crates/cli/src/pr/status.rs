@@ -11,7 +11,7 @@
 
 use crate::config;
 use crate::json::envelope;
-use crate::pr::triage;
+use crate::pr::review::triage;
 use crate::review;
 use crate::review::suggest::Scope;
 use serde_json::{json, Value};

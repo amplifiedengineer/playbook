@@ -1,0 +1,7 @@
+{
+  "commit_id": "abc123def456",
+  "comments": [
+    {"path": "src/a.rs", "line": 12, "side": "RIGHT", "body": "issue (blocking): the lock is never released on the error path."},
+    {"path": "src/b.rs", "start_line": 20, "start_side": "RIGHT", "line": 24, "side": "RIGHT", "body": "suggestion: fold these four branches into one match."}
+  ]
+}

@@ -168,6 +168,14 @@
     "required": false
   },
   {
+    "intent": "pr-review-post",
+    "required": false
+  },
+  {
+    "intent": "pr-review-submit",
+    "required": false
+  },
+  {
     "intent": "pr-review-triage",
     "required": false
   },

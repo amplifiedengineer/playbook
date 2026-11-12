@@ -2224,6 +2224,48 @@ pub enum PrReviewCommand {
         #[arg(long)]
         model: bool,
     },
+    /// Create a pending review on a PR from a findings file
+    ///
+    /// The findings file is JSON: `commit_id`, then `comments`, each with
+    /// `path`, `line`, `side` and `body`, plus `start_line` and `start_side`
+    /// for a range. A review `body` is optional; leave it out to frame the
+    /// review at submit time. Creates the review pending, checks GitHub
+    /// reports it `PENDING` (code 5 otherwise) and prints `id=`, `state=` and
+    /// `url=`. With `--json` it prints the envelope and exits 0.
+    ///
+    /// Example: `playbook pr review post 12 --findings /tmp/findings.json`
+    Post {
+        /// PR number
+        pr: String,
+        /// Findings file to post as the pending review
+        #[arg(long)]
+        findings: PathBuf,
+        /// Print the envelope with id, state and url, and exit 0
+        #[arg(long)]
+        json: bool,
+    },
+    /// Submit a pending review as a comment, an approval or a change request
+    ///
+    /// Sends the verdict for review `ID` and checks it left `PENDING` (code 5
+    /// otherwise). An approve with no `--body` says `LGTM`. Prints `id=`,
+    /// `state=` and `url=`. With `--json` it prints the envelope and exits 0.
+    ///
+    /// Example: `playbook pr review submit 12 99 --event request-changes`
+    Submit {
+        /// PR number
+        pr: String,
+        /// Review id, as `pr review post` printed it
+        id: String,
+        /// How to submit the review
+        #[arg(long, value_enum)]
+        event: pr::review::submit::Event,
+        /// Text for the review
+        #[arg(long)]
+        body: Option<String>,
+        /// Print the envelope with id, state and url, and exit 0
+        #[arg(long)]
+        json: bool,
+    },
 }
 
 /// `playbook gate` subcommands.

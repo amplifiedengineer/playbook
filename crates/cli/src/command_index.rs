@@ -300,6 +300,8 @@ pub(crate) const META: &[Meta] = &[
     free("pr prepare"),
     free("pr reply"),
     free("pr review"),
+    free("pr review post"),
+    free("pr review submit"),
     free("pr review triage"),
     ro("pr rules"),
     ro("pr stack"),

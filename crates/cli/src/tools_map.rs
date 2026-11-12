@@ -135,6 +135,20 @@ pub const TOOLS: &[Tool] = &[
         "pr review triage",
     ),
     t(
+        "pr-review-post",
+        "pr review",
+        "post",
+        "",
+        "pr review post 1 --findings f",
+    ),
+    t(
+        "pr-review-submit",
+        "pr review",
+        "submit",
+        "",
+        "pr review submit 1 9 --event comment",
+    ),
+    t(
         "review-prepare",
         "review",
         "prepare",

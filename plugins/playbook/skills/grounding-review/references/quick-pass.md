@@ -172,7 +172,7 @@ Relay the swept report with each draft shown under its finding as a `Draft:` blo
 
 Build each inline comment from that finding's previewed `Draft:` block verbatim as the comment `body`, anchored to the finding's `file:line`. Post the previewed bodies as they are, never a rewording. Skip any finding marked `Report-only`.
 
-Build a JSON payload at `$REVIEW_JSON` (`/tmp/<org>/<repo>/quick-review-<number>.json`; the directory was created in Step 1):
+Build the findings file at `$REVIEW_JSON` (`/tmp/<org>/<repo>/quick-review-<number>.json`; the directory was created in Step 1):
 
 ```json
 {
@@ -186,7 +186,7 @@ Build a JSON payload at `$REVIEW_JSON` (`/tmp/<org>/<repo>/quick-review-<number>
 
 **No `body` field on the pending review.** The author chooses their own framing when they submit from the GitHub UI. (If the user explicitly supplies a body, include it.)
 
-Create the pending review:
+Create the pending review. Intent: pr-review-post. If the session's tool map lists it, run that command with `"$PR_NUMBER" --findings "$REVIEW_JSON" --json`; it creates the review, checks it is `PENDING` and returns `id` and `url`. Otherwise run:
 
 ```bash
 gh api -X POST /repos/$REPO/pulls/$PR_NUMBER/reviews --input "$REVIEW_JSON" --jq '{id, state, html_url}'
@@ -199,6 +199,8 @@ Confirm `state: PENDING` and capture the review id + html_url. Show the user the
 If `skip`, stop. The pending review stays for manual submit from the UI. Otherwise:
 
 **Q3**: "Add a comment for the review?" (optional free text, blank to skip). Leave `BODY` empty on a blank answer, except: on `approve` with a blank answer, default `BODY` to `LGTM`.
+
+Submit the review. Intent: pr-review-submit. If the session's tool map lists it, run that command with `"$PR_NUMBER" "$REVIEW_ID" --event <approve|comment|request-changes> --json`, adding `--body "$BODY"` when `BODY` is not empty (an approve with no body says `LGTM` by itself). Otherwise run:
 
 ```bash
 if [ -n "$BODY" ]; then

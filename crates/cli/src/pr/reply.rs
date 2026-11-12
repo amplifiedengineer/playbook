@@ -41,7 +41,7 @@ pub fn api_args(repo: &str, pr: &str, target: &Target, body_file: &Path) -> Vec<
     .collect()
 }
 
-fn digits(label: &str, value: &str) -> Result<(), String> {
+pub(crate) fn digits(label: &str, value: &str) -> Result<(), String> {
     if value.is_empty() || !value.chars().all(|c| c.is_ascii_digit()) {
         return Err(format!("{label} must be a number, got {value:?}"));
     }
