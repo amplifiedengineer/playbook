@@ -18,6 +18,7 @@ pub mod proc;
 pub mod repo;
 pub mod session;
 pub mod sqlite;
+pub mod sync_commands;
 #[doc(hidden)]
 pub mod testing;
 pub mod time;

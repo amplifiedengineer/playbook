@@ -79,7 +79,7 @@ Configure and support Claude Code from the command line.
 
 playbook installs hooks and a session launcher, shows the Agent Budget Dashboard, and helps with PRs, reviews, worktrees and session handoffs.
 
-Subcommands: `adr`, `agents`, `atlassian`, `cc`, `ccd`, `ci`, `code`, `commands`, `commit`, `completions`, `config`, `deps`, `doc`, `doctor`, `effort`, `eval`, `gate`, `gc`, `glossary`, `handoff`, `hooks`, `learn`, `manifest`, `memory`, `migrate`, `mode`, `path`, `plan`, `plans`, `plugin`, `pr`, `prose`, `review`, `route`, `sanitize`, `segment`, `sessions`, `settings`, `setup`, `skills`, `state`, `statusline`, `tools`, `trust`, `uninstall`, `upgrade`, `usage`, `version`, `watch`, `worktree`
+Subcommands: `adr`, `agents`, `atlassian`, `cc`, `ccd`, `ci`, `code`, `commands`, `commit`, `completions`, `config`, `deps`, `doc`, `doctor`, `effort`, `eval`, `gate`, `gc`, `glossary`, `handoff`, `hooks`, `learn`, `manifest`, `memory`, `migrate`, `mode`, `path`, `plan`, `plans`, `plugin`, `pr`, `prose`, `review`, `route`, `sanitize`, `segment`, `sessions`, `settings`, `setup`, `skills`, `state`, `statusline`, `sync`, `tools`, `trust`, `uninstall`, `upgrade`, `usage`, `version`, `watch`, `worktree`
 
 ### `playbook adr`
 
@@ -377,17 +377,7 @@ Settings come from tiers, highest first: repo, org, global, then the built-in de
 
 Example: `playbook config set pr.review.enabled true`
 
-Subcommands: `apply-proposal`, `export`, `get`, `import`, `list`, `set`
-
-### `playbook config apply-proposal`
-
-Apply the settings that `pbsync config pull` proposed
-
-Shows each proposed value next to your current global value and asks before it stores anything. Only keys that may sync are accepted, and each value is checked like `config set`. A project value still wins over the global one. Nothing changes unless you answer yes or pass `--yes`.
-
-Example: `playbook config apply-proposal --yes`
-
-- `--yes`: Apply without asking
+Subcommands: `export`, `get`, `import`, `list`, `set`
 
 ### `playbook config export`
 
@@ -1474,6 +1464,122 @@ Print the state rows, sorted by key
 Print the Claude Code status line
 
 Claude Code runs this to draw the line at the bottom of a session.
+
+### `playbook sync`
+
+Share usage between your machines, or turn that off
+
+Sync is off until you run `playbook sync enable`. It sends only the usage columns it lists to your own Turso database. Most names run the `pbsync` helper that ships next to playbook, and `playbook sync config` shares the settings that may sync. `pbsync` is a short name for the same commands.
+
+Example: `playbook sync status`
+
+Subcommands: `config`, `disable`, `enable`, `pull`, `purge`, `push`, `run`, `status`
+
+### `playbook sync config`
+
+Share the settings that may sync, or apply what other machines sent
+
+`push` sends your shared global values and `pull` writes a proposal that changes nothing. `apply` shows the proposal next to your values and applies it when you answer yes.
+
+Example: `playbook sync config apply`
+
+- `<ARGS>`: Words for the helper when no subcommand matches
+
+Subcommands: `apply`, `pull`, `push`
+
+### `playbook sync config apply`
+
+Apply the settings that `playbook sync config pull` proposed
+
+Shows each proposed value next to your current global value and asks before it stores anything. Only keys that may sync are accepted, and each value is checked like `config set`. A project value still wins over the global one. Nothing changes unless you answer yes or pass `--yes`.
+
+Example: `playbook sync config apply --yes`
+
+- `--yes`: Apply without asking
+
+### `playbook sync config pull`
+
+Write the settings other machines sent as a proposal
+
+Changes no setting. Run `playbook sync config apply` to review it.
+
+Example: `playbook sync config pull`
+
+- `<ARGS>`: Flags for the helper
+
+### `playbook sync config push`
+
+Send the shared global setting values
+
+Refreshes the key list and values files first.
+
+Example: `playbook sync config push`
+
+- `<ARGS>`: Flags for the helper
+
+### `playbook sync disable`
+
+Turn sync off and keep the local data
+
+Example: `playbook sync disable`
+
+- `<ARGS>`: Flags for the helper
+
+### `playbook sync enable`
+
+Turn sync on for the accounts you name
+
+Shows what will be sent and asks before it turns sync on. Pass `--url` for your Turso database, `--account` for each account to sync, and `--yes` to skip the question.
+
+Example: `playbook sync enable --url https://db.example.turso.io --account me`
+
+- `<ARGS>`: Flags for the helper, such as `--url`
+
+### `playbook sync pull`
+
+Copy the usage rows other machines sent
+
+Example: `playbook sync pull`
+
+- `<ARGS>`: Flags for the helper, such as `--force`
+
+### `playbook sync purge`
+
+Remove this machine's rows from the shared database
+
+Clears the local copies and turns sync off. `--all` removes every machine's rows and asks first.
+
+Example: `playbook sync purge --yes`
+
+- `<ARGS>`: Flags for the helper, such as `--all`
+
+### `playbook sync push`
+
+Send new usage rows to the shared database
+
+Example: `playbook sync push --force`
+
+- `<ARGS>`: Flags for the helper, such as `--force`
+
+### `playbook sync run`
+
+Push, then pull, then share the settings that may sync
+
+The old `pbsync sync`.
+
+Example: `playbook sync run`
+
+- `<ARGS>`: Flags for the helper, such as `--force`
+
+### `playbook sync status`
+
+Show whether sync is on and its local state
+
+Makes no network call.
+
+Example: `playbook sync status`
+
+- `<ARGS>`: Flags for the helper
 
 ### `playbook tools`
 

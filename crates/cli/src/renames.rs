@@ -27,6 +27,16 @@ pub const COMMAND_RENAMES: &[Rename] = &[
         extra: &["--json"],
     },
     Rename {
+        old: "config apply-proposal",
+        new: "sync config apply",
+        extra: &[],
+    },
+    Rename {
+        old: "config sync-files",
+        new: "sync config refresh",
+        extra: &[],
+    },
+    Rename {
         old: "pr review-triage",
         new: "pr review triage",
         extra: &[],

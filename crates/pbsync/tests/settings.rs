@@ -51,6 +51,7 @@ fn pb(dir: &std::path::Path, args: &[&str], stdin: &str, token: Option<&str>) ->
         data_dir: dir.to_path_buf(),
         env: &env,
         now: &|| NOW,
+        is_terminal: &|| false,
         input: &mut input,
         out: &mut out,
         err: &mut err,
@@ -97,7 +98,7 @@ fn enable_without_url_fails_with_the_fix() {
     // Assert
     assert_eq!(outcome.code, EXIT_USAGE);
     assert!(
-        outcome.stderr.contains("pbsync enable --url"),
+        outcome.stderr.contains("playbook sync enable --url"),
         "{}",
         outcome.stderr
     );
@@ -119,7 +120,7 @@ fn unknown_flags_are_errors_and_help_works() {
     assert_eq!(unknown.code, EXIT_USAGE);
     assert!(helps
         .iter()
-        .all(|h| h.code == EXIT_OK && h.stdout.contains("usage: pbsync")));
+        .all(|h| h.code == EXIT_OK && h.stdout.contains("usage: playbook sync")));
 }
 
 #[test]

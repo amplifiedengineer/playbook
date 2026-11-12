@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Igor Santos
 // SPDX-License-Identifier: Apache-2.0
 
-//! Integration tests for `playbook config apply-proposal`, spawning the real
+//! Integration tests for `playbook sync config apply`, spawning the real
 //! binary against a scratch `$HOME` so the prompt, the exit codes and the
 //! config store are proven end to end.
 
@@ -45,7 +45,7 @@ fn write_proposal(home: &Path, proposed: &Value) {
 
 fn apply(home: &Path, args: &[&str], answer: &str) -> Output {
     let mut child = Command::new(env!("CARGO_BIN_EXE_playbook"))
-        .args(["config", "apply-proposal"])
+        .args(["sync", "config", "apply"])
         .args(args)
         .current_dir(scratch_dir("cwd"))
         .env("HOME", home)
@@ -277,7 +277,7 @@ fn a_project_value_that_shadows_an_applied_key_gets_one_note() {
 
     // Act
     let out = Command::new(env!("CARGO_BIN_EXE_playbook"))
-        .args(["config", "apply-proposal", "--yes"])
+        .args(["sync", "config", "apply", "--yes"])
         .current_dir(&repo)
         .env("HOME", &home)
         .output()

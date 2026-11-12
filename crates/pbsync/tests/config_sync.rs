@@ -314,6 +314,6 @@ fn each_config_command_has_help() {
         a.pb(&["config", "pull", "--help"]),
     ];
     // Assert
-    assert!(outcomes[0].stdout.contains("pbsync config push"));
-    assert!(outcomes[1].stdout.contains("pbsync config pull"));
+    assert!(outcomes[0].stdout.contains("playbook sync config push"));
+    assert!(outcomes[1].stdout.contains("playbook sync config pull"));
 }

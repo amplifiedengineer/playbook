@@ -3,6 +3,7 @@
 
 //! The `pbsync` command line.
 
+use std::io::IsTerminal;
 use std::process::ExitCode;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -23,6 +24,7 @@ fn main() -> ExitCode {
         data_dir: playbook_data::data_dir(),
         env: &env,
         now: &unix_now,
+        is_terminal: &|| std::io::stderr().is_terminal(),
         input: &mut std::io::stdin().lock(),
         out: &mut std::io::stdout(),
         err: &mut std::io::stderr(),

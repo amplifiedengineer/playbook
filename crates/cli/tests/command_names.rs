@@ -6,6 +6,7 @@
 //! `LEGACY_HYPHENATED`; an entry whose command is gone must be removed.
 
 use clap::Command;
+use std::path::Path;
 
 const MAX_DEPTH: usize = 4;
 
@@ -21,8 +22,6 @@ const LEGACY_HYPHENATED: &[&str] = &[
     "watch dry-run",
     "watch install-service",
     "watch uninstall-service",
-    "config apply-proposal",
-    "config sync-files",
 ];
 
 /// Paths under `cmd` (root excluded) that end in a hyphenated segment outside
@@ -146,5 +145,73 @@ fn legacy_list_has_no_stale_entries() {
 
     // Assert
     assert!(found.is_empty(), "stale legacy entries: {found:?}");
-    assert_eq!(LEGACY_HYPHENATED.len(), 12);
+    assert_eq!(LEGACY_HYPHENATED.len(), 10);
+}
+
+/// Helpers users never run.
+const HELPER_BINARIES: &[&str] = &["pbdoc", "pbsync"];
+/// Short aliases of a `playbook` command.
+const ALIAS_BINARIES: &[&str] = &["pbtop"];
+/// Development tools that are not shipped.
+const DEV_BINARIES: &[&str] = &["code-bench"];
+const MAIN_BINARY: &str = "playbook";
+const BIN_TABLE: &str = "[[bin]]";
+
+/// The `name` of each `[[bin]]` table in `manifest`.
+fn bin_names(manifest: &str) -> Vec<String> {
+    let mut names = Vec::new();
+    let mut in_bin = false;
+    for line in manifest.lines().map(str::trim) {
+        if line.starts_with('[') {
+            in_bin = line == BIN_TABLE;
+        } else if let (true, Some(value)) = (in_bin, line.strip_prefix("name")) {
+            let value = value.trim_start().trim_start_matches('=').trim();
+            names.push(value.trim_matches('"').to_string());
+        }
+    }
+    names
+}
+
+/// Binaries in `manifest` that are neither `playbook` nor a listed helper,
+/// short alias or development tool.
+fn unlisted_bins(manifest: &str) -> Vec<String> {
+    bin_names(manifest)
+        .into_iter()
+        .filter(|name| {
+            name != MAIN_BINARY
+                && ![HELPER_BINARIES, ALIAS_BINARIES, DEV_BINARIES]
+                    .iter()
+                    .any(|list| list.contains(&name.as_str()))
+        })
+        .collect()
+}
+
+#[test]
+fn every_binary_in_the_workspace_is_a_helper_an_alias_or_a_dev_tool() {
+    // Arrange
+    let crates = Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
+    let mut manifests: Vec<String> = std::fs::read_dir(crates)
+        .expect("crates folder")
+        .flatten()
+        .filter_map(|entry| std::fs::read_to_string(entry.path().join("Cargo.toml")).ok())
+        .collect();
+    manifests.sort();
+
+    // Act
+    let found: Vec<String> = manifests.iter().flat_map(|m| unlisted_bins(m)).collect();
+
+    // Assert
+    assert!(found.is_empty(), "unlisted binaries: {found:?}");
+}
+
+#[test]
+fn a_new_pb_binary_in_a_fixture_manifest_is_reported() {
+    // Arrange
+    let manifest = "[package]\nname = \"x\"\n\n[[bin]]\nname = \"pbnew\"\npath = \"src/main.rs\"\n\n[[bin]]\nname = \"pbsync\"\n";
+
+    // Act
+    let found = unlisted_bins(manifest);
+
+    // Assert
+    assert_eq!(found, vec!["pbnew".to_string()]);
 }

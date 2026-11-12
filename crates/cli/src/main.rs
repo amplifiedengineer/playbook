@@ -1677,6 +1677,7 @@ fn real_main() {
                 }
             }
         }
+        Command::Sync { sub } => std::process::exit(playbook::sync::run(sub)),
         Command::State { sub } => {
             let root = common::paths::playbook_root_from(&common::home_dir());
             match sub {
@@ -1835,31 +1836,6 @@ fn real_main() {
                         },
                         Err(err) => {
                             eprintln!("config import: {err}");
-                            std::process::exit(1);
-                        }
-                    }
-                }
-                ConfigCommand::SyncFiles => match config::sync_files::write_sync_files(&home) {
-                    Ok(()) => println!("config sync-files: key list and values refreshed"),
-                    Err(err) => {
-                        eprintln!("config sync-files: {err}");
-                        std::process::exit(1);
-                    }
-                },
-                ConfigCommand::ApplyProposal { yes } => {
-                    let stdin = std::io::stdin();
-                    let (mut input, mut out, mut err) =
-                        (stdin.lock(), std::io::stdout(), std::io::stderr());
-                    let mut streams = config::proposal::Streams {
-                        input: &mut input,
-                        out: &mut out,
-                        err: &mut err,
-                    };
-                    match config::proposal::run(&home, repo_slug, yes, &mut streams) {
-                        Ok(0) => {}
-                        Ok(code) => std::process::exit(code),
-                        Err(err) => {
-                            eprintln!("config apply-proposal: {err}");
                             std::process::exit(1);
                         }
                     }

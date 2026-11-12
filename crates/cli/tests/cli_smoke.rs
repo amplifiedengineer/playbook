@@ -38,6 +38,19 @@ const PANIC_MARKERS: [&str; 3] = ["panicked at", "RUST_BACKTRACE", "thread 'main
 /// Commands that run until stopped, so a smoke run would hit the timeout.
 const LONG_RUNNING: [(&str, &str); 1] = [("usage collect", "serves OTLP until stopped")];
 
+/// The `playbook sync` words that run the `pbsync` helper. Whether one sits
+/// beside the test binary varies, so `sync_cli.rs` covers them with a fake.
+/// `sync config` hands its `--help` to the helper too.
+fn helper_backed() -> BTreeSet<String> {
+    playbook_common::sync_commands::FORWARDED
+        .iter()
+        .map(|name| format!("sync {name}"))
+        .chain(std::iter::once(SYNC_CONFIG.to_string()))
+        .collect()
+}
+
+const SYNC_CONFIG: &str = "sync config";
+
 static COUNTER: AtomicU64 = AtomicU64::new(0);
 
 // ---------------------------------------------------------------- environment
@@ -519,8 +532,8 @@ fn table() -> Vec<Case> {
         case("config list", &["config", "list"]).out("pr.review.enabled").plain(),
         case("config export", &["config", "export"]).out("\"version\": 1"),
         case("config import", &["config", "import", "{ROOT}/cfg.json"]).file( "cfg.json", r#"{"version":1,"global":{},"orgs":{},"repos":{}}"#, ).writes(),
-        case("config sync-files", &["config", "sync-files"]).out("refreshed").writes(),
-        case("config apply-proposal", &["config", "apply-proposal"]).out("No sync proposal to apply."),
+        case("sync config refresh", &["sync", "config", "refresh"]).out("refreshed").writes(),
+        case("sync config apply", &["sync", "config", "apply"]).out("No sync proposal to apply."),
         case("state list", &["state", "list"]).writes(),
         case( "effort resolve", &["effort", "resolve", "agent", "reviewer"], ).out("no such component"),
         case("effort suggest", &["effort", "suggest"]).code(1).err("no plugin root"),
@@ -739,7 +752,12 @@ fn all_paths() -> Vec<Vec<String>> {
 fn every_command_has_a_smoke_entry() {
     let table = table();
     let covered: BTreeSet<&str> = table.iter().map(|c| c.path.as_str()).collect();
-    let skipped: BTreeSet<&str> = LONG_RUNNING.iter().map(|(p, _)| *p).collect();
+    let backed = helper_backed();
+    let skipped: BTreeSet<&str> = LONG_RUNNING
+        .iter()
+        .map(|(p, _)| *p)
+        .chain(backed.iter().map(String::as_str))
+        .collect();
     let all = leaves();
     let missing: Vec<&String> = all
         .iter()
@@ -766,7 +784,8 @@ fn every_command_prints_help_and_exits_zero_with_no_stderr() {
     let paths = all_paths();
     let top = vec!["--help".to_string()];
     let mut runs = vec![top];
-    for p in &paths {
+    let backed = helper_backed();
+    for p in paths.iter().filter(|p| !backed.contains(&p.join(" "))) {
         let mut args = p.clone();
         args.push("--help".to_string());
         runs.push(args);

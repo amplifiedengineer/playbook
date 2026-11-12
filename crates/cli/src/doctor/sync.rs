@@ -6,18 +6,18 @@
 //! `pbsync`: it reads the settings file into a private struct and `usage.db`
 //! read-only. The row never holds the token or the URL.
 
-use super::check::{on_path_in, Env, Level, Row};
+use super::check::{Env, Level, Row};
 use playbook_store::OptionalExtension;
 use serde::Deserialize;
 use std::path::Path;
 
 const SETTINGS_FILE: &str = "sync.json";
-const PBSYNC_BINARY: &str = "pbsync";
 const DEFAULT_TOKEN_ENV: &str = "PBSYNC_TOKEN";
 const DEFAULT_INTERVAL_SECONDS: i64 = 900;
 const ERROR_LIMIT: usize = 120;
-const FIX_PUSH: &str = "run: pbsync push";
-const FIX_STATUS: &str = "run: pbsync status";
+const FIX_PUSH: &str = "run: playbook sync push";
+const FIX_STATUS: &str = "run: playbook sync status";
+const FIX_UPDATE: &str = "run: playbook update";
 const KEY_LAST_SUCCESS: &str = "last_success";
 const KEY_LAST_ERROR: &str = "last_error";
 const KEY_FAILURES: &str = "failures";
@@ -67,7 +67,7 @@ struct Inputs<'a> {
 }
 
 pub(super) fn rows(env: &Env) -> Vec<Row> {
-    let pbsync_found = pbsync_found(env);
+    let pbsync_found = crate::sync::helper_path(Some(&env.path_var)).is_some();
     let token_set = |name: &str| std::env::var_os(name).is_some_and(|v| !v.is_empty());
     let inputs = Inputs {
         now: crate::common::time::now_secs(),
@@ -77,14 +77,6 @@ pub(super) fn rows(env: &Env) -> Vec<Row> {
     row_for(&crate::usage::data::data_dir(&env.home), &inputs)
         .into_iter()
         .collect()
-}
-
-fn pbsync_found(env: &Env) -> bool {
-    let beside = std::env::current_exe()
-        .ok()
-        .and_then(|exe| exe.parent().map(|dir| dir.join(PBSYNC_BINARY)))
-        .is_some_and(|path| path.is_file());
-    beside || on_path_in(&env.path_var, PBSYNC_BINARY).is_some()
 }
 
 fn row_for(data_dir: &Path, inputs: &Inputs) -> Option<Row> {
@@ -119,7 +111,7 @@ fn warn(message: String) -> Row {
 
 fn enabled_row(data_dir: &Path, settings: &Settings, inputs: &Inputs) -> Row {
     if !inputs.pbsync_found {
-        return warn("sync: pbsync is missing".to_string()).hint("install pbsync next to playbook");
+        return warn("sync: pbsync is missing".to_string()).hint(FIX_UPDATE);
     }
     let local = match read_local(&data_dir.join(crate::usage::data::USAGE_DB_FILE), settings) {
         Ok(Some(local)) => local,
@@ -143,7 +135,7 @@ fn enabled_row(data_dir: &Path, settings: &Settings, inputs: &Inputs) -> Row {
     let message = format!("sync: on, {since}, {} rows pending", local.pending);
     if !(inputs.token_set)(&settings.token_env) {
         return Row::new("-", Level::Fail, message).hint(format!(
-            "set {}, then run: pbsync status",
+            "set {}, then run: playbook sync status",
             settings.token_env
         ));
     }
@@ -441,6 +433,50 @@ mod tests {
     }
 
     #[test]
+    fn the_fix_text_names_playbook_sync() {
+        // Arrange
+        let dir = data_dir("sync-fix-text");
+        write_settings(&dir, true, "");
+        make_db(
+            &dir,
+            &[(KEY_FAILURES, "2"), (KEY_LAST_ERROR, "boom")],
+            0,
+            &[],
+        );
+
+        // Act
+        let failing = probe(&dir, true, true).unwrap();
+        let stale = {
+            let dir = data_dir("sync-fix-stale");
+            write_settings(&dir, true, "");
+            make_db(
+                &dir,
+                &[(KEY_LAST_SUCCESS, &last_success(INTERVAL * 3))],
+                0,
+                &[],
+            );
+            probe(&dir, true, true).unwrap()
+        };
+
+        // Assert
+        assert_eq!(failing.hint.as_deref(), Some("run: playbook sync status"));
+        assert_eq!(stale.hint.as_deref(), Some("run: playbook sync push"));
+    }
+
+    #[test]
+    fn a_missing_helper_hint_says_to_run_playbook_update() {
+        // Arrange
+        let dir = data_dir("sync-missing-hint");
+        write_settings(&dir, true, "");
+
+        // Act
+        let row = probe(&dir, true, false).unwrap();
+
+        // Assert
+        assert_eq!(row.hint.as_deref(), Some("run: playbook update"));
+    }
+
+    #[test]
     fn an_unset_token_fails_naming_the_variable_only() {
         // Arrange
         let dir = data_dir("sync-token");
@@ -455,7 +491,7 @@ mod tests {
         assert_eq!(unset.level, Level::Fail);
         assert_eq!(
             unset.hint.as_deref(),
-            Some("set PB_TEST_TOKEN, then run: pbsync status")
+            Some("set PB_TEST_TOKEN, then run: playbook sync status")
         );
         assert_eq!(set.level, Level::Pass);
     }

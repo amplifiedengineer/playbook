@@ -209,7 +209,6 @@ pub(crate) const META: &[Meta] = &[
     free("config")
         .purpose("Read and change playbook settings in the repo, org or global tier")
         .for_users(),
-    user("config apply-proposal"),
     ro("config export"),
     ro("config get"),
     user("config import"),
@@ -334,6 +333,18 @@ pub(crate) const META: &[Meta] = &[
     ro("state").for_agents(),
     ro("state list"),
     ro("statusline").for_agents(),
+    user("sync").for_users(),
+    user("sync config"),
+    user("sync config apply"),
+    user("sync config pull"),
+    user("sync config push"),
+    user("sync disable"),
+    user("sync enable"),
+    user("sync pull"),
+    user("sync purge"),
+    user("sync push"),
+    user("sync run"),
+    ro("sync status"),
     ro("tools").for_agents(),
     ro("tools map"),
     user("trust").for_users(),
@@ -931,6 +942,7 @@ mod tests {
         "effort",
         "mode",
         "memory",
+        "sync",
     ];
     const AGENT: &[&str] = &[
         "doc",

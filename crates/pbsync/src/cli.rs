@@ -36,25 +36,30 @@ const READ_STATE_SQL: &str = "SELECT value FROM sync_state WHERE key = ?1";
 const READ_MARK_SQL: &str = "SELECT rowid_mark FROM sync_watermarks WHERE table_name = ?1";
 
 const TOP_USAGE: &str =
-    "usage: pbsync <enable | disable | status | push | pull | sync | config | purge> [--help]
+    "usage: playbook sync <enable | disable | status | push | pull | run | config | purge> [--help]
        pbsync --version";
 const ENABLE_USAGE: &str =
-    "usage: pbsync enable --url URL [--account KEY]... [--token-env NAME] [--yes]\n\
+    "usage: playbook sync enable --url URL [--account KEY]... [--token-env NAME] [--yes]\n\
   --url URL         the Turso database URL (https or libsql; http only for localhost)\n\
   --account KEY     a local account key to sync, repeatable; with none, nothing syncs\n\
   --token-env NAME  the environment variable that holds the token (default PBSYNC_TOKEN)\n\
   --yes             skip the confirmation question";
 const DISABLE_USAGE: &str =
-    "usage: pbsync disable\nTurns sync off. Local data and the account list are kept.";
+    "usage: playbook sync disable\nTurns sync off. Local data and the account list are kept.";
 const STATUS_USAGE: &str =
-    "usage: pbsync status\nShows whether sync is on, and its local state. Makes no network call.";
-const MISSING_URL: &str = "missing --url: run `pbsync enable --url https://YOUR-DB.turso.io`";
+    "usage: playbook sync status\nShows whether sync is on, and its local state. Makes no network call.";
+const OLD_SYNC_NOTICE: &str =
+    "pbsync sync is renamed, use: playbook sync run (the old name is removed in 1.0.0)";
+const MISSING_URL: &str =
+    "missing --url: run `playbook sync enable --url https://YOUR-DB.turso.io`";
 
 /// Everything a command touches, injected so tests need no real home or clock.
 pub struct Context<'a> {
     pub data_dir: PathBuf,
     pub env: &'a dyn Fn(&str) -> Option<String>,
     pub now: &'a dyn Fn() -> i64,
+    /// Whether stderr is a terminal, which decides if a renamed verb says so.
+    pub is_terminal: &'a dyn Fn() -> bool,
     pub input: &'a mut dyn BufRead,
     pub out: &'a mut dyn Write,
     pub err: &'a mut dyn Write,
@@ -89,7 +94,13 @@ pub fn run(args: &[String], ctx: &mut Context) -> u8 {
         "status" => no_flags(rest, STATUS_USAGE, ctx, status),
         "push" => sync_cmd::run(Kind::Push, rest, ctx),
         "pull" => sync_cmd::run(Kind::Pull, rest, ctx),
-        "sync" => sync_cmd::run(Kind::Both, rest, ctx),
+        "run" => sync_cmd::run(Kind::Both, rest, ctx),
+        "sync" => {
+            if (ctx.is_terminal)() {
+                let _ = writeln!(ctx.err, "{OLD_SYNC_NOTICE}");
+            }
+            sync_cmd::run(Kind::Both, rest, ctx)
+        }
         "config" => config_cmd::run(rest, ctx),
         "purge" => purge::run(rest, ctx),
         other => ctx.fail(EXIT_USAGE, &format!("unknown command {other}\n{TOP_USAGE}")),
@@ -209,7 +220,7 @@ fn show_consent(ctx: &mut Context, args: &EnableArgs) {
     ctx.say("account and repo leave as salted 128-bit hashes.");
     ctx.say("Never sent: session id, agent, branch, path or raw email.");
     if args.accounts.is_empty() {
-        ctx.say("Accounts that will sync: none. Nothing will sync until you run `pbsync enable` again with --account KEY.");
+        ctx.say("Accounts that will sync: none. Nothing will sync until you run `playbook sync enable` again with --account KEY.");
     } else {
         ctx.say(&format!(
             "Accounts that will sync: {}",

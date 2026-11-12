@@ -14,9 +14,10 @@ use harness::{Machine, Remote, NOW, SENTINEL};
 use local::ACCOUNT;
 use pbsync::cli::{EXIT_FAILED, EXIT_OK, EXIT_USAGE};
 use pbsync::push::backoff_seconds;
+use playbook_common::sync_commands::FORWARDED;
 
 const OTHER_ACCOUNT: &str = "other@example.com";
-const NETWORK_COMMANDS: [&str; 3] = ["push", "pull", "sync"];
+const NETWORK_COMMANDS: [&str; 4] = ["push", "pull", "run", "sync"];
 const SHARED_ROWS: &str = "SELECT COUNT(*) FROM shared_usage_events";
 
 fn machine_with_rows(test: &str, id: &str, rows: usize) -> Machine {
@@ -160,7 +161,7 @@ fn a_salt_that_differs_from_the_remote_stops_with_the_purge_message() {
     let outcome = b.pb(&["sync"]);
     // Assert
     assert_eq!(outcome.code, EXIT_FAILED);
-    assert!(outcome.stderr.contains("pbsync purge"));
+    assert!(outcome.stderr.contains("playbook sync purge"));
     assert_eq!(remote.count(SHARED_ROWS), 1);
 }
 
@@ -232,13 +233,103 @@ fn a_missing_machine_id_or_usage_db_is_a_named_error() {
 fn every_command_has_help_and_rejects_unknown_flags() {
     // Arrange
     let machine = Machine::new("help", "m1");
-    for command in ["push", "pull", "sync", "purge"] {
+    for command in ["push", "pull", "run", "purge"] {
         // Act
         let help = machine.pb(&[command, "--help"]);
         let unknown = machine.pb(&[command, "--bogus"]);
         // Assert
         assert_eq!(help.code, EXIT_OK);
-        assert!(help.stdout.contains(&format!("usage: pbsync {command}")));
+        assert!(help
+            .stdout
+            .contains(&format!("usage: playbook sync {command}")));
         assert_eq!(unknown.code, EXIT_USAGE);
     }
+}
+
+#[test]
+fn every_forwarded_name_is_accepted_with_help_and_says_playbook_sync() {
+    // Arrange
+    assert!(!FORWARDED.is_empty(), "the forwarded list is empty");
+    let machine = Machine::new("forwarded-help", "m1");
+    for name in FORWARDED {
+        let mut args: Vec<&str> = name.split(' ').collect();
+        args.push("--help");
+
+        // Act
+        let help = machine.pb(&args);
+
+        // Assert
+        assert_eq!(help.code, EXIT_OK, "{name}: {}", help.stderr);
+        assert!(
+            help.stdout
+                .contains(&format!("usage: playbook sync {name}")),
+            "{name}: {}",
+            help.stdout
+        );
+    }
+}
+
+#[test]
+fn the_top_usage_lists_the_forwarded_verbs_and_leaves_sync_out() {
+    // Arrange
+    let machine = Machine::new("top-usage", "m1");
+    let verbs: std::collections::BTreeSet<&str> = FORWARDED
+        .iter()
+        .filter_map(|name| name.split(' ').next())
+        .collect();
+
+    // Act
+    let outcome = machine.pb(&[]);
+
+    // Assert
+    assert_eq!(outcome.code, EXIT_USAGE);
+    let line = outcome
+        .stderr
+        .lines()
+        .find(|l| l.contains("usage:"))
+        .expect("a usage line");
+    let listed = line
+        .split_once('<')
+        .and_then(|(_, rest)| rest.split_once('>'))
+        .map(|(list, _)| list.split(" | ").collect::<std::collections::BTreeSet<_>>())
+        .expect("a verb list");
+    assert_eq!(listed, verbs, "{line}");
+    assert!(line.contains("playbook sync"), "{line}");
+}
+
+#[test]
+fn the_old_sync_verb_still_runs_and_names_its_new_spelling_on_a_terminal_only() {
+    for (is_terminal, notice) in [(true, true), (false, false)] {
+        // Arrange
+        let machine = machine_with_rows("sync-notice", "m1", 1);
+
+        // Act
+        let outcome = machine.pb_terminal(&["sync"], is_terminal);
+
+        // Assert
+        assert_eq!(outcome.code, EXIT_FAILED, "{}", outcome.stderr);
+        assert!(outcome.stderr.contains("sync is off"));
+        assert_eq!(
+            outcome.stderr.contains("playbook sync run"),
+            notice,
+            "terminal {is_terminal}: {}",
+            outcome.stderr
+        );
+    }
+}
+
+#[test]
+fn run_pushes_then_pulls_like_the_old_sync_verb() {
+    // Arrange
+    let remote = Remote::start();
+    let machine = machine_with_rows("run-verb", "m1", 2);
+    machine.enable(&remote.url, &[ACCOUNT]);
+
+    // Act
+    let outcome = machine.pb(&["run"]);
+
+    // Assert
+    assert_eq!(outcome.code, EXIT_OK, "{}", outcome.stderr);
+    assert_eq!(remote.count(SHARED_ROWS), 2);
+    assert!(!outcome.stderr.contains("playbook sync run"));
 }

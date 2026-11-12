@@ -107,7 +107,7 @@ fn purge_all_asks_first_then_removes_every_row_and_the_salt() {
     assert_eq!(confirmed.code, EXIT_OK, "{}", confirmed.stderr);
     assert_eq!((rows_after_yes, salts_after_yes), (0, 0));
     assert_eq!(stale.code, EXIT_FAILED);
-    assert!(stale.stderr.contains("pbsync purge"));
+    assert!(stale.stderr.contains("playbook sync purge"));
 }
 
 #[test]

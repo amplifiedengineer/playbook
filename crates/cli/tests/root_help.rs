@@ -33,6 +33,7 @@ const USER: &[&str] = &[
     "effort",
     "mode",
     "memory",
+    "sync",
 ];
 const AGENT: &[&str] = &[
     "doc",

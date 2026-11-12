@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Igor Santos
 // SPDX-License-Identifier: Apache-2.0
 
-//! `pbsync config push` and `pbsync config pull`, and the config step of `pbsync sync`.
+//! `pbsync config push` and `pbsync config pull`, and the config step of `pbsync run`.
 
 use crate::cli::{Context, EXIT_FAILED, EXIT_OK, EXIT_USAGE};
 use crate::config_sync::{pull_config, push_config};
@@ -11,10 +11,10 @@ use crate::settings::{require_enabled, Settings};
 use crate::tables::SHARED_TABLES;
 use crate::transport::Transport;
 
-const CONFIG_USAGE: &str = "usage: pbsync config <push | pull> [--help]";
-const PUSH_USAGE: &str = "usage: pbsync config push\n\
+const CONFIG_USAGE: &str = "usage: playbook sync config <push | pull> [--help]";
+const PUSH_USAGE: &str = "usage: playbook sync config push\n\
   Sends the shareable config values listed in sync-keys.json.";
-const PULL_USAGE: &str = "usage: pbsync config pull\n\
+const PULL_USAGE: &str = "usage: playbook sync config pull\n\
   Writes config-proposal.json with the values other machines hold. Changes no config.";
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -85,7 +85,7 @@ fn run_step(
     }
 }
 
-/// The config step of `pbsync sync`, silent when nothing happened. A failure is a warning: the row sync stands.
+/// The config step of `pbsync run`, silent when nothing happened. A failure is a warning: the row sync stands.
 pub(crate) fn sync_config(transport: &dyn Transport, machine: &str, ctx: &mut Context) {
     for step in [Step::Push, Step::Pull] {
         match run_step(step, transport, machine, ctx) {

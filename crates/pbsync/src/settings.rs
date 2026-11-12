@@ -88,7 +88,7 @@ impl fmt::Display for SettingsError {
             ),
             Self::Io { path, reason } => write!(f, "cannot access {}: {reason}", path.display()),
             Self::Disabled => f.write_str(
-                "sync is off: run `pbsync enable --url URL` first; nothing was sent",
+                "sync is off: run `playbook sync enable --url URL` first; nothing was sent",
             ),
         }
     }

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! Every row of `KEY_RENAMES` through the real binary: `config set`, `get`,
-//! `import` and `apply-proposal` accept the old name and act on the new one.
+//! `import` and `sync config apply` accept the old name and act on the new one.
 //! The tests iterate the table, so a rename added later is covered without a
 //! new test. The cases that need a pseudo terminal or a seeded old row live
 //! beside the code as unit tests. Each test uses a scratch `$HOME`.
@@ -152,7 +152,7 @@ fn apply_proposal_with_an_old_name_stores_the_new_name() {
         fs::write(&path, doc.to_string()).unwrap();
 
         // Act
-        let out = playbook(&home, &["config", "apply-proposal", "--yes"]);
+        let out = playbook(&home, &["sync", "config", "apply", "--yes"]);
 
         // Assert
         assert!(out.status.success(), "{}: {}", row.old, text(&out.stderr));

@@ -917,6 +917,13 @@ jobs:
           path: downstream/tap
           persist-credentials: false
 
+      # The caveats check below is a script of this repository.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: source
+          sparse-checkout: scripts/check-formula-caveats.sh
+          persist-credentials: false
+
       # The bump script reads the release's SHA256SUMS. A dry run has no
       # published release, so it reads a stand-in whose checksums are
       # placeholders.
@@ -948,6 +955,9 @@ jobs:
           # pbsync resource to install the helper next to playbook.
           grep -q '^ *resource "pbsync"' downstream/tap/Formula/playbook.rb \
             || { echo "::error::The tap's Formula/playbook.rb has no resource \"pbsync\"." >&2; exit 1; }
+          # The caveats must tell users that usage sync starts with
+          # `playbook sync enable`, not with the helper's own name.
+          source/scripts/check-formula-caveats.sh downstream/tap/Formula/playbook.rb
           {
             echo "playbook=$(base64 -w0 < downstream/tap/Formula/playbook.rb)"
             echo "pbtop=$(base64 -w0 < downstream/tap/Formula/pbtop.rb)"

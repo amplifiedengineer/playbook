@@ -99,6 +99,22 @@ impl Machine {
         stdin: &str,
         token: Option<&str>,
     ) -> Outcome {
+        self.pb_on(args, now, stdin, token, false)
+    }
+
+    /// Like `pb`, with stderr reported as a terminal or not.
+    pub(crate) fn pb_terminal(&self, args: &[&str], is_terminal: bool) -> Outcome {
+        self.pb_on(args, NOW, "", Some(SENTINEL), is_terminal)
+    }
+
+    fn pb_on(
+        &self,
+        args: &[&str],
+        now: i64,
+        stdin: &str,
+        token: Option<&str>,
+        is_terminal: bool,
+    ) -> Outcome {
         let args: Vec<String> = args.iter().map(|a| (*a).to_string()).collect();
         let env = |name: &str| {
             (name == TOKEN_ENV)
@@ -112,6 +128,7 @@ impl Machine {
             data_dir: self.dir.clone(),
             env: &env,
             now: &clock,
+            is_terminal: &move || is_terminal,
             input: &mut input,
             out: &mut out,
             err: &mut err,

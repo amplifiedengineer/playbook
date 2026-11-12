@@ -31,7 +31,7 @@ const CLEAR_LOCAL_SQL: &str = "BEGIN;
 const DELETE_SALT_SQL: &str = "DELETE FROM shared_meta WHERE key = ?";
 const MACHINE_COLUMN: &str = "machine";
 
-const USAGE: &str = "usage: pbsync purge [--all] [--account KEY] [--yes]\n\
+const USAGE: &str = "usage: playbook sync purge [--all] [--account KEY] [--yes]\n\
   Removes this machine's rows from the remote, clears the local copies and turns sync off.\n\
   --account KEY  remove only the rows of that account\n\
   --all          remove every machine's rows and the shared salt (asks first)\n\

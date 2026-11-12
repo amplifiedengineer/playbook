@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Igor Santos
 // SPDX-License-Identifier: Apache-2.0
 
-//! The `pbsync` commands that talk to the remote: `push`, `pull` and `sync`.
+//! The `pbsync` commands that talk to the remote: `push`, `pull` and `run`.
 
 use playbook_store::{params, Connection};
 
@@ -22,16 +22,16 @@ use crate::transport::HttpTransport;
 const KEY_LAST_ATTEMPT: &str = "last_attempt";
 const BACKING_OFF: &str = "backing off after recent failures: use --force to try now";
 const SALT_MISMATCH: &str =
-    "the shared salt changed on the remote: run `pbsync purge` on this machine, then enable sync again";
+    "the shared salt changed on the remote: run `playbook sync purge` on this machine, then enable sync again";
 const RESET_WATERMARK_SQL: &str = "DELETE FROM sync_watermarks WHERE table_name = ?1";
 
-const PUSH_USAGE: &str = "usage: pbsync push [--force]\n\
+const PUSH_USAGE: &str = "usage: playbook sync push [--force]\n\
   Sends new usage rows for the allowed accounts.\n\
   --force  run even while backing off after failures";
-const PULL_USAGE: &str = "usage: pbsync pull [--force]\n\
+const PULL_USAGE: &str = "usage: playbook sync pull [--force]\n\
   Copies the usage rows the other machines sent.\n\
   --force  run even while backing off after failures";
-const SYNC_USAGE: &str = "usage: pbsync sync [--force]\n\
+const SYNC_USAGE: &str = "usage: playbook sync run [--force]\n\
   Runs push, then pull, then the shared config push and pull.\n\
   --force  run even while backing off after failures";
 

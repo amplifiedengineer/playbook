@@ -647,6 +647,43 @@ mod tests {
         }
     }
 
+    /// The paths of every command under `sync`, hidden ones included.
+    fn sync_leaves() -> Vec<String> {
+        fn walk(cmd: &clap::Command, path: &str, out: &mut Vec<String>) {
+            let subs: Vec<&clap::Command> = cmd
+                .get_subcommands()
+                .filter(|sub| sub.get_name() != "help")
+                .collect();
+            if subs.is_empty() {
+                out.push(path.to_string());
+            }
+            for sub in subs {
+                walk(sub, &format!("{path} {}", sub.get_name()), out);
+            }
+        }
+        let root = crate::parse::command();
+        let sync = root.find_subcommand("sync").expect("`sync` is a command");
+        let mut leaves = Vec::new();
+        walk(sync, "sync", &mut leaves);
+        leaves
+    }
+
+    #[test]
+    fn every_sync_leaf_is_refused_after_a_budget_stop() {
+        // Arrange
+        let leaves = sync_leaves();
+
+        // Act
+        let allowed: Vec<&String> = leaves
+            .iter()
+            .filter(|leaf| closing(&format!("playbook {leaf}")))
+            .collect();
+
+        // Assert
+        assert!(!leaves.is_empty(), "`sync` has no leaves");
+        assert!(allowed.is_empty(), "closing steps: {allowed:?}");
+    }
+
     #[test]
     fn only_the_delivery_skills_and_their_dependencies_are_closing_skills() {
         for skill in [

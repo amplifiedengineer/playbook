@@ -167,6 +167,27 @@ const TRIAGE_ROWS: [(&str, &str); 3] = [
     ("eval review-triage", "eval triage"),
 ];
 
+/// The sync rows this table must carry, as (old, new).
+const SYNC_ROWS: [(&str, &str); 2] = [
+    ("config apply-proposal", "sync config apply"),
+    ("config sync-files", "sync config refresh"),
+];
+
+#[test]
+fn the_config_sync_commands_are_alias_rows() {
+    // Arrange
+    let table = playbook::renames::COMMAND_RENAMES;
+
+    for (old, new) in SYNC_ROWS {
+        // Act
+        let row = table.iter().find(|row| row.old == old);
+
+        // Assert
+        let row = row.unwrap_or_else(|| panic!("`{old}` has no alias row"));
+        assert_eq!(row.new, new);
+    }
+}
+
 /// Arguments a row needs to run offline. Most rows need none.
 fn sample_tail(old: &str) -> &'static [&'static str] {
     match old {

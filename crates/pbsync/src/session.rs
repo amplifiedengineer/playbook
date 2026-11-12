@@ -16,7 +16,7 @@ use crate::transport::HttpTransport;
 const USAGE_DB_FILE: &str = "usage.db";
 const BUSY_WAIT: Duration = Duration::from_secs(5);
 const READ_MACHINE_SQL: &str = "SELECT machine_id FROM machine WHERE id = 1";
-const NO_URL: &str = "sync has no url: run `pbsync enable --url URL`";
+const NO_URL: &str = "sync has no url: run `playbook sync enable --url URL`";
 pub const NO_MACHINE: &str =
     "usage.db has no machine id yet: run any playbook command, then try again";
 pub const NO_USAGE_DB: &str =

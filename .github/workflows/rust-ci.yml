@@ -311,6 +311,21 @@ jobs:
               ;;
           esac
 
+      # The playbook sync alias test runs the real pbsync next to playbook and
+      # reads it from PBSYNC_BIN, for the same reason.
+      - name: Build pbsync for the playbook tests
+        if: env.LANE == 'true'
+        env:
+          PKGS: ${{ needs.changes.outputs.pkgs || '--workspace' }}
+        run: |
+          set -euo pipefail
+          case " $PKGS " in
+            *" --workspace "*|*" -p playbook "*|*" -p pbsync "*)
+              cargo build -p pbsync
+              echo "PBSYNC_BIN=$PWD/target/debug/pbsync" >> "$GITHUB_ENV"
+              ;;
+          esac
+
       - name: cargo nextest run
         if: env.LANE == 'true'
         env:

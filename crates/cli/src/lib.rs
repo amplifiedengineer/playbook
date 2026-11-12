@@ -104,6 +104,7 @@ pub mod settings;
 pub mod state;
 pub mod statusline;
 pub mod storage;
+pub mod sync;
 #[doc(hidden)]
 pub mod testing;
 pub mod tools_map;
@@ -608,6 +609,19 @@ pub enum Command {
     Config {
         #[command(subcommand)]
         sub: ConfigCommand,
+    },
+    /// Share usage between your machines, or turn that off
+    ///
+    /// Sync is off until you run `playbook sync enable`. It sends only the
+    /// usage columns it lists to your own Turso database. Most names run the
+    /// `pbsync` helper that ships next to playbook, and `playbook sync config`
+    /// shares the settings that may sync. `pbsync` is a short name for the
+    /// same commands.
+    ///
+    /// Example: `playbook sync status`
+    Sync {
+        #[command(subcommand)]
+        sub: SyncCommand,
     },
     /// Inspect playbook's own bookkeeping (migration record, sweep markers)
     ///
@@ -2314,17 +2328,133 @@ pub enum ConfigCommand {
         /// JSON file to read, or `-` for standard input
         file: String,
     },
-    /// Refresh the key list and values files that `pbsync` reads
+}
+
+/// `playbook sync` subcommands. Each name that `pbsync` handles passes its
+/// words and flags on untouched, `--help` included.
+#[derive(Subcommand, Debug)]
+pub enum SyncCommand {
+    /// Turn sync on for the accounts you name
     ///
-    /// Writes `sync-keys.json` and `config-values.json` in the data folder
-    /// that holds `usage.db`. They hold only the keys allowed to sync between
-    /// your machines and their global values. `config set --global` refreshes
-    /// them for a shared key, so you rarely need this.
+    /// Shows what will be sent and asks before it turns sync on. Pass `--url`
+    /// for your Turso database, `--account` for each account to sync, and
+    /// `--yes` to skip the question.
     ///
-    /// Example: `playbook config sync-files`
-    #[command(hide = true)]
-    SyncFiles,
-    /// Apply the settings that `pbsync config pull` proposed
+    /// Example: `playbook sync enable --url https://db.example.turso.io --account me`
+    #[command(disable_help_flag = true)]
+    Enable {
+        /// Flags for the helper, such as `--url`
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+    /// Turn sync off and keep the local data
+    ///
+    /// Example: `playbook sync disable`
+    #[command(disable_help_flag = true)]
+    Disable {
+        /// Flags for the helper
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+    /// Show whether sync is on and its local state
+    ///
+    /// Makes no network call.
+    ///
+    /// Example: `playbook sync status`
+    #[command(disable_help_flag = true)]
+    Status {
+        /// Flags for the helper
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+    /// Send new usage rows to the shared database
+    ///
+    /// Example: `playbook sync push --force`
+    #[command(disable_help_flag = true)]
+    Push {
+        /// Flags for the helper, such as `--force`
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+    /// Copy the usage rows other machines sent
+    ///
+    /// Example: `playbook sync pull`
+    #[command(disable_help_flag = true)]
+    Pull {
+        /// Flags for the helper, such as `--force`
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+    /// Push, then pull, then share the settings that may sync
+    ///
+    /// The old `pbsync sync`.
+    ///
+    /// Example: `playbook sync run`
+    #[command(disable_help_flag = true)]
+    Run {
+        /// Flags for the helper, such as `--force`
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+    /// Remove this machine's rows from the shared database
+    ///
+    /// Clears the local copies and turns sync off. `--all` removes every
+    /// machine's rows and asks first.
+    ///
+    /// Example: `playbook sync purge --yes`
+    #[command(disable_help_flag = true)]
+    Purge {
+        /// Flags for the helper, such as `--all`
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+    /// Share the settings that may sync, or apply what other machines sent
+    ///
+    /// `push` sends your shared global values and `pull` writes a proposal
+    /// that changes nothing. `apply` shows the proposal next to your values
+    /// and applies it when you answer yes.
+    ///
+    /// Example: `playbook sync config apply`
+    #[command(
+        args_conflicts_with_subcommands = true,
+        disable_help_flag = true,
+        disable_help_subcommand = true
+    )]
+    Config {
+        #[command(subcommand)]
+        sub: Option<SyncConfigCommand>,
+        /// Words for the helper when no subcommand matches
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+}
+
+/// `playbook sync config` subcommands.
+#[derive(Subcommand, Debug)]
+pub enum SyncConfigCommand {
+    /// Send the shared global setting values
+    ///
+    /// Refreshes the key list and values files first.
+    ///
+    /// Example: `playbook sync config push`
+    #[command(disable_help_flag = true)]
+    Push {
+        /// Flags for the helper
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+    /// Write the settings other machines sent as a proposal
+    ///
+    /// Changes no setting. Run `playbook sync config apply` to review it.
+    ///
+    /// Example: `playbook sync config pull`
+    #[command(disable_help_flag = true)]
+    Pull {
+        /// Flags for the helper
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+    /// Apply the settings that `playbook sync config pull` proposed
     ///
     /// Shows each proposed value next to your current global value and asks
     /// before it stores anything. Only keys that may sync are accepted, and
@@ -2332,11 +2462,28 @@ pub enum ConfigCommand {
     /// over the global one. Nothing changes unless you answer yes or pass
     /// `--yes`.
     ///
-    /// Example: `playbook config apply-proposal --yes`
-    ApplyProposal {
+    /// Example: `playbook sync config apply --yes`
+    Apply {
         /// Apply without asking
         #[arg(long)]
         yes: bool,
+        /// Print help
+        #[arg(short, long, action = clap::ArgAction::Help)]
+        help: Option<bool>,
+    },
+    /// Refresh the key list and values files that `pbsync` reads
+    ///
+    /// Writes `sync-keys.json` and `config-values.json` in the data directory
+    /// that holds `usage.db`. They hold only the keys allowed to sync between
+    /// your machines and their global values. `config set --global` refreshes
+    /// them for a shared key, so you rarely need this.
+    ///
+    /// Example: `playbook sync config refresh`
+    #[command(hide = true)]
+    Refresh {
+        /// Print help
+        #[arg(short, long, action = clap::ArgAction::Help)]
+        help: Option<bool>,
     },
 }
 
