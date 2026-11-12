@@ -559,6 +559,11 @@ jobs:
               [ "${out##* }" = "$want" ] \
                 || { echo "::error::$b --version says '$out', not $want." >&2; exit 1; }
             done
+            # playbook sync forwards to the pbsync beside it. With sync off,
+            # status makes no network call and must exit 0.
+            sync_home="$(mktemp -d)"
+            HOME="$sync_home" USERPROFILE="$sync_home" "$dir/playbook$EXT" sync status \
+              || { echo "::error::playbook sync status failed beside the built pbsync." >&2; exit 1; }
           fi
           cp "$dir/playbook$EXT" "dist/playbook-$VERSION-$TARGET$EXT"
           # bsdtar on macOS adds a ._name AppleDouble entry for a file with

@@ -23,7 +23,7 @@ This is a Cargo workspace. The skills, commands and agents live in `plugins/play
 | `crates/code` | `playbook-code` | the code index, search, symbols and references |
 | `crates/telemetry` | `playbook-telemetry` | the Agent Budget Dashboard, with the `pbtop` binary |
 | `crates/data` | `playbook-data` | shared storage (data folder, `config.db`, `memory.db`) |
-| `crates/pbsync` | `pbsync` | the opt-in usage sync helper: the Turso SQL-over-HTTP transport and token handling |
+| `crates/pbsync` | `pbsync` | the opt-in usage sync helper that `playbook sync` runs: the Turso SQL-over-HTTP transport and token handling |
 | `crates/store` | `playbook-store` | the shim over the SQLite engine, with the busy-retry helpers |
 | `crates/code-bench` | `code-bench` | dev-only benchmark for the code index: corpus, metrics and gate. Nothing in the shipped binary depends on it |
 | `crates/pbdoc` | `pbdoc` | offline document to Markdown converter that ships next to `playbook` |

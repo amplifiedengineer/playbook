@@ -1,6 +1,7 @@
 # ADR-0061: Sync Usage Between One User's Computers Only When the User Turns It On
 
 - **Status:** Proposed
+- **Amended 2026-11-13:** users now run the sync commands as `playbook sync ...`, and `pbsync` stays as the helper and a short alias. Commands below are as they were when this record was written.
 - **Date created:** 2026-11-07
 - **Date modified:** 2026-11-07
 - **Relates to:** [ADR 0025](0025-self-improving-playbook.md) (it rejected remote learning across users; this ADR covers one user's own machines and does not change that), [ADR 0020](0020-usage-terminal-ui.md) (the usage UI that reads these rows)

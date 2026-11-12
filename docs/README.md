@@ -22,7 +22,7 @@ A map of the Playbook docs, for people who use Claude Code and want to know wher
 | Safety guards | The rm guard and the opt-in policy guard | [rm guard](guides/07-rm-guard.md), [policy guard](guides/08-policy-guard.md) |
 | Memory | Facts that sessions recall, per repo, org and global | [Guide](guides/15-memory.md) |
 | Launcher | `playbook cc`, worktrees and the `pb` alias | [Guide](guides/09-launcher.md) |
-| Usage sync | An opt-in preview that shares usage between your own machines | [Guide](guides/17-sync.md) |
+| Usage sync | An opt-in preview that shares usage between your own machines with `playbook sync` | [Guide](guides/17-sync.md) |
 
 More guides: [decisions and memory](guides/03-decisions-and-memory.md), [auto mode](guides/04-auto-mode.md), [telemetry](guides/10-telemetry.md), [settings](guides/12-settings.md), [security defaults](guides/13-security-defaults.md), [models and effort](guides/14-models-and-effort.md) and the [watch acceptance run](guides/16-watch-acceptance-run.md).
 

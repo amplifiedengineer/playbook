@@ -213,3 +213,83 @@ fn the_page_is_linked_from_the_index_and_the_readme() {
         );
     }
 }
+
+/// Lines that may name the helper by its short alias followed by a word.
+const HELPER_SENTENCES: &[&str] = &[
+    "The old `pbsync sync`.",
+    "checks the pbsync and pbdoc size budgets",
+];
+
+/// Old spellings that no user instruction may use any more.
+const STALE_PATTERNS: &[&str] = &[r"\bpbsync\s+[a-z]", r"config\s+(apply-proposal|sync-files)"];
+
+/// Every `file:line` in `text` that tells a user to run an old spelling.
+fn stale_instructions(file: &str, text: &str) -> Vec<String> {
+    let patterns: Vec<regex::Regex> = STALE_PATTERNS
+        .iter()
+        .map(|p| regex::Regex::new(p).unwrap())
+        .collect();
+    text.lines()
+        .enumerate()
+        .filter(|(_, line)| !HELPER_SENTENCES.iter().any(|ok| line.contains(ok)))
+        .filter(|(_, line)| patterns.iter().any(|p| p.is_match(line)))
+        .map(|(i, line)| format!("{file}:{}: {}", i + 1, line.trim()))
+        .collect()
+}
+
+/// Markdown files that carry user instructions: everything under `docs/`
+/// except the ADRs, which are history, plus `CONTRIBUTING.md`.
+fn instruction_pages() -> Vec<PathBuf> {
+    fn walk_dir(dir: &std::path::Path, out: &mut Vec<PathBuf>) {
+        for entry in fs::read_dir(dir).unwrap() {
+            let path = entry.unwrap().path();
+            if path.is_dir() {
+                if path.file_name().is_some_and(|n| n != "adr") {
+                    walk_dir(&path, out);
+                }
+            } else if path.extension().is_some_and(|e| e == "md") {
+                out.push(path);
+            }
+        }
+    }
+    let mut pages = vec![root().join("CONTRIBUTING.md")];
+    walk_dir(&root().join("docs"), &mut pages);
+    pages.sort();
+    pages
+}
+
+#[test]
+fn the_stale_instruction_check_flags_old_spellings() {
+    // Arrange
+    let text = "fine\n```bash\npbsync push\n```\nrun `playbook config apply-proposal`\nThe old `pbsync sync`.\n`pbsync` is a short name";
+
+    // Act
+    let hits = stale_instructions("x.md", text);
+
+    // Assert
+    assert_eq!(hits.len(), 2, "{hits:?}");
+    assert!(hits[0].starts_with("x.md:3:"), "{hits:?}");
+    assert!(hits[1].starts_with("x.md:5:"), "{hits:?}");
+}
+
+#[test]
+fn no_doc_tells_a_user_to_run_an_old_sync_spelling() {
+    // Arrange
+    let pages = instruction_pages();
+
+    // Act
+    let hits: Vec<String> = pages
+        .iter()
+        .flat_map(|path| {
+            let rel = path.strip_prefix(root()).unwrap().display().to_string();
+            stale_instructions(&rel, &fs::read_to_string(path).unwrap())
+        })
+        .collect();
+
+    // Assert
+    assert!(
+        hits.is_empty(),
+        "user instructions must say `playbook sync ...`:\n{}",
+        hits.join("\n")
+    );
+}

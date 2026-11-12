@@ -123,7 +123,7 @@ Use this when you have no Homebrew. install.sh is a bash script, so it does not 
 curl -fsSL https://raw.githubusercontent.com/amplifiedengineer/playbook/main/install.sh | bash
 ```
 
-It installs the `playbook` binary, the `pbdoc` document converter and the `pbsync` usage sync helper, and links `pb`, into `PLAYBOOK_BIN_DIR` (default `~/.local/bin`). When a release has no `pbdoc` or `pbsync` archive, it warns and skips that helper. Installing `pbsync` does not turn sync on, which stays off until you opt in. It checks each download after checking its SHA256, its build attestation when `gh` can check it, and a `--version` smoke test. It puts that directory on `PATH`. It does not touch Claude Code's plugins or settings.
+It installs the `playbook` binary, the `pbdoc` document converter and the `pbsync` usage sync helper (you run it as `playbook sync`), and links `pb`, into `PLAYBOOK_BIN_DIR` (default `~/.local/bin`). When a release has no `pbdoc` or `pbsync` archive, it warns and skips that helper. Installing `pbsync` does not turn sync on, which stays off until you opt in. It checks each download after checking its SHA256, its build attestation when `gh` can check it, and a `--version` smoke test. It puts that directory on `PATH`. It does not touch Claude Code's plugins or settings.
 
 When it replaces an older binary, it prints "playbook updated from A to B.", then the breaking changes of the new release if there are any, then a link to the full release notes. Before 1.0 a breaking change can ship in any release, so read them.
 

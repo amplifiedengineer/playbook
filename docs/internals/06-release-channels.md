@@ -49,7 +49,7 @@ When the gate still fails on the release commit, land the fix and tag `vX.Y.Z` o
 ### After the tag
 
 - `draft` creates a draft release with the notes and attaches `release-notes.json`.
-- `build` compiles the five targets with `--locked` and attaches the `playbook` binary and `pbtop-X.Y.Z-<target>.tar.gz` and `pbsync-X.Y.Z-<target>.tar.gz` for each target. The four macOS and Linux targets also get `pbdoc-X.Y.Z-<target>.tar.gz`. Each build job first runs its binaries with `--version` (all but the cross built x86_64 macOS one), checks the pbsync and pbdoc size budgets and attests the assets it built.
+- `build` compiles the five targets with `--locked` and attaches the `playbook` binary and `pbtop-X.Y.Z-<target>.tar.gz` and `pbsync-X.Y.Z-<target>.tar.gz` for each target. The four macOS and Linux targets also get `pbdoc-X.Y.Z-<target>.tar.gz`. Each build job first runs its binaries with `--version` (all but the cross built x86_64 macOS one), runs `playbook sync status` against the built `pbsync` in an empty home and expects exit 0 with sync off, checks the pbsync and pbdoc size budgets and attests the assets it built.
 - `publish` checks every draft asset against that attestation, writes `SHA256SUMS` over every asset, attests it and the notes, and makes the release public and the latest.
 - `verify` downloads the published release, checks the sums and the attestations of a run from `main`, and runs `--version` on the x86_64 Linux binaries.
 
