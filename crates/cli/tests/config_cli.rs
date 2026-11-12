@@ -1021,3 +1021,78 @@ fn sync_files_command_writes_both_files_and_fails_clearly_when_blocked() {
     assert!(!blocked.status.success());
     assert!(stderr_of(&blocked).contains("config sync-files: cannot write"));
 }
+
+const RETIRED_DEAD_KEYS: [(&str, &str); 3] = [
+    ("sessions.autoClose", "off"),
+    ("launcher.claudeOverride", "false"),
+    ("agents.variants", "auto"),
+];
+
+#[test]
+fn a_retired_key_is_refused_by_set() {
+    for (key, value) in RETIRED_DEAD_KEYS {
+        // Arrange
+        let repo = seeded_repo("retired-set");
+        let home = scratch_dir("retired-set-home");
+
+        // Act
+        let out = run_playbook(&repo, &home, &["config", "set", "--global", key, value]);
+
+        // Assert
+        assert!(!out.status.success(), "{key}");
+        assert!(stderr_of(&out).contains(key), "{key}: {}", stderr_of(&out));
+        assert!(empty(&home, "global"), "{key}");
+    }
+}
+
+#[test]
+fn import_skips_a_retired_key() {
+    for (key, _) in RETIRED_DEAD_KEYS {
+        // Arrange
+        let repo = seeded_repo("retired-import");
+        let home = scratch_dir("retired-import-home");
+        let file = home.join("doc.json");
+        fs::write(
+            &file,
+            format!(r#"{{"global": {{"{key}": "off", "pr.draft": false}}}}"#),
+        )
+        .unwrap();
+
+        // Act
+        let out = run_playbook(&repo, &home, &["config", "import", file.to_str().unwrap()]);
+
+        // Assert
+        assert!(out.status.success(), "{key}: {}", stderr_of(&out));
+        assert!(
+            stdout_of(&out).contains("1 setting(s)"),
+            "{key}: {}",
+            stdout_of(&out)
+        );
+        assert!(stored(&home)["global"].get(key).is_none(), "{key}");
+    }
+}
+
+#[test]
+fn a_stored_retired_value_does_not_break_list() {
+    for (key, _) in RETIRED_DEAD_KEYS {
+        // Arrange
+        let repo = seeded_repo("retired-list");
+        let home = scratch_dir("retired-list-home");
+        let root = home.join(".config").join("playbook");
+        playbook::config::store::put(
+            &root,
+            playbook::config::write::Tier::Global,
+            None,
+            key,
+            &serde_json::json!("off"),
+        )
+        .unwrap();
+
+        // Act
+        let out = run_playbook(&repo, &home, &["config", "list"]);
+
+        // Assert
+        assert!(out.status.success(), "{key}: {}", stderr_of(&out));
+        assert!(!stdout_of(&out).contains(key), "{key}: {}", stdout_of(&out));
+    }
+}

@@ -67,7 +67,6 @@ pub const KNOWN_KEYS: &[&str] = &[
     "maxEffortLevel",
     "effort.auto",
     "memory.source",
-    "agents.variants",
     "models.haiku",
     "models.sonnet",
     "models.opus",
@@ -103,7 +102,6 @@ pub const KNOWN_KEYS: &[&str] = &[
     "usage.ui.state",
     "sessions.staleAfterDays",
     "sessions.recentDays",
-    "sessions.autoClose",
     "hygiene.enabled",
     "hygiene.thresholdTokens",
     "docs.convert",
@@ -114,7 +112,6 @@ pub const KNOWN_KEYS: &[&str] = &[
     "docs.displayChars",
     "docs.anydocPath",
     "code.briefFactsTokens",
-    "launcher.claudeOverride",
     "launcher.shortName",
     "systemPrompt.enabled",
     "attribution.enabled",
@@ -215,15 +212,14 @@ pub fn gc_pressure_within_idle(pressure: i64, idle: i64) -> i64 {
     }
 }
 
-/// Known keys that no code reads. `launcher.claudeOverride` was written by
-/// releases up to 0.36.0 when a user chose the `claude` shell function (ADR
-/// 0044). It stays settable and readable so a stored value does not turn into
-/// an error on upgrade. Remove it in 1.0.0 by moving it to [`RETIRED_KEYS`].
-pub const NO_EFFECT_KEYS: &[&str] = &["launcher.claudeOverride"];
-
 /// Keys that were removed. A stored value stays in the store, is never read,
 /// and `config import` skips it (one release of grace).
-pub const RETIRED_KEYS: &[&str] = &["hooks.rmGuard.allowedRoots"];
+pub const RETIRED_KEYS: &[&str] = &[
+    "hooks.rmGuard.allowedRoots",
+    "sessions.autoClose",
+    "launcher.claudeOverride",
+    "agents.variants",
+];
 
 /// The per-user settings, which live only in the global tier.
 pub const USER_KEYS: &[&str] = &[
@@ -264,7 +260,6 @@ pub const SHARED_KEYS: &[&str] = &[
     "maxEffortLevel",
     "effort.auto",
     "routing.escalate",
-    "agents.variants",
     "auto.budgetUsd",
     "auto.agentBudgetUsd",
     "auto.sessionCeilingUsd",
@@ -317,7 +312,6 @@ pub const LOCAL_ONLY_KEYS: &[&str] = &[
     "usage.ui.state",
     "sessions.staleAfterDays",
     "sessions.recentDays",
-    "sessions.autoClose",
     "hygiene.enabled",
     "hygiene.thresholdTokens",
     "docs.convert",
@@ -328,7 +322,6 @@ pub const LOCAL_ONLY_KEYS: &[&str] = &[
     "docs.displayChars",
     "docs.anydocPath",
     "code.briefFactsTokens",
-    "launcher.claudeOverride",
     "launcher.shortName",
     "systemPrompt.enabled",
     "attribution.enabled",
@@ -430,7 +423,6 @@ pub fn default_value(key: &str) -> Option<Value> {
         "maxEffortLevel" => Some(Value::String("auto".to_string())),
         "effort.auto" => Some(Value::String("off".to_string())),
         "memory.source" => Some(Value::String("both".to_string())),
-        "agents.variants" => Some(Value::String("auto".to_string())),
         "models.haiku" | "models.sonnet" | "models.opus" => Some(Value::String(String::new())),
         "routing.escalate" => Some(Value::String("auto".to_string())),
         "auto.budgetUsd" => Some(Value::Number(AUTO_BUDGET_USD.into())),
@@ -462,7 +454,6 @@ pub fn default_value(key: &str) -> Option<Value> {
         "usage.ui.layout" | "usage.ui.state" => Some(Value::String(String::new())),
         "sessions.staleAfterDays" => Some(Value::Number(3.into())),
         "sessions.recentDays" => Some(Value::Number(7.into())),
-        "sessions.autoClose" => Some(Value::String("off".to_string())),
         "hygiene.enabled" => Some(Value::Bool(true)),
         "hygiene.thresholdTokens" => Some(Value::Number(250_000.into())),
         "docs.convert" => Some(Value::String("auto".to_string())),
@@ -473,7 +464,7 @@ pub fn default_value(key: &str) -> Option<Value> {
         "docs.displayChars" => Some(Value::Number(24_000.into())),
         "docs.anydocPath" => Some(Value::String(String::new())),
         "code.briefFactsTokens" => Some(Value::Number(0.into())),
-        "launcher.claudeOverride" | "launcher.shortName" => Some(Value::Bool(false)),
+        "launcher.shortName" => Some(Value::Bool(false)),
         "systemPrompt.enabled" => Some(Value::Bool(true)),
         "attribution.enabled" => Some(Value::Bool(false)),
         "hooks.proseLint.mode" => Some(Value::String("warn".to_string())),
@@ -505,7 +496,6 @@ pub fn allowed_enum_values(key: &str) -> Option<&'static [&'static str]> {
         "mode" => Some(&["ask", "auto"]),
         "maxEffortLevel" => Some(&["auto", "low", "medium", "high", "xhigh", "max"]),
         "memory.source" => Some(&["both", "playbook"]),
-        "agents.variants" => Some(&["auto", "all", "off"]),
         "effort.auto" => Some(&["off", "suggest", "on"]),
         "routing.escalate" => Some(&["ask", "auto", "deny"]),
         "usage.theme" => Some(&["default", "spectrum", "dark", "light", "mono"]),
@@ -513,7 +503,6 @@ pub fn allowed_enum_values(key: &str) -> Option<&'static [&'static str]> {
         "usage.timeZone" => Some(&["local", "utc"]),
         "usage.telemetry" => Some(&["auto", "off"]),
         "docs.convert" => Some(&["auto", "off"]),
-        "sessions.autoClose" => Some(&["off", "propose"]),
         "hooks.proseLint.mode" => Some(&["warn", "block", "off"]),
         "update.mode" => Some(&["notify", "auto", "off"]),
         "update.plugin" => Some(&["auto", "ask", "off"]),
@@ -596,7 +585,7 @@ const COMPOUND_GROUPS: &[&str] = &["proseLint", "policyGuard"];
 
 /// The exact size of `KNOWN_KEYS`; each Segment that cuts keys lowers it.
 #[cfg(test)]
-const KEY_CEILING: usize = 99;
+const KEY_CEILING: usize = 96;
 
 #[cfg(test)]
 mod tests {
@@ -604,7 +593,6 @@ mod tests {
     const MACHINE_BOUND_KEYS: &[&str] = &[
         "docs.anydocPath",
         "launcher.shortName",
-        "launcher.claudeOverride",
         "watch.allowedAuthors",
         "watch.repos",
         "watch.tokenEnv",
@@ -739,13 +727,6 @@ mod tests {
         for key in RETIRED_KEYS {
             assert!(!KNOWN_KEYS.contains(key), "{key}");
             assert_eq!(default_value(key), None, "{key}");
-        }
-    }
-
-    #[test]
-    fn a_no_effect_key_is_still_a_known_key() {
-        for key in NO_EFFECT_KEYS {
-            assert!(KNOWN_KEYS.contains(key), "{key}");
         }
     }
 
@@ -1059,18 +1040,5 @@ mod tests {
         assert_eq!(gc_pressure_within_idle(3, 3), 3);
         assert_eq!(gc_pressure_within_idle(4, 3), default);
         assert_eq!(gc_pressure_within_idle(1, 7), 1);
-    }
-
-    #[test]
-    fn session_auto_close_is_off_by_default_and_has_no_auto_level() {
-        assert!(KNOWN_KEYS.contains(&"sessions.autoClose"));
-        assert_eq!(
-            default_value("sessions.autoClose"),
-            Some(Value::String("off".to_string()))
-        );
-        assert_eq!(
-            allowed_enum_values("sessions.autoClose"),
-            Some(&["off", "propose"][..])
-        );
     }
 }

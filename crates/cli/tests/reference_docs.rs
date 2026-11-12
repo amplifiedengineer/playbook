@@ -10,7 +10,7 @@
 use clap::{Command, CommandFactory};
 use playbook::command_index::{visible, visible_args};
 use playbook::config::keys::{
-    allowed_enum_values, default_value, EFFORT_COMPONENT_KINDS, KNOWN_KEYS, NO_EFFECT_KEYS,
+    allowed_enum_values, default_value, EFFORT_COMPONENT_KINDS, KNOWN_KEYS,
 };
 use playbook::Cli;
 use serde_json::Value;
@@ -125,11 +125,6 @@ fn config_table() -> String {
                     .join(", ")
             },
         );
-        let allowed = if NO_EFFECT_KEYS.contains(key) {
-            format!("{allowed} (retired, no effect)")
-        } else {
-            allowed
-        };
         let _ = writeln!(out, "| `{key}` | {default} | {allowed} |");
     }
     let sample = |kind: &str| format!("effort.{kind}.<name>");

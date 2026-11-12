@@ -11,7 +11,7 @@ Each command and agent names its model and effort in its own frontmatter. Spend 
 Plugin files name only the alias, and `playbook cc` passes the fallback chain. Run `playbook doctor models` to see the table, your overrides and the chain in force.
 
 - **Effort ceiling.** `playbook effort <auto|low|medium|high|xhigh|max>` sets `maxEffortLevel`. The lower of this and Claude Code's own `maxEffortLevel` wins, and playbook never changes Claude Code's setting. The ceiling does not cap a command, skill or base agent that ships its own effort, or a level you state for the session, since only Claude Code's setting can. See the [config keys page](../reference/config-keys.md#what-the-effort-ceiling-does-and-does-not-cap). Override one component with `effort.agents.<name>`, `effort.commands.<name>` or `effort.skills.<name>`.
-- **Effort per spawn.** The orchestrator passes the `effort` parameter on the `Agent` call, lowered by every ceiling you set. The old `agents.variants` setting is accepted and does nothing.
+- **Effort per spawn.** The orchestrator passes the `effort` parameter on the `Agent` call, lowered by every ceiling you set. The old `agents.variants` setting is retired: `config set` refuses it and a stored value is ignored.
 - **Routing.** `playbook route <kind>` says which model, effort and agent a task goes to, and when you must approve first. See [Approval prompts](#approval-prompts).
 - **Measure.** `playbook eval bench` compares roles across models and efforts on real cases, with a cost cap.
 

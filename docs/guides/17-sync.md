@@ -67,7 +67,7 @@ Pulled rows are copies. They sit in separate local tables, and the usage views m
 
 ## Share config between machines
 
-Only keys on a fixed list can sync: `usage.theme`, `usage.maskAccount`, `usage.weekStart`, `usage.timeZone`, the two `usage.budget` keys, `usage.ui.layout`, `maxEffortLevel`, `effort.auto`, `routing.escalate`, `agents.variants`, the four `auto.*` budget and warning keys, `pr.draft` and `commit.signOff`. Paths, hosts, token names and safety switches never sync, and no `sync.*` key does. See [Settings](12-settings.md).
+Only keys on a fixed list can sync: `usage.theme`, `usage.maskAccount`, `usage.weekStart`, `usage.timeZone`, the two `usage.budget` keys, `usage.ui.layout`, `maxEffortLevel`, `effort.auto`, `routing.escalate`, the four `auto.*` budget and warning keys, `pr.draft` and `commit.signOff`. Paths, hosts, token names and safety switches never sync, and no `sync.*` key does. See [Settings](12-settings.md).
 
 ```bash
 pbsync config push                 # send this machine's shared keys

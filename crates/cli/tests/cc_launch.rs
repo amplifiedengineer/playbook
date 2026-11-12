@@ -881,7 +881,7 @@ fn the_launcher_adds_no_variant_agents_or_plugin() {
 }
 
 #[test]
-fn the_old_variants_setting_is_still_accepted_and_changes_nothing() {
+fn the_retired_variants_setting_is_refused_and_changes_nothing() {
     let e = env("variants-off");
     let root = plugin_with_agents(&e);
     for value in ["off", "all"] {
@@ -890,7 +890,7 @@ fn the_old_variants_setting_is_still_accepted_and_changes_nothing() {
             .env("HOME", &e.home)
             .output()
             .unwrap();
-        assert!(set.status.success(), "{set:?}");
+        assert!(!set.status.success(), "{set:?}");
     }
     launch_with_plugin(&e, &root, &["fresh"]);
     let line = e.raw_calls().remove(0);

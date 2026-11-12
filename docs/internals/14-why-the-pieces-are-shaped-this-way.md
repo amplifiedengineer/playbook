@@ -62,7 +62,6 @@ The `Agent` tool takes an `effort` per call when a skill asks for it, and the `d
 |---|---|
 | `playbook effort resolve` | Tells the orchestrator which `effort` to pass, because the user's effort ceilings decide it |
 | `playbook effort choose` | With `effort.auto` on, picks the level from the diff |
-| `agents.variants` | Kept so old configs load. It does nothing, and `playbook doctor check` says so |
 
 The orchestrator then picks by diff size and risk, following the `delegating-subagents` skill.
 

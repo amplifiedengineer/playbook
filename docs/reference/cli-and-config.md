@@ -35,7 +35,6 @@ Set a key with `playbook config set <key> <value>` and read it with `playbook co
 | `maxEffortLevel` | `auto` | `auto`, `low`, `medium`, `high`, `xhigh`, `max` |
 | `effort.auto` | `off` | `off`, `suggest`, `on` |
 | `memory.source` | `both` | `both`, `playbook` |
-| `agents.variants` | `auto` | `auto`, `all`, `off` |
 | `models.haiku` | empty | empty, or `claude-<tier>-<major>[-<minor>]` for that tier |
 | `models.sonnet` | empty | empty, or `claude-<tier>-<major>[-<minor>]` for that tier |
 | `models.opus` | empty | empty, or `claude-<tier>-<major>[-<minor>]` for that tier |
@@ -71,7 +70,6 @@ Set a key with `playbook config set <key> <value>` and read it with `playbook co
 | `usage.ui.state` | empty | see the config keys page |
 | `sessions.staleAfterDays` | `3` | a number, see the config keys page for the range |
 | `sessions.recentDays` | `7` | a number, see the config keys page for the range |
-| `sessions.autoClose` | `off` | `off`, `propose` |
 | `hygiene.enabled` | `true` | `true`, `false` |
 | `hygiene.thresholdTokens` | `250000` | a number, see the config keys page for the range |
 | `docs.convert` | `auto` | `auto`, `off` |
@@ -82,7 +80,6 @@ Set a key with `playbook config set <key> <value>` and read it with `playbook co
 | `docs.displayChars` | `24000` | a number, see the config keys page for the range |
 | `docs.anydocPath` | empty | see the config keys page |
 | `code.briefFactsTokens` | `0` | a number, see the config keys page for the range |
-| `launcher.claudeOverride` | `false` | `true`, `false` (retired, no effect) |
 | `launcher.shortName` | `false` | `true`, `false` |
 | `systemPrompt.enabled` | `true` | `true`, `false` |
 | `attribution.enabled` | `false` | `true`, `false` |

@@ -95,7 +95,7 @@ An agent file sets the effort the agent runs at by default. When an orchestrator
 - `playbook effort resolve agents <name> --json` reports `effort`, the shipped effort lowered by every ceiling, and `ceiling`. The orchestrator never passes a level above `ceiling`.
 - Claude Code 2.1.296 or later applies the parameter to plugin agents. An older version ignores it and the agent runs at its file's effort.
 - Spawn the base agent with its prefix, for example `playbook:reviewer`.
-- Older releases rendered `<base>-<tier>` variants such as `reviewer-low`. The launcher now removes any leftover `playbook-variants-<pid>` folder from the temp dir, and the `agents.variants` setting is accepted and ignored.
+- Older releases rendered `<base>-<tier>` variants such as `reviewer-low`. The launcher now removes any leftover `playbook-variants-<pid>` folder from the temp dir, and the retired `agents.variants` setting is ignored.
 
 ## The check
 

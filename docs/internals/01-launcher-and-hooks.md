@@ -18,7 +18,7 @@ On every launch the launcher:
 - Sets `CLAUDE_CODE_DISABLE_AUTO_MEMORY=1` for that session when `memory.source` is `playbook`. It never edits Claude Code's settings or memory.
 - After `claude` exits, prunes to the newest `CCD_KEEP` transcripts per project (default 5, floor 2), with their sidecars and runtime state.
 
-A session started without the launcher, such as a plain `claude`, gets only the hooks and the status line: no playbook prompt, effort default, model overrides or memory switch. The `claude` function that `launcher.claudeOverride` turned on is gone with the shell line.
+A session started without the launcher, such as a plain `claude`, gets only the hooks and the status line: no playbook prompt, effort default, model overrides or memory switch. The `claude` shell function that older releases offered is gone with the shell line.
 
 ### The `pb` short name
 

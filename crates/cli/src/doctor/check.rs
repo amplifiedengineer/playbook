@@ -812,7 +812,7 @@ fn layer7(env: &Env) -> Vec<Row> {
 fn effort_rows(env: &Env) -> Vec<Row> {
     let cwd = env.repo_root.clone().unwrap_or_else(|| env.home.clone());
     let c = crate::effort::ceiling(&env.home, &env.claude_home, &cwd);
-    let mut rows = vec![
+    vec![
         Row::new(
             "-",
             Level::Info,
@@ -824,28 +824,7 @@ fn effort_rows(env: &Env) -> Vec<Row> {
             ),
         ),
         Row::new("-", Level::Info, format!("effort ceiling limit: {}", crate::effort::LIMIT)),
-    ];
-    rows.extend(variants_setting_row(&env.home));
-    rows
-}
-
-/// The `agents.variants` key still reads, but nothing uses it since an agent's
-/// effort is passed per spawn. Shown only when the user set it.
-fn variants_setting_row(home: &Path) -> Option<Row> {
-    let set = matches!(
-        config::resolve_valid("agents.variants", home, None),
-        Ok((_, source, _)) if source != config::Source::Default
-    );
-    set.then(|| {
-        Row::new(
-            "-",
-            Level::Info,
-            "agents.variants is set, but effort variants are gone and the setting does nothing",
-        )
-        .hint(
-            "no action needed; the value is ignored and the setting stays valid for older configs",
-        )
-    })
+    ]
 }
 
 fn config_rows(env: &Env) -> Vec<Row> {
@@ -1929,24 +1908,6 @@ mod tests {
             repo_root: None,
             repo_slug: None,
         }
-    }
-
-    #[test]
-    fn the_old_variants_setting_gets_a_hint_only_when_it_is_set() {
-        let home = crate::common::test_support::scratch_dir("doctor-variants-key");
-        fs::create_dir_all(&home).unwrap();
-        assert!(variants_setting_row(&home).is_none());
-        config::write::set(
-            config::write::Tier::Global,
-            "agents.variants",
-            &serde_json::json!("off"),
-            &home,
-            None,
-        )
-        .unwrap();
-        let row = variants_setting_row(&home).expect("row");
-        assert_eq!(row.level, Level::Info);
-        assert!(row.message.contains("does nothing"), "{}", row.message);
     }
 
     #[test]
