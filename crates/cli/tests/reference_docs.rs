@@ -188,19 +188,213 @@ fn the_generated_output_is_deterministic() {
     assert_eq!(generate(), generate());
 }
 
+/// Splits a markdown table row into trimmed cells, keeping `\|` inside one.
+fn split_cells(line: &str) -> Vec<String> {
+    let inner = line.trim();
+    let inner = inner.strip_prefix('|').unwrap_or(inner);
+    let inner = inner.strip_suffix('|').unwrap_or(inner);
+    let mut cells = vec![String::new()];
+    let mut chars = inner.chars().peekable();
+    while let Some(c) = chars.next() {
+        match c {
+            '\\' if chars.peek() == Some(&'|') => {
+                cells.last_mut().unwrap().push_str("\\|");
+                chars.next();
+            }
+            '|' => cells.push(String::new()),
+            _ => cells.last_mut().unwrap().push(c),
+        }
+    }
+    cells.iter().map(|c| c.trim().to_string()).collect()
+}
+
+/// The data rows (those whose first cell starts with a code span) of the
+/// table under the `## heading` section, as cells.
+fn table_rows(page: &str, heading: &str) -> Vec<Vec<String>> {
+    let mut in_section = false;
+    let mut rows = Vec::new();
+    for line in page.lines() {
+        if let Some(title) = line.strip_prefix("## ") {
+            in_section = title.trim() == heading;
+        } else if in_section && line.starts_with("| `") {
+            rows.push(split_cells(line));
+        }
+    }
+    rows
+}
+
+/// The code spans of a cell.
+fn code_spans(cell: &str) -> Vec<&str> {
+    cell.split('`').skip(1).step_by(2).collect()
+}
+
+/// A key name the page may show in the key column besides the known keys: a
+/// family placeholder such as `watch.rule.<id>`.
+fn is_family_placeholder(name: &str) -> bool {
+    name == "watch.rule.<id>"
+        || EFFORT_COMPONENT_KINDS
+            .iter()
+            .any(|kind| name == format!("effort.{kind}.<name>"))
+}
+
 #[test]
 fn every_known_key_is_explained_in_the_config_keys_page() {
+    // Arrange
     let guide = fs::read_to_string(root().join(CONFIG_KEYS)).unwrap();
+    let rows = table_rows(&guide, "Reference");
+    let columns = ["Key", "Default", "Values", "What it does", "Change it when"];
+
+    // Act
+    let row_for = |key: &str| -> Vec<&Vec<String>> {
+        rows.iter()
+            .filter(|row| code_spans(&row[0]).contains(&key))
+            .collect()
+    };
+
+    // Assert
     for key in KNOWN_KEYS {
+        let found = row_for(key);
+        assert_eq!(
+            found.len(),
+            1,
+            "{CONFIG_KEYS} needs exactly one row for the config key `{key}`, found {}",
+            found.len()
+        );
+        let row = found[0];
+        assert_eq!(
+            row.len(),
+            columns.len(),
+            "the row of `{key}` has the wrong cell count"
+        );
+        for (name, cell) in columns.iter().zip(row.iter()) {
+            assert!(!cell.is_empty(), "the `{name}` cell of `{key}` is empty");
+        }
+    }
+    let families = EFFORT_COMPONENT_KINDS
+        .iter()
+        .map(|kind| format!("effort.{kind}.<name>"))
+        .chain(["watch.rule.<id>".to_string()]);
+    for family in families {
+        let found = row_for(&family);
+        assert_eq!(
+            found.len(),
+            1,
+            "{CONFIG_KEYS} needs one row for the family `{family}`"
+        );
+        for (name, cell) in columns.iter().zip(found[0].iter()) {
+            assert!(!cell.is_empty(), "the `{name}` cell of `{family}` is empty");
+        }
+    }
+    for row in &rows {
+        for name in code_spans(&row[0]) {
+            assert!(
+                KNOWN_KEYS.contains(&name) || is_family_placeholder(name),
+                "{CONFIG_KEYS} has a row for `{name}`, which is not a current config key"
+            );
+        }
+    }
+}
+
+/// Every `.rs` file under `dir`.
+fn rust_files(dir: &std::path::Path, out: &mut Vec<PathBuf>) {
+    for entry in fs::read_dir(dir).unwrap() {
+        let path = entry.unwrap().path();
+        if path.is_dir() {
+            rust_files(&path, out);
+        } else if path.extension().is_some_and(|e| e == "rs") {
+            out.push(path);
+        }
+    }
+}
+
+/// The production part of a source file: everything before the trailing
+/// `#[cfg(test)] mod` block.
+fn production_part(text: &str) -> &str {
+    text.split("\n#[cfg(test)]\nmod ").next().unwrap_or(text)
+}
+
+/// The `PLAYBOOK_*` variables the shipped binaries read with `env::var` or
+/// `env::var_os`, in `crates/*/src`. Test code is skipped: the `tests/`
+/// folders, `testing.rs` and the trailing test module of a file. So are the
+/// test seams: a variable with `TEST` in its name, and a read within three
+/// lines of a `debug_assertions` check, which a release build never makes.
+fn production_env_vars() -> std::collections::BTreeSet<String> {
+    let mut files = Vec::new();
+    for krate in fs::read_dir(root().join("crates")).unwrap() {
+        let src = krate.unwrap().path().join("src");
+        if src.is_dir() {
+            rust_files(&src, &mut files);
+        }
+    }
+    let texts: Vec<String> = files
+        .iter()
+        .filter(|f| f.file_name().is_some_and(|n| n != "testing.rs"))
+        .map(|f| fs::read_to_string(f).unwrap())
+        .collect();
+    let consts =
+        regex::Regex::new(r#"const\s+([A-Z_]+):\s*&str\s*=\s*"(PLAYBOOK_[A-Z_]+)""#).unwrap();
+    let reads = regex::Regex::new(
+        r#"env::var(?:_os)?\(\s*(?:"(PLAYBOOK_[A-Z_]+)"|(?:[a-z_]+::)*([A-Z_]+))\s*\)"#,
+    )
+    .unwrap();
+    let production: Vec<&str> = texts.iter().map(|t| production_part(t)).collect();
+    let named: std::collections::HashMap<&str, &str> = production
+        .iter()
+        .flat_map(|t| consts.captures_iter(t))
+        .map(|c| (c.get(1).unwrap().as_str(), c.get(2).unwrap().as_str()))
+        .collect();
+    let mut found = std::collections::BTreeSet::new();
+    for text in production {
+        for read in reads.captures_iter(text) {
+            let name = match (read.get(1), read.get(2)) {
+                (Some(literal), _) => literal.as_str(),
+                (None, Some(ident)) => match named.get(ident.as_str()) {
+                    Some(value) => value,
+                    None => continue,
+                },
+                _ => continue,
+            };
+            let line = text[..read.get(0).unwrap().start()].matches('\n').count();
+            let guarded = text
+                .lines()
+                .skip(line.saturating_sub(3))
+                .take(4)
+                .any(|l| l.contains("debug_assertions"));
+            if !guarded && !name.contains("TEST") {
+                found.insert(name.to_string());
+            }
+        }
+    }
+    found
+}
+
+#[test]
+fn every_production_env_var_has_a_row_in_the_config_keys_page() {
+    // Arrange
+    let guide = fs::read_to_string(root().join(CONFIG_KEYS)).unwrap();
+    let rows = table_rows(&guide, "Environment variables");
+
+    // Act
+    let vars = production_env_vars();
+
+    // Assert
+    assert!(
+        vars.contains("PLAYBOOK_MODE"),
+        "the scan found no PLAYBOOK_MODE read, so it is broken: {vars:?}"
+    );
+    for var in &vars {
+        let row = rows
+            .iter()
+            .find(|row| code_spans(&row[0]).contains(&var.as_str()))
+            .unwrap_or_else(|| {
+                panic!("{CONFIG_KEYS} has no row in `Environment variables` for `{var}`")
+            });
+        assert_eq!(row.len(), 3, "the row of `{var}` has the wrong cell count");
         assert!(
-            guide.contains(&format!("`{key}`")),
-            "{CONFIG_KEYS} does not explain the config key `{key}`"
+            row.iter().all(|cell| !cell.is_empty()),
+            "the row of `{var}` has an empty cell"
         );
     }
-    assert!(
-        guide.contains("effort.agents.<name>"),
-        "the effort component keys are not explained"
-    );
 }
 
 #[test]
