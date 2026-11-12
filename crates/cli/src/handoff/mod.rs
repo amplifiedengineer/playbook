@@ -7,7 +7,7 @@
 //!
 //! Files live in `repos/<owner>/<repo>/handoff/<key>_<epoch>_<pid>.md`, or in
 //! `runtime_root()/handoff/` outside a repo with an `origin` remote. A handoff
-//! the hook has loaded is tombstoned by gc for `gc.handoffGraceDays`, so `show`
+//! the hook has loaded is tombstoned by gc for the handoff grace period, so `show`
 //! can still print it after the session start consumed it.
 
 pub mod compose;
@@ -402,7 +402,7 @@ fn with_production_archive<T>(f: impl FnOnce(&Archive) -> T) -> T {
         registry: &registry,
         fs: &fs,
         clock: &*clock,
-        grace_days: crate::gc::stores::handoff_grace_days(&home),
+        grace_days: crate::gc::HANDOFF_GRACE_DAYS,
     })
 }
 
@@ -863,7 +863,6 @@ mod tests {
             roots: vec![dir.to_path_buf()],
             scan: |_, _| Vec::new(),
             action: Action::ReportOnly,
-            retention_key: None,
             limits: Limits::default(),
         })
     }

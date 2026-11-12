@@ -7,10 +7,13 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use super::{Action, Due, Item, Limits, Store};
+use super::{
+    Action, Due, Item, Limits, Store, BUILD_OUTPUT_ACTIVE_MINUTES, BUILD_OUTPUT_IDLE_DAYS,
+    BUILD_OUTPUT_PRESSURE_IDLE_DAYS, FREE_SPACE_WARN_GIB, FREE_SPACE_WARN_PERCENT,
+    GATE_DB_IDLE_DAYS, GRACE_DAYS, LEFTOVER_DAYS, LOG_MAX_DAYS, LOG_MAX_MIB, SESSION_DIR_IDLE_DAYS,
+};
 use crate::common::data::data_dir_from;
 use crate::common::paths::playbook_root_from;
-use crate::config::keys;
 
 /// A folder with more entries than this counts as active, so a huge tree never
 /// makes one scan slow.
@@ -188,84 +191,58 @@ fn scan_leftovers(store: &Store, now: i64) -> Vec<Item> {
         .collect()
 }
 
-/// The configured whole number for `key` (days, or MiB for the log size), or its
-/// default when it cannot be read.
-pub(super) fn configured_number(home: &Path, key: &'static str) -> u32 {
-    let from_config = crate::config::resolve_valid(key, home, None)
-        .ok()
-        .and_then(|(value, _, _)| keys::gc_number_or_default(key, &value));
-    let days = from_config.or_else(|| keys::gc_number(key).map(|entry| entry.default));
-    days.and_then(|n| u32::try_from(n).ok()).unwrap_or(1)
-}
-
-fn store(
-    name: &'static str,
-    root: PathBuf,
-    scan: super::ScanFn,
-    idle_key: &'static str,
-    home: &Path,
-) -> Store {
+fn store(name: &'static str, root: PathBuf, scan: super::ScanFn, idle_days: u32) -> Store {
     Store {
         name,
         roots: vec![root],
         scan,
         action: Action::Tombstone,
-        retention_key: Some(idle_key),
         limits: Limits {
-            idle_days: configured_number(home, idle_key),
+            idle_days,
             max_bytes: 0,
-            retain_days: configured_number(home, "gc.graceDays"),
+            retain_days: GRACE_DAYS,
             ..Limits::default()
         },
     }
 }
 
-/// The build output store, with every rule number read from the config.
-fn build_output_store(home: &Path) -> Store {
+/// The build output store with its rule numbers.
+fn build_output_store() -> Store {
     let mut store = super::build_output::store();
     store.limits = Limits {
-        idle_days: configured_number(home, "gc.buildOutputIdleDays"),
-        pressure_idle_days: configured_number(home, "gc.buildOutputPressureIdleDays"),
-        active_minutes: configured_number(home, "gc.buildOutputActiveMinutes"),
-        warn_gib: configured_number(home, "gc.freeSpaceWarnGiB"),
-        warn_percent: configured_number(home, "gc.freeSpaceWarnPercent"),
+        idle_days: BUILD_OUTPUT_IDLE_DAYS,
+        pressure_idle_days: BUILD_OUTPUT_PRESSURE_IDLE_DAYS,
+        active_minutes: BUILD_OUTPUT_ACTIVE_MINUTES,
+        warn_gib: FREE_SPACE_WARN_GIB,
+        warn_percent: FREE_SPACE_WARN_PERCENT,
         ..Limits::default()
     };
     store
 }
 
-/// Days a loaded handoff stays restorable, from `gc.handoffGraceDays`.
-pub fn handoff_grace_days(home: &Path) -> u32 {
-    configured_number(home, "gc.handoffGraceDays")
-}
-
-/// The stores of this unit, with their limits read from the config under
-/// `home`.
+/// The stores of this unit, rooted under `home`.
 pub fn small_stores(home: &Path) -> Vec<Store> {
     vec![
         store(
             "session folders",
             playbook_root_from(home).join("runtime"),
             scan_sessions,
-            "gc.sessionDirIdleDays",
-            home,
+            SESSION_DIR_IDLE_DAYS,
         ),
         store(
             "migration leftovers",
             playbook_root_from(home).join("repos"),
             scan_leftovers,
-            "gc.leftoverDays",
-            home,
+            LEFTOVER_DAYS,
         ),
         store(
             "gate databases",
             data_dir_from(home).join("gate"),
             super::gate::scan,
-            "gc.gateDbIdleDays",
-            home,
+            GATE_DB_IDLE_DAYS,
         ),
         log_store(home),
-        build_output_store(home),
+        build_output_store(),
     ]
 }
 
@@ -273,15 +250,9 @@ pub fn small_stores(home: &Path) -> Vec<Store> {
 /// MiB in config, and the age limit counts days since the last write.
 fn log_store(home: &Path) -> Store {
     const MIB: u64 = 1024 * 1024;
-    let mut store = store(
-        "logs",
-        data_dir_from(home),
-        super::logs::scan,
-        "gc.logMaxDays",
-        home,
-    );
+    let mut store = store("logs", data_dir_from(home), super::logs::scan, LOG_MAX_DAYS);
     store.action = Action::Rotate;
-    store.limits.max_bytes = u64::from(configured_number(home, "gc.logMaxMiB")) * MIB;
+    store.limits.max_bytes = u64::from(LOG_MAX_MIB) * MIB;
     store
 }
 
@@ -317,7 +288,6 @@ mod tests {
             roots: vec![root.to_path_buf()],
             scan,
             action: Action::Tombstone,
-            retention_key: None,
             limits: Limits {
                 idle_days,
                 max_bytes: 0,
@@ -529,11 +499,27 @@ mod tests {
     }
 
     #[test]
-    fn production_stores_use_the_configured_number() {
+    fn production_stores_use_the_built_in_numbers() {
         // Arrange
-        let home = scratch("stores-config");
-        let config = home.join(".config/playbook");
-        fs::create_dir_all(&config).unwrap();
+        let home = scratch("stores-fixed");
+        let root = playbook_root_from(&home);
+        fs::create_dir_all(&root).unwrap();
+        for key in [
+            "gc.graceDays",
+            "gc.sessionDirIdleDays",
+            "gc.leftoverDays",
+            "gc.gateDbIdleDays",
+            "gc.logMaxMiB",
+        ] {
+            crate::config::store::put(
+                &root,
+                crate::config::write::Tier::Global,
+                None,
+                key,
+                &serde_json::json!(3),
+            )
+            .unwrap();
+        }
 
         // Act
         let stores = small_stores(&home);
@@ -544,6 +530,5 @@ mod tests {
         assert_eq!(stores[1].limits.idle_days, 90);
         assert_eq!(stores[2].limits.idle_days, 30);
         assert_eq!(stores[3].limits.max_bytes, 5 * 1024 * 1024);
-        assert_eq!(stores[3].action, Action::Rotate);
     }
 }

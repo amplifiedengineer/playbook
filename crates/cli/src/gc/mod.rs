@@ -31,6 +31,34 @@ pub const RUN_LOCK_STALE: Duration = Duration::from_secs(3600);
 /// Name of the environment variable that sets the clock in debug builds.
 const TEST_NOW_VAR: &str = "PLAYBOOK_TEST_NOW";
 
+/// Days a tombstoned item can be restored before it is deleted.
+pub const GRACE_DAYS: u32 = 7;
+/// Days a loaded handoff stays restorable.
+pub const HANDOFF_GRACE_DAYS: u32 = 14;
+/// Days a session folder must be idle before it is tombstoned.
+pub const SESSION_DIR_IDLE_DAYS: u32 = 14;
+/// Age in days at which a collector log is rotated.
+pub const LOG_MAX_DAYS: u32 = 30;
+/// Size in MiB at which a collector log is rotated.
+pub const LOG_MAX_MIB: u32 = 5;
+/// Age in days of a migration leftover before it is tombstoned.
+pub const LEFTOVER_DAYS: u32 = 90;
+/// Days a gate database of a removed worktree must be idle.
+pub const GATE_DB_IDLE_DAYS: u32 = 30;
+/// Days a build folder in a playbook worktree must be idle.
+pub const BUILD_OUTPUT_IDLE_DAYS: u32 = 7;
+/// The shorter build folder idle limit used while free space is low.
+pub const BUILD_OUTPUT_PRESSURE_IDLE_DAYS: u32 = 1;
+/// Minutes a recent change keeps a build folder in use.
+pub const BUILD_OUTPUT_ACTIVE_MINUTES: u32 = 15;
+/// Free GiB under which space counts as low.
+pub const FREE_SPACE_WARN_GIB: u32 = 10;
+/// Free percent of the volume under which space counts as low.
+pub const FREE_SPACE_WARN_PERCENT: u32 = 5;
+
+// Pressure may only shorten the idle limit.
+const _: () = assert!(BUILD_OUTPUT_PRESSURE_IDLE_DAYS <= BUILD_OUTPUT_IDLE_DAYS);
+
 /// A source of the current time as epoch seconds, so tests control it.
 pub trait Clock {
     fn now(&self) -> i64;
@@ -114,8 +142,8 @@ pub struct Due {
 /// without the wall clock.
 pub type ScanFn = fn(store: &Store, now: i64) -> Vec<Item>;
 
-/// The numbers a store's rule reads, taken from config when the registry is
-/// built so a scan never touches config itself.
+/// The numbers a store's rule reads, set when the registry is built so a scan
+/// never computes them itself.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct Limits {
     /// Days without a change before an item is due.
@@ -141,8 +169,6 @@ pub struct Store {
     pub roots: Vec<PathBuf>,
     pub scan: ScanFn,
     pub action: Action,
-    /// The config key that sets this store's retention, if it has one.
-    pub retention_key: Option<&'static str>,
     pub limits: Limits,
 }
 
@@ -232,7 +258,6 @@ mod tests {
             roots: vec![PathBuf::from("/a"), PathBuf::from("/b")],
             scan: |_, _| Vec::new(),
             action: Action::Delete,
-            retention_key: None,
             limits: Limits::default(),
         };
         let registry = Registry::new(PathBuf::from("/pb/gc")).with_store(store);
@@ -258,7 +283,6 @@ mod tests {
                 }]
             },
             action: Action::Delete,
-            retention_key: None,
             limits: Limits {
                 max_bytes: 9,
                 ..Limits::default()

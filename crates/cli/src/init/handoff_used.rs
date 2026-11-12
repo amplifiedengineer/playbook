@@ -96,7 +96,7 @@ pub(super) fn migrate(
     if folders.is_empty() {
         return Outcome::Quiet;
     }
-    let grace_days = crate::gc::stores::handoff_grace_days(home);
+    let grace_days = crate::gc::HANDOFF_GRACE_DAYS;
     let ran = with_run_lock(registry.gc_dir(), LOCK_WAIT, clock, &NoHook, |guard| {
         move_all(
             &Env {

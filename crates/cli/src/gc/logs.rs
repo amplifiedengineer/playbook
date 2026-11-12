@@ -155,7 +155,6 @@ mod tests {
             roots: vec![root.to_path_buf()],
             scan,
             action: Action::Rotate,
-            retention_key: None,
             limits: Limits {
                 idle_days: 30,
                 max_bytes: 5 * MIB,

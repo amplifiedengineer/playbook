@@ -337,7 +337,6 @@ mod tests {
             roots: vec![fx.root.clone()],
             scan: |_, _| Vec::new(),
             action: Action::Delete,
-            retention_key: None,
             limits: Limits::default(),
         };
         let ops = RealFs::new(&Registry::new(fx.gc.clone()).with_store(store));

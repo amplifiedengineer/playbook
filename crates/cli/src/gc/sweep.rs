@@ -182,7 +182,6 @@ mod tests {
                 roots: vec![root],
                 scan: *scan,
                 action: Action::Tombstone,
-                retention_key: None,
                 limits: Limits::default(),
             });
         }

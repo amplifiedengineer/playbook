@@ -509,7 +509,6 @@ pub fn store() -> Store {
         roots: Vec::new(),
         scan,
         action: Action::Delete,
-        retention_key: Some("gc.buildOutputIdleDays"),
         limits: Limits::default(),
     }
 }

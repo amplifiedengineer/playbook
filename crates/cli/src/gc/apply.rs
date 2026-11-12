@@ -486,7 +486,6 @@ mod tests {
             roots: vec![fx.root.clone()],
             scan: scan_old,
             action: Action::Tombstone,
-            retention_key: None,
             limits: Limits::default(),
         };
         fx.registry = Registry::new(fx.gc.clone()).with_store(store);
@@ -793,7 +792,6 @@ mod tests {
             roots: vec![fx.root.clone()],
             scan: crate::gc::logs::scan,
             action: Action::Rotate,
-            retention_key: None,
             limits: Limits {
                 idle_days: 1,
                 max_bytes: 0,

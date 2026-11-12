@@ -755,7 +755,6 @@ pub(super) mod tests {
             roots: vec![root.clone()],
             scan: |_, _| Vec::new(),
             action: Action::Tombstone,
-            retention_key: None,
             limits: Limits::default(),
         };
         let registry = Registry::new(gc.clone()).with_store(store);

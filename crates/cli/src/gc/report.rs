@@ -139,7 +139,6 @@ mod tests {
             roots: vec![root],
             scan: scan_files,
             action,
-            retention_key: None,
             limits: Limits::default(),
         }
     }

@@ -176,7 +176,6 @@ mod tests {
             roots: vec![gate.clone()],
             scan,
             action: Action::Tombstone,
-            retention_key: None,
             limits: Limits {
                 idle_days: 30,
                 max_bytes: 0,

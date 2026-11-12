@@ -10,9 +10,11 @@ Playbook keeps state on disk: session folders, logs, databases, handoffs, worktr
 
 The first session start of each day runs a slice of the same cleanup, unless `gc.enabled` is `false`. It checks the 20 second budget between stores, not inside one, so a single large store can run past it. It picks up at the next store on the next start. It stamps the day only when it has been through every store.
 
+These numbers are constants in `crates/cli/src/gc/mod.rs`, not config keys. The twelve `gc.*` keys that once set them are retired: a stored value is ignored and the `fixed-config-keys` migration reports it. `gc.enabled` stays.
+
 ## The lifecycle of a tombstone
 
-Most files are not deleted when a rule says they are due. They move to `gc/tombstones/<date>/<id>/` and a line in `gc/index.jsonl` records where they came from. After the item's grace period (`gc.graceDays`, or `gc.handoffGraceDays` for handoffs) a later run deletes the copy for good. Until then `playbook gc --restore <id>` brings it back.
+Most files are not deleted when a rule says they are due. They move to `gc/tombstones/<date>/<id>/` and a line in `gc/index.jsonl` records where they came from. After the item's grace period (7 days, or 14 days for handoffs) a later run deletes the copy for good. Until then `playbook gc --restore <id>` brings it back.
 
 The index is an append-only file, one line per state change, and the last line for an id wins. A move writes `pending`, moves the data, then writes `done`. A crash between the steps leaves a line that the next run finishes or drops, so the index and the disk agree again. A run deletes at most 500 tombstones, and a record dated in the future is kept.
 
@@ -22,10 +24,10 @@ Everything that removes data takes the run lock (`gc/.lock`) and goes through on
 
 | Store | What it holds | Rule | Action |
 | --- | --- | --- | --- |
-| session folders | `runtime/<session>` | idle for `gc.sessionDirIdleDays` (newest nested change) | tombstone |
-| migration leftovers | `.copied` markers and `MOVED.txt` notes | older than `gc.leftoverDays`, and only once the old files they guard are gone | tombstone |
-| gate databases | gate databases of removed worktrees of the current repo | idle for `gc.gateDbIdleDays` | tombstone, with the `-wal` and `-shm` files |
-| logs | `collector.log`, `collector-service.log` | over `gc.logMaxMiB` or older than `gc.logMaxDays` | copy to `<log>.1`, then truncate; a rotation replaces an earlier `<log>.1` |
+| session folders | `runtime/<session>` | idle for 14 days (newest nested change) | tombstone |
+| migration leftovers | `.copied` markers and `MOVED.txt` notes | older than 90 days, and only once the old files they guard are gone | tombstone |
+| gate databases | gate databases of removed worktrees of the current repo | idle for 30 days | tombstone, with the `-wal` and `-shm` files |
+| logs | `collector.log`, `collector-service.log` | over 5 MiB or older than 30 days | copy to `<log>.1`, then truncate; a rotation replaces an earlier `<log>.1` |
 | build output | `target`, `node_modules` and the other table folders in worktrees | see below | delete |
 
 Loaded handoffs are tombstoned when a session start loads them, and worktrees follow the sweep rules in [the worktree engine](03-worktree.md). The sweep removes a worktree only through the gc guard.
@@ -41,9 +43,9 @@ Build output is regenerable, so it is deleted directly, never tombstoned. A fold
 - a marker file of the same ecosystem sits in its parent or an ancestor inside the worktree;
 - git ignores it and tracks nothing in it;
 - the worktree was created by playbook, or `--build-output` was confirmed;
-- nothing outside the folder changed for `gc.buildOutputIdleDays`, nothing inside it changed within `gc.buildOutputActiveMinutes`, and no process has it open.
+- nothing outside the folder changed for 7 days, nothing inside it changed within 15 minutes, and no process has it open.
 
-When free space is under `gc.freeSpaceWarnGiB` or under `gc.freeSpaceWarnPercent` of the volume, the idle limit drops to `gc.buildOutputPressureIdleDays`, oldest first, until space recovers. The primary checkout is never scanned. Virtual environments (`.venv`, `venv` and any folder with a `pyvenv.cfg`) are out of v1: they are not rebuilt by a plain build, so gc leaves them alone.
+When free space is under 10 GiB or under 5 percent of the volume, the idle limit drops to 1 day, oldest first, until space recovers. The primary checkout is never scanned. Virtual environments (`.venv`, `venv` and any folder with a `pyvenv.cfg`) are out of v1: they are not rebuilt by a plain build, so gc leaves them alone.
 
 ### The ecosystem table
 

@@ -458,7 +458,7 @@ pub fn import(root: &Path, doc: &Value) -> Result<usize, ConfigError> {
             return Ok(());
         };
         for (key, value) in obj {
-            if super::keys::RETIRED_KEYS.contains(&key.as_str()) {
+            if super::keys::is_retired(key) {
                 continue;
             }
             super::write::validate_key_and_value(key, value)?;
@@ -648,6 +648,26 @@ pub fn global_keys(root: &Path) -> Result<Vec<String>, ConfigError> {
         .query_map([], |r| r.get::<_, String>(0))
         .map_err(broken(root))?;
     rows.collect::<Result<Vec<_>, _>>().map_err(broken(root))
+}
+
+/// Every value stored for `key` in any tier, in tier then scope order. Empty
+/// when there is no database.
+pub fn stored_values(root: &Path, key: &str) -> Result<Vec<Value>, ConfigError> {
+    if !has_data(root) {
+        return Ok(Vec::new());
+    }
+    let conn = open(root)?;
+    let mut stmt = conn
+        .prepare("SELECT value_json FROM config WHERE key = ?1 ORDER BY tier, scope")
+        .map_err(broken(root))?;
+    let rows = stmt
+        .query_map([key], |r| r.get::<_, String>(0))
+        .map_err(broken(root))?;
+    rows.map(|row| {
+        let raw = row.map_err(broken(root))?;
+        serde_json::from_str(&raw).map_err(|_| ConfigError::Malformed(db_path(root)))
+    })
+    .collect()
 }
 
 /// The distinct keys of every tier that start with `prefix`, sorted. Empty

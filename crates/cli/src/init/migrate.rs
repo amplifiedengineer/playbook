@@ -83,6 +83,8 @@ pub const CODE_INDEX_FILES_MIGRATION: &str = "code-index-per-worktree-files";
 /// The `Owned` move of loaded handoffs from the old `used` folder into the gc
 /// tombstone folder.
 pub const HANDOFF_USED_MIGRATION: &str = "handoff-used-to-tombstone";
+/// The `Manual` report of stored values for keys that became built-in constants.
+pub const FIXED_CONFIG_KEYS_MIGRATION: &str = "fixed-config-keys";
 /// The step name of that notice, which the heal line shows in full.
 pub const RM_GUARD_NOTICE_STEP: &str = "rm guard";
 /// What the notice says (docs/guides/07-rm-guard.md).
@@ -434,7 +436,45 @@ pub fn registry() -> Vec<Migration> {
             scope: Scope::Owned,
             run: crate::init::handoff_used::run,
         },
+        Migration {
+            id: FIXED_CONFIG_KEYS_MIGRATION,
+            since: "next",
+            kind: Kind::Manual,
+            scope: Scope::Owned,
+            run: fixed_config_keys,
+        },
     ]
+}
+
+/// The stored values of `key` that differ from its built-in `fixed` value.
+fn differing_stored_values(root: &Path, key: &str, fixed: &serde_json::Value) -> Vec<String> {
+    crate::config::store::stored_values(root, key)
+        .unwrap_or_default()
+        .iter()
+        .filter(|value| *value != fixed)
+        .map(ToString::to_string)
+        .collect()
+}
+
+/// A stored value for a key that is now a built-in constant is never read.
+/// Names each such key once with what is stored and the built-in value.
+fn fixed_config_keys(ctx: &Ctx) -> Outcome {
+    let root = playbook_root_from(&ctx.home);
+    let found: Vec<String> = crate::config::keys::FIXED_KEYS
+        .iter()
+        .filter_map(|(key, fixed)| {
+            let stored = differing_stored_values(&root, key, fixed);
+            (!stored.is_empty())
+                .then(|| format!("{key} (stored {}, built in {fixed})", stored.join(", ")))
+        })
+        .collect();
+    if found.is_empty() {
+        return Outcome::Quiet;
+    }
+    Outcome::Warn(format!(
+        "these config keys are now built in and their stored values are ignored: {}",
+        found.join("; ")
+    ))
 }
 
 /// The code index files that earlier versions kept per worktree: the
@@ -3326,5 +3366,79 @@ mod tests {
         // Assert
         assert!(matches!(outcome, Outcome::Done(_)));
         assert!(state_index(&h, "fresh").exists());
+    }
+
+    /// A stored value that differs from the fixed default, of the same type.
+    fn differing(default: &serde_json::Value) -> serde_json::Value {
+        use serde_json::Value;
+        match default {
+            Value::Bool(b) => Value::Bool(!b),
+            Value::String(s) => Value::String(format!("{s}-changed")),
+            Value::Number(n) if n.is_f64() => serde_json::json!(n.as_f64().unwrap() + 1.0),
+            other => serde_json::json!(other.as_i64().unwrap() + 1),
+        }
+    }
+
+    #[test]
+    fn every_fixed_key_is_ignored_refused_skipped_and_reported_once() {
+        use crate::config::{keys, store, write, ConfigError};
+        for (key, default) in keys::FIXED_KEYS.iter() {
+            // Arrange
+            let h = home(&format!("fixed-{key}"));
+            let root = playbook_root_from(&h);
+            let stored = differing(default);
+            store::put(&root, write::Tier::Global, None, key, &stored).unwrap();
+            store::put(&root, write::Tier::Repo, Some("o/r"), key, &stored).unwrap();
+
+            // Act
+            let resolved = crate::config::resolve(key, &h, Some("o/r"));
+            let set = write::set(write::Tier::Global, key, &stored, &h, None);
+            let imported = store::import(&root, &serde_json::json!({"global": {*key: stored}}));
+            let out = fixed_config_keys(&ctx(&h));
+
+            // Assert
+            assert!(matches!(resolved, Err(ConfigError::UnknownKey(_))), "{key}");
+            assert!(set.is_err(), "{key}");
+            assert_eq!(imported.unwrap(), 0, "{key}");
+            let Outcome::Warn(msg) = out else {
+                panic!("{key}: a stored fixed key is reported");
+            };
+            assert_eq!(msg.matches(key).count(), 1, "{key}: {msg}");
+            assert!(msg.contains(&stored.to_string()), "{key}: {msg}");
+        }
+    }
+
+    #[test]
+    fn a_fixed_key_stored_at_its_default_or_not_at_all_is_not_reported() {
+        use crate::config::{keys, store, write};
+        // Arrange
+        let h = home("fixed-quiet");
+        let root = playbook_root_from(&h);
+        let (key, default) = &keys::FIXED_KEYS[0];
+        let quiet_before = fixed_config_keys(&ctx(&h));
+        store::put(&root, write::Tier::Global, None, key, default).unwrap();
+
+        // Act
+        let quiet_at_default = fixed_config_keys(&ctx(&h));
+
+        // Assert
+        assert!(matches!(quiet_before, Outcome::Quiet));
+        assert!(matches!(quiet_at_default, Outcome::Quiet));
+    }
+
+    #[test]
+    fn fixed_config_keys_is_a_manual_migration_that_waits_for_the_next_release() {
+        // Arrange
+        let entry = registry()
+            .into_iter()
+            .find(|m| m.id == FIXED_CONFIG_KEYS_MIGRATION)
+            .expect("registered");
+
+        // Act
+        let since = entry.since();
+
+        // Assert
+        assert!(matches!(entry.kind, Kind::Manual));
+        assert_eq!(since, Since::Next);
     }
 }

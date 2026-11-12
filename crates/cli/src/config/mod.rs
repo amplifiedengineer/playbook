@@ -288,9 +288,6 @@ pub fn resolve_valid(
         };
         return Ok((default, Source::Default, Some(ignored)));
     }
-    if let Some(fixed) = gc_fallback(key, &value, source, home, repo_slug)? {
-        return Ok(fixed);
-    }
     if key == "gate.maxRounds" && !value.as_i64().is_some_and(keys::gate_max_rounds_in_range) {
         let ignored = IgnoredValue {
             tier: source,
@@ -317,54 +314,6 @@ pub fn resolve_valid(
         warning,
     };
     Ok((default, Source::Default, Some(ignored)))
-}
-
-/// A resolved value that `resolve_valid` returns, with the tier and any
-/// dropped-value note.
-type Checked = (Value, Source, Option<IgnoredValue>);
-
-/// For a numeric `gc.*` key whose stored value is outside its range (or, for
-/// the pressure key, above the idle key), the default with a warning. `None`
-/// when the key is not one of those or the value is fine.
-fn gc_fallback(
-    key: &str,
-    value: &Value,
-    source: Source,
-    home: &Path,
-    repo_slug: Option<&str>,
-) -> Result<Option<Checked>, ConfigError> {
-    let Some(entry) = keys::gc_number(key) else {
-        return Ok(None);
-    };
-    let mut good = keys::gc_number_or_default(key, value) == value.as_i64();
-    let mut above_idle = false;
-    if good && key == keys::GC_PRESSURE_KEY {
-        let (idle, _) = resolve(keys::GC_PRESSURE_CAP_KEY, home, repo_slug)?;
-        let idle = keys::gc_number_or_default(keys::GC_PRESSURE_CAP_KEY, &idle).unwrap_or(0);
-        good = value
-            .as_i64()
-            .is_some_and(|n| keys::gc_pressure_within_idle(n, idle) == n);
-        above_idle = !good;
-    }
-    if good {
-        return Ok(None);
-    }
-    let warning = if above_idle {
-        format!(
-            "ignoring invalid value {value} for config key {key}, it must not exceed {}",
-            keys::GC_PRESSURE_CAP_KEY
-        )
-    } else {
-        format!(
-            "ignoring invalid value {value} for config key {key}, valid values are {} to {}",
-            entry.min, entry.max
-        )
-    };
-    let ignored = IgnoredValue {
-        tier: source,
-        warning,
-    };
-    Ok(Some((known_default(key), Source::Default, Some(ignored))))
 }
 
 /// The legacy global tier JSON file, imported into the store on first open.
@@ -515,47 +464,6 @@ mod tests {
             assert!(any_scoped_config(&root), "{case}");
             fs::remove_file(dir.join("config.json")).unwrap();
         }
-        let _ = fs::remove_dir_all(&home);
-    }
-
-    #[test]
-    fn a_gc_number_is_range_checked_on_write() {
-        let low = write::validate_key_and_value("gc.graceDays", &json!(0));
-        let high = write::validate_key_and_value("gc.graceDays", &json!(366));
-        let text = write::validate_key_and_value("gc.graceDays", &json!(1.5));
-        let ok = write::validate_key_and_value("gc.graceDays", &json!(30));
-
-        assert!(matches!(low, Err(ConfigError::OutOfRange { .. })));
-        assert!(matches!(high, Err(ConfigError::OutOfRange { .. })));
-        assert!(matches!(text, Err(ConfigError::OutOfRange { .. })));
-        assert!(ok.is_ok());
-    }
-
-    #[test]
-    fn resolve_valid_drops_an_out_of_range_gc_value_and_a_pressure_above_idle() {
-        let home = scratch_home("gc-range");
-        let root = crate::common::paths::playbook_root_from(&home);
-        let put = |key: &str, value: i64| {
-            store::put(&root, write::Tier::Global, None, key, &Value::from(value)).unwrap();
-        };
-        put("gc.graceDays", 366);
-        put("gc.buildOutputIdleDays", 3);
-        put("gc.buildOutputPressureIdleDays", 4);
-
-        let grace = resolve_valid("gc.graceDays", &home, None).unwrap();
-        let pressure = resolve_valid("gc.buildOutputPressureIdleDays", &home, None).unwrap();
-
-        assert_eq!((grace.0, grace.1), (Value::from(7), Source::Default));
-        assert!(grace.2.is_some());
-        assert_eq!(pressure.0, Value::from(1));
-        let note = pressure.2.as_ref().unwrap();
-        assert!(note
-            .warning
-            .contains("must not exceed gc.buildOutputIdleDays"));
-        assert!(grace.2.as_ref().unwrap().warning.contains("1 to"));
-        put("gc.buildOutputPressureIdleDays", 3);
-        let kept = resolve_valid("gc.buildOutputPressureIdleDays", &home, None).unwrap();
-        assert_eq!((kept.0, kept.2), (Value::from(3), None));
         let _ = fs::remove_dir_all(&home);
     }
 

@@ -5,7 +5,8 @@
 //! values where one exists. Used by the resolution and write modules to
 //! reject an unknown key or an out-of-range value.
 
-use serde_json::Value;
+use serde_json::{json, Value};
+use std::sync::LazyLock;
 
 /// The default `auto.budgetUsd`, the main session's spend cap in US dollars.
 /// Measured on 30 days of real sessions (ADR 0028, 2026-10-17 amendment): the
@@ -130,96 +131,44 @@ pub const KNOWN_KEYS: &[&str] = &[
     "watch.limits.actionsPerDay",
     "watch.limits.usdPerDay",
     "gc.enabled",
-    "gc.graceDays",
-    "gc.handoffGraceDays",
-    "gc.sessionDirIdleDays",
-    "gc.logMaxDays",
-    "gc.logMaxMiB",
-    "gc.leftoverDays",
-    "gc.gateDbIdleDays",
-    "gc.buildOutputIdleDays",
-    "gc.buildOutputPressureIdleDays",
-    "gc.buildOutputActiveMinutes",
-    "gc.freeSpaceWarnGiB",
-    "gc.freeSpaceWarnPercent",
 ];
-
-/// A numeric `gc.*` key: its name, default, and the inclusive range a value
-/// must lie in. A value outside the range falls back to the default.
-pub struct GcNumber {
-    pub key: &'static str,
-    pub default: i64,
-    pub min: i64,
-    pub max: i64,
-}
-
-/// The key `gc.buildOutputPressureIdleDays` may not exceed.
-pub const GC_PRESSURE_CAP_KEY: &str = "gc.buildOutputIdleDays";
-/// The pressure key, which is also bounded by [`GC_PRESSURE_CAP_KEY`].
-pub const GC_PRESSURE_KEY: &str = "gc.buildOutputPressureIdleDays";
-
-const fn gc_entry(key: &'static str, default: i64, min: i64, max: i64) -> GcNumber {
-    GcNumber {
-        key,
-        default,
-        min,
-        max,
-    }
-}
-
-/// Every numeric `gc.*` key with its default and range.
-pub const GC_NUMBERS: &[GcNumber] = &[
-    gc_entry("gc.graceDays", 7, 1, 365),
-    gc_entry("gc.handoffGraceDays", 14, 1, 365),
-    gc_entry("gc.sessionDirIdleDays", 14, 1, 365),
-    gc_entry("gc.logMaxDays", 30, 1, 365),
-    gc_entry("gc.logMaxMiB", 5, 1, 1024),
-    gc_entry("gc.leftoverDays", 90, 1, 730),
-    gc_entry("gc.gateDbIdleDays", 30, 1, 365),
-    gc_entry("gc.buildOutputIdleDays", 7, 1, 365),
-    gc_entry(GC_PRESSURE_KEY, 1, 1, 30),
-    gc_entry("gc.buildOutputActiveMinutes", 15, 1, 1440),
-    gc_entry("gc.freeSpaceWarnGiB", 10, 1, 1024),
-    gc_entry("gc.freeSpaceWarnPercent", 5, 1, 50),
-];
-
-/// The numeric `gc.*` entry for `key`, or `None` for any other key.
-pub fn gc_number(key: &str) -> Option<&'static GcNumber> {
-    GC_NUMBERS.iter().find(|entry| entry.key == key)
-}
-
-/// `value` when it is a whole number inside the range of the `gc.*` key
-/// `key`, else the key's default. `None` for a key that is not numeric `gc.*`.
-/// The pressure key's upper bound also depends on the idle key, which
-/// [`gc_pressure_within_idle`] checks.
-pub fn gc_number_or_default(key: &str, value: &Value) -> Option<i64> {
-    let entry = gc_number(key)?;
-    Some(
-        value
-            .as_i64()
-            .filter(|n| (entry.min..=entry.max).contains(n))
-            .unwrap_or(entry.default),
-    )
-}
-
-/// The pressure idle days to use: `pressure` unless it exceeds `idle`, then
-/// the pressure default.
-pub fn gc_pressure_within_idle(pressure: i64, idle: i64) -> i64 {
-    if pressure > idle {
-        gc_number(GC_PRESSURE_KEY).map_or(pressure, |entry| entry.default)
-    } else {
-        pressure
-    }
-}
 
 /// Keys that were removed. A stored value stays in the store, is never read,
-/// and `config import` skips it (one release of grace).
+/// and `config import` skips it (one release of grace). A key that became a
+/// built-in constant is listed in [`FIXED_KEYS`] instead.
 pub const RETIRED_KEYS: &[&str] = &[
     "hooks.rmGuard.allowedRoots",
     "sessions.autoClose",
     "launcher.claudeOverride",
     "agents.variants",
 ];
+
+/// Keys that became built-in constants, each with the value the constant now
+/// has. They behave as [`RETIRED_KEYS`] do, and the `fixed-config-keys`
+/// migration reports a stored value that differs. Cutting another key to a
+/// constant adds one row here.
+pub static FIXED_KEYS: LazyLock<Vec<(&'static str, Value)>> = LazyLock::new(|| {
+    vec![
+        ("gc.graceDays", json!(7)),
+        ("gc.handoffGraceDays", json!(14)),
+        ("gc.sessionDirIdleDays", json!(14)),
+        ("gc.logMaxDays", json!(30)),
+        ("gc.logMaxMiB", json!(5)),
+        ("gc.leftoverDays", json!(90)),
+        ("gc.gateDbIdleDays", json!(30)),
+        ("gc.buildOutputIdleDays", json!(7)),
+        ("gc.buildOutputPressureIdleDays", json!(1)),
+        ("gc.buildOutputActiveMinutes", json!(15)),
+        ("gc.freeSpaceWarnGiB", json!(10)),
+        ("gc.freeSpaceWarnPercent", json!(5)),
+    ]
+});
+
+/// Whether `key` was removed: a stored value is never read, `config set`
+/// refuses it and `config import` skips it.
+pub fn is_retired(key: &str) -> bool {
+    RETIRED_KEYS.contains(&key) || FIXED_KEYS.iter().any(|(fixed, _)| *fixed == key)
+}
 
 /// The per-user settings, which live only in the global tier.
 pub const USER_KEYS: &[&str] = &[
@@ -340,18 +289,6 @@ pub const LOCAL_ONLY_KEYS: &[&str] = &[
     "watch.limits.actionsPerDay",
     "watch.limits.usdPerDay",
     "gc.enabled",
-    "gc.graceDays",
-    "gc.handoffGraceDays",
-    "gc.sessionDirIdleDays",
-    "gc.logMaxDays",
-    "gc.logMaxMiB",
-    "gc.leftoverDays",
-    "gc.gateDbIdleDays",
-    "gc.buildOutputIdleDays",
-    "gc.buildOutputPressureIdleDays",
-    "gc.buildOutputActiveMinutes",
-    "gc.freeSpaceWarnGiB",
-    "gc.freeSpaceWarnPercent",
 ];
 
 /// Keys that start with this prefix never sync, whatever `SHARED_KEYS` holds.
@@ -481,7 +418,7 @@ pub fn default_value(key: &str) -> Option<Value> {
         "watch.limits.actionsPerDay" => Some(Value::Number(50.into())),
         "watch.limits.usdPerDay" => Some(Value::Number(5.into())),
         "gc.enabled" => Some(Value::Bool(true)),
-        _ => gc_number(key).map(|entry| Value::Number(entry.default.into())),
+        _ => None,
     }
 }
 
@@ -567,16 +504,6 @@ const LEGACY_KEY_NAMES: &[&str] = &[
     "watch.maxCatchupHours",
     "watch.limits.actionsPerDay",
     "watch.limits.usdPerDay",
-    "gc.handoffGraceDays",
-    "gc.sessionDirIdleDays",
-    "gc.logMaxDays",
-    "gc.logMaxMiB",
-    "gc.gateDbIdleDays",
-    "gc.buildOutputIdleDays",
-    "gc.buildOutputPressureIdleDays",
-    "gc.buildOutputActiveMinutes",
-    "gc.freeSpaceWarnGiB",
-    "gc.freeSpaceWarnPercent",
 ];
 
 /// Non-leaf segments that are allowed to be camelCase.
@@ -585,7 +512,7 @@ const COMPOUND_GROUPS: &[&str] = &["proseLint", "policyGuard"];
 
 /// The exact size of `KNOWN_KEYS`; each Segment that cuts keys lowers it.
 #[cfg(test)]
-const KEY_CEILING: usize = 96;
+const KEY_CEILING: usize = 84;
 
 #[cfg(test)]
 mod tests {
@@ -724,9 +651,14 @@ mod tests {
 
     #[test]
     fn the_retired_rm_guard_key_is_no_longer_known() {
-        for key in RETIRED_KEYS {
-            assert!(!KNOWN_KEYS.contains(key), "{key}");
+        for key in RETIRED_KEYS
+            .iter()
+            .copied()
+            .chain(FIXED_KEYS.iter().map(|(key, _)| *key))
+        {
+            assert!(!KNOWN_KEYS.contains(&key), "{key}");
             assert_eq!(default_value(key), None, "{key}");
+            assert!(is_retired(key), "{key}");
         }
     }
 
@@ -1002,43 +934,8 @@ mod tests {
     }
 
     #[test]
-    fn gc_keys_fall_back_on_bad_values() {
-        for entry in GC_NUMBERS {
-            let at = |n: i64| gc_number_or_default(entry.key, &Value::from(n));
-            assert_eq!(at(entry.min), Some(entry.min), "{} min", entry.key);
-            assert_eq!(at(entry.max), Some(entry.max), "{} max", entry.key);
-            assert_eq!(
-                at(entry.min - 1),
-                Some(entry.default),
-                "{} under",
-                entry.key
-            );
-            assert_eq!(at(entry.max + 1), Some(entry.default), "{} over", entry.key);
-            let wrong = gc_number_or_default(entry.key, &Value::from("ten"));
-            assert_eq!(wrong, Some(entry.default), "{} type", entry.key);
-            assert_eq!(default_value(entry.key), Some(Value::from(entry.default)));
-        }
-        assert_eq!(gc_number_or_default("mode", &Value::from(3)), None);
-    }
-
-    #[test]
     fn gc_enabled_is_a_boolean_defaulting_to_true() {
         assert!(KNOWN_KEYS.contains(&"gc.enabled"));
         assert_eq!(default_value("gc.enabled"), Some(Value::Bool(true)));
-    }
-
-    #[test]
-    fn every_gc_number_is_a_known_key() {
-        for entry in GC_NUMBERS {
-            assert!(KNOWN_KEYS.contains(&entry.key), "{}", entry.key);
-        }
-    }
-
-    #[test]
-    fn pressure_idle_not_above_idle() {
-        let default = gc_number(GC_PRESSURE_KEY).unwrap().default;
-        assert_eq!(gc_pressure_within_idle(3, 3), 3);
-        assert_eq!(gc_pressure_within_idle(4, 3), default);
-        assert_eq!(gc_pressure_within_idle(1, 7), 1);
     }
 }
