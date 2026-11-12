@@ -5,6 +5,10 @@
 //! fake `gh` script. Every child runs with a scratch HOME and no global git
 //! configuration.
 
+#[path = "support/deliver_gh.rs"]
+mod deliver_gh;
+
+use deliver_gh::FAKE_GH;
 use playbook::deliver::{self, exit, Options, Stage};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -16,40 +20,6 @@ static N: AtomicU64 = AtomicU64::new(0);
 
 /// A diff far past the old 1500 line refusal.
 const LARGE_DIFF_LINES: usize = 2000;
-
-const FAKE_GH: &str = r#"#!/bin/bash
-d="$FAKE_GH_DIR"
-echo "$*" >> "$d/log"
-val() { shift_to="$1"; shift; while [ $# -gt 0 ]; do [ "$1" = "$shift_to" ] && { echo "$2"; return; }; shift; done; }
-json() {
-  printf '{"number":7,"url":"https://github.com/o/r/pull/7","isDraft":%s,"state":"%s","title":"%s","baseRefName":"%s"}' \
-    "$(cat $d/draft)" "$(cat $d/state)" "$(cat $d/title)" "$(cat $d/base)"
-}
-case "$1 $2" in
-  "pr list")
-    case "$*" in
-      *headRefName*) [ -f "$d/heads" ] && cat "$d/heads" || echo "[]";;
-      *) [ -f "$d/title" ] && echo "[$(json)]" || echo "[]";;
-    esac;;
-  "pr create")
-    [ -f "$d/fail_create" ] && { echo "boom" >&2; exit 1; }
-    val --title "$@" > "$d/title"; val --base "$@" > "$d/base"
-    case "$*" in *--draft*) echo true > "$d/draft";; *) echo false > "$d/draft";; esac
-    [ -f "$d/state" ] || echo OPEN > "$d/state"; cp "$(val --body-file "$@")" "$d/body"
-    echo https://github.com/o/r/pull/7;;
-  "pr edit")
-    t="$(val --title "$@")"; [ -n "$t" ] && echo "$t" > "$d/title"
-    b="$(val --base "$@")"; [ -n "$b" ] && echo "$b" > "$d/base"
-    f="$(val --body-file "$@")"; [ -n "$f" ] && cp "$f" "$d/body"; true;;
-  "pr ready") case "$*" in *--undo*) echo true > "$d/draft";; *) echo false > "$d/draft";; esac;;
-  "pr merge") [ -f "$d/noqueue" ] || touch "$d/queued";;
-  "pr view")
-    q=null; [ -f "$d/queued" ] && q='{"enabledAt":"x"}'
-    printf '{"state":"%s","autoMergeRequest":%s}' "$(cat $d/state)" "$q";;
-  "pr checks") [ -f "$d/checks" ] && cat "$d/checks" || echo "[]"; exit 8;;
-  *) echo "unexpected gh $*" >&2; exit 1;;
-esac
-"#;
 
 struct Rig {
     root: PathBuf,

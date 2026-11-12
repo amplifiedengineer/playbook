@@ -144,7 +144,7 @@ fn unwrap_group<'a>(words: &[&'a str]) -> Vec<&'a str> {
 }
 
 /// `cat > <dir>/pr-body.md <<'EOF'`: the one file write the pull request
-/// skill makes before `playbook deliver`. The body must be a quoted heredoc.
+/// skill makes before `playbook pr create`. The body must be a quoted heredoc.
 fn is_pr_body_write(command: &Command) -> bool {
     let words: Vec<&str> = command.words.iter().map(String::as_str).collect();
     let [cat, ">", target, ..] = words.as_slice() else {
@@ -426,10 +426,11 @@ fn is_playbook_step(args: &[&str]) -> bool {
     match args {
         ["commit", "run", rest @ ..] => rest.contains(&"--auto"),
         // Delivery only: promoting a draft, queueing a merge or waiting on one is new work.
-        ["deliver", rest @ ..] => !rest
+        // `deliver` is the old name of `pr create`.
+        ["pr", "create", rest @ ..] | ["deliver", rest @ ..] => !rest
             .iter()
             .any(|a| matches!(*a, "--ready" | "--auto-merge" | "--wait")),
-        ["pr", "create" | "prepare" | "rules", ..]
+        ["pr", "prepare" | "rules", ..]
         | ["commit", "prepare", ..]
         | ["worktree", "review", "teardown", ..]
         | ["config", "get", ..] => true,
@@ -546,6 +547,9 @@ mod tests {
             "git add -A `git push origin feat/x`",
             "playbook deliver --wait",
             "playbook deliver --ready",
+            "playbook pr create --ready --auto-merge",
+            "playbook pr create --wait",
+            "playbook pr create --ready",
             "cargo build",
             "npm test",
             "rm -rf target",

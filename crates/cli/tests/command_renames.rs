@@ -53,3 +53,32 @@ fn no_legacy_command_is_listed_by_the_command_index() {
         );
     }
 }
+
+const DELIVER_OLD: &str = "deliver";
+const DELIVER_NEW: &str = "pr create";
+
+#[test]
+fn deliver_is_an_alias_row_for_pr_create() {
+    // Arrange
+    let args: Vec<std::ffi::OsString> = ["playbook", DELIVER_OLD, "--ready", "--json"]
+        .iter()
+        .map(std::ffi::OsString::from)
+        .collect();
+
+    // Act
+    let (out, line) = playbook::renames::rewrite(&args, playbook::renames::COMMAND_RENAMES);
+
+    // Assert
+    let out: Vec<String> = out
+        .iter()
+        .map(|a| a.to_string_lossy().into_owned())
+        .collect();
+    assert_eq!(out, ["playbook", "pr", "create", "--ready", "--json"]);
+    assert_eq!(
+        line,
+        Some(playbook::renames::deprecation_line(
+            DELIVER_OLD,
+            DELIVER_NEW
+        ))
+    );
+}

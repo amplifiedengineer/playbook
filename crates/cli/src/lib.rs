@@ -997,83 +997,6 @@ pub enum Command {
         #[command(subcommand)]
         sub: CommitCommand,
     },
-    /// Commit, push and open or update a PR from any worktree
-    ///
-    /// Stages per flag, commits when something is staged (message from
-    /// `--message` or `--message-file`), rebases onto the base, pushes, then
-    /// opens or updates the PR through `gh`. Refuses the default or a
-    /// protected branch and a detached HEAD, never skips hooks or signing,
-    /// and only force-pushes with a lease after its own rebase. Exit codes:
-    /// 0 delivered, 3 refused, 4 rebase conflict, 5 a git or gh call
-    /// failed, 6 PR closed or a required check failed, 7 wait timed out, 8
-    /// auto-merge did not queue, 9 nothing to do.
-    ///
-    /// Example: `playbook deliver --dir ../wt -A --message "fix(x): y" --title "fix(x): y" --ready`
-    Deliver {
-        /// Worktree to deliver from (default: the current directory)
-        #[arg(long)]
-        dir: Option<String>,
-        /// Stage everything first (`git add -A`)
-        #[arg(short = 'A', conflicts_with_all = ["update", "staged"])]
-        all: bool,
-        /// Stage tracked changes first (`git add -u`)
-        #[arg(short = 'u', conflicts_with = "staged")]
-        update: bool,
-        /// Commit only what is already staged (the default)
-        #[arg(long)]
-        staged: bool,
-        /// Commit message
-        #[arg(long, conflicts_with = "message_file")]
-        message: Option<String>,
-        /// File with the commit message
-        #[arg(long)]
-        message_file: Option<String>,
-        /// PR title
-        #[arg(long)]
-        title: Option<String>,
-        /// PR body
-        #[arg(long, conflicts_with = "body_file")]
-        body: Option<String>,
-        /// File with the PR body
-        #[arg(long)]
-        body_file: Option<String>,
-        /// Base branch (default: the open PR's base, a parent PR branch, or the default branch)
-        #[arg(long)]
-        base: Option<String>,
-        /// Open or mark the PR ready for review
-        #[arg(long, conflicts_with = "draft")]
-        ready: bool,
-        /// Open or return the PR as a draft
-        #[arg(long)]
-        draft: bool,
-        /// Queue auto-merge and verify it queued
-        #[arg(long)]
-        auto_merge: bool,
-        /// Wait until the PR merges, closes, or a required check fails
-        #[arg(long)]
-        wait: bool,
-        /// Seconds to wait with `--wait`
-        #[arg(long, default_value_t = 1800, requires = "wait")]
-        timeout: u64,
-        /// Print the plan and change nothing
-        #[arg(long)]
-        dry_run: bool,
-        /// Ticket key for the branch (`none` turns the ticket rules off)
-        #[arg(long)]
-        ticket: Option<String>,
-        /// GitHub issue number the PR handles
-        #[arg(long)]
-        issue: Option<String>,
-        /// Print JSON instead of text
-        #[arg(long)]
-        json: bool,
-        /// Refuse unless `--dir` is on this branch
-        #[arg(long)]
-        branch: Option<String>,
-        /// Auto mode: never force a push; a branch that needs a force is parked
-        #[arg(long)]
-        auto: bool,
-    },
     /// Run the mechanical steps behind the review commands
     Review {
         #[command(subcommand)]
@@ -1535,30 +1458,83 @@ pub enum PrCommand {
         #[arg(long, requires = "json")]
         args_stdin: bool,
     },
-    /// Push the branch and open a PR from a drafted title and body
+    /// Commit, push and open or update a PR from any worktree
     ///
-    /// Opens a draft unless the `pr.draft` setting is `false`.
+    /// Stages per flag, commits when something is staged (message from
+    /// `--message` or `--message-file`), rebases onto the base, pushes, then
+    /// opens or updates the PR through `gh`. Opens a draft unless the
+    /// `pr.draft` setting is `false`. Refuses the default or a protected
+    /// branch and a detached HEAD, never skips hooks or signing, and only
+    /// force-pushes with a lease after its own rebase. Exit codes: 0
+    /// delivered, 3 refused, 4 rebase conflict, 5 a git or gh call failed, 6
+    /// PR closed or a required check failed, 7 wait timed out, 8 auto-merge
+    /// did not queue, 9 nothing to do.
     ///
-    /// Example: `playbook pr create --title "fix(x): y" --body-file /tmp/body.md`
+    /// Example: `playbook pr create --dir ../wt -A --message "fix(x): y" --title "fix(x): y" --ready`
     Create {
-        /// PR title, at most 72 characters
-        #[arg(long)]
-        title: String,
-        /// File holding the PR body
-        #[arg(long)]
-        body_file: String,
-        /// Base branch for the PR (default: the repo's default branch)
-        #[arg(long)]
-        base: Option<String>,
-        /// Work in this directory instead of the current one
+        /// Worktree to deliver from (default: the current directory)
         #[arg(long)]
         dir: Option<String>,
+        /// Stage everything first (`git add -A`)
+        #[arg(short = 'A', conflicts_with_all = ["update", "staged"])]
+        all: bool,
+        /// Stage tracked changes first (`git add -u`)
+        #[arg(short = 'u', conflicts_with = "staged")]
+        update: bool,
+        /// Commit only what is already staged (the default)
+        #[arg(long)]
+        staged: bool,
+        /// Commit message
+        #[arg(long, conflicts_with = "message_file")]
+        message: Option<String>,
+        /// File with the commit message
+        #[arg(long)]
+        message_file: Option<String>,
+        /// PR title
+        #[arg(long)]
+        title: Option<String>,
+        /// PR body
+        #[arg(long, conflicts_with = "body_file")]
+        body: Option<String>,
+        /// File with the PR body
+        #[arg(long)]
+        body_file: Option<String>,
+        /// Base branch (default: the open PR's base, a parent PR branch, or the default branch)
+        #[arg(long)]
+        base: Option<String>,
+        /// Open or mark the PR ready for review
+        #[arg(long, conflicts_with = "draft")]
+        ready: bool,
+        /// Open or return the PR as a draft
+        #[arg(long)]
+        draft: bool,
+        /// Queue auto-merge and verify it queued
+        #[arg(long)]
+        auto_merge: bool,
+        /// Wait until the PR merges, closes, or a required check fails
+        #[arg(long)]
+        wait: bool,
+        /// Seconds to wait with `--wait`
+        #[arg(long, default_value_t = 1800, requires = "wait")]
+        timeout: u64,
+        /// Print the plan and change nothing
+        #[arg(long)]
+        dry_run: bool,
         /// Ticket key for the branch (`none` turns the ticket rules off)
         #[arg(long)]
         ticket: Option<String>,
         /// GitHub issue number the PR handles
         #[arg(long)]
         issue: Option<String>,
+        /// Print JSON instead of text
+        #[arg(long)]
+        json: bool,
+        /// Refuse unless `--dir` is on this branch
+        #[arg(long)]
+        branch: Option<String>,
+        /// Auto mode: never force a push; a branch that needs a force is parked
+        #[arg(long)]
+        auto: bool,
     },
     /// Read what the finish flow needs to know about a PR, in one call
     ///

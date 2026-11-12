@@ -112,7 +112,7 @@ A tagged handoff with no marker belongs to a session still running and is left a
 **`policy-guard`.** When off it allows every call. When on, it denies:
 
 - skipping git hooks or signing (`--no-verify`, `git commit -n`, `--no-gpg-sign`, `-c commit.gpgsign=false`);
-- a hand-run `gh pr create` (use `playbook deliver`, or `/playbook:pr-create`, which writes the title and body and opens the PR);
+- a hand-run `gh pr create` (use `playbook pr create`, or `/playbook:pr-create`, which writes the title and body and opens the PR);
 - a write to Claude Code's own memory (`~/.claude/projects/*/memory/`, `~/.claude/memory/`) from Bash, Edit or Write;
 - every write to a Claude Code settings file (`settings.json` or `settings.local.json`, user or project): an Edit or Write, or a Bash redirect, `tee`, `sed -i`, `perl -pi`, `cp`, `mv`, `install`, `rsync`, `ln`, `dd`, `rm`, `truncate` or interpreter one-liner;
 - `playbook uninstall --yes` in Bash.

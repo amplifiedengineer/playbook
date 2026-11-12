@@ -1337,37 +1337,135 @@ fn real_main() {
                     std::process::exit(report.exit_code);
                 }
                 PrCommand::Create {
+                    dir,
+                    all,
+                    update,
+                    staged: _,
+                    message,
+                    message_file,
                     title,
+                    body,
                     body_file,
                     base,
-                    dir,
+                    ready,
+                    draft,
+                    auto_merge,
+                    wait,
+                    timeout,
+                    dry_run,
                     ticket,
                     issue,
+                    json,
+                    branch,
+                    auto,
                 } => {
-                    // A relative body path is relative to where the caller ran.
-                    let body_file = absolute_from_cwd(&body_file);
-                    enter_dir("pr create", dir.as_deref());
+                    let die = |message: String| -> ! {
+                        if json {
+                            let v = deliver::failure_json(&deliver::Failure {
+                                code: deliver::exit::REFUSED,
+                                message,
+                                details: Vec::new(),
+                            });
+                            println!("{}", serde_json::to_string_pretty(&v).unwrap_or_default());
+                        } else {
+                            eprintln!("pr create: {message}");
+                        }
+                        std::process::exit(deliver::exit::REFUSED)
+                    };
+                    let read = |file: Option<String>, text: Option<String>| -> Option<String> {
+                        match file {
+                            Some(f) if f == "-" => Some(read_stdin_to_string()),
+                            Some(f) => match std::fs::read_to_string(&f) {
+                                Ok(t) => Some(t),
+                                Err(e) => die(format!("could not read {f}: {e}")),
+                            },
+                            None => text,
+                        }
+                    };
+                    if message_file.as_deref() == Some("-") && body_file.as_deref() == Some("-") {
+                        die("--message-file and --body-file cannot both read stdin".into());
+                    }
+                    let message = read(message_file, message);
+                    let body = read(body_file, body);
+                    let dir = dir.map(|d| absolute_from_cwd(&d));
+                    if let Some(d) = &dir {
+                        if let Err(e) = std::env::set_current_dir(d) {
+                            die(format!("--dir {d}: {e}"));
+                        }
+                    }
+                    let cwd = std::env::current_dir().unwrap_or_default();
+                    if let Some(expected) = &branch {
+                        if let Err(why) = common::inline_args::guard(&cwd, expected) {
+                            if json {
+                                let mut v = deliver::failure_json(&deliver::Failure {
+                                    code: deliver::exit::REFUSED,
+                                    message: why,
+                                    details: Vec::new(),
+                                });
+                                v["verdict"] = "WRONG_DIRECTORY".into();
+                                println!(
+                                    "{}",
+                                    serde_json::to_string_pretty(&v).unwrap_or_default()
+                                );
+                            } else {
+                                eprintln!("pr create: WRONG_DIRECTORY: {why}");
+                            }
+                            std::process::exit(deliver::exit::REFUSED);
+                        }
+                    }
                     let slug = common::repo_slug();
                     let repo_slug = (!slug.is_empty()).then_some(slug.as_str());
-                    let draft = pr::create::draft_setting(&common::home_dir(), repo_slug);
-                    let rules = pr::body_rules::Rules::load(&common::home_dir(), repo_slug);
-                    let args = pr::create::Args {
-                        ticket: ticket.as_deref(),
-                        issue: issue.as_deref(),
+                    let mut opts = deliver::Options::new(cwd);
+                    opts.auto = auto;
+                    opts.stage = if all {
+                        deliver::Stage::All
+                    } else if update {
+                        deliver::Stage::Tracked
+                    } else {
+                        deliver::Stage::Staged
                     };
-                    match pr::create::run_with_rules(
-                        &gh,
-                        &title,
-                        &body_file,
-                        base.as_deref(),
-                        draft,
-                        &rules,
-                        &args,
-                    ) {
-                        Ok(output) => println!("{output}"),
-                        Err(err) => {
-                            eprintln!("pr create: {err}");
-                            std::process::exit(1);
+                    opts.message = message;
+                    opts.title = title;
+                    opts.body = body;
+                    opts.base = base;
+                    opts.ready = if ready {
+                        Some(true)
+                    } else if draft {
+                        Some(false)
+                    } else {
+                        None
+                    };
+                    opts.default_draft = pr::create::draft_setting(&common::home_dir(), repo_slug);
+                    opts.auto_merge = auto_merge;
+                    opts.wait = wait.then(|| std::time::Duration::from_secs(timeout));
+                    opts.dry_run = dry_run;
+                    opts.rules = Some(pr::body_rules::Rules::load(&common::home_dir(), repo_slug));
+                    opts.ticket = ticket;
+                    opts.issue = issue;
+                    opts.signoff = commit_signoff_on();
+                    match deliver::run(&opts) {
+                        Ok(report) => {
+                            if json {
+                                println!("{}", report.to_json());
+                            } else {
+                                print!("{}", report.to_text());
+                            }
+                            std::process::exit(report.code);
+                        }
+                        Err(f) => {
+                            if json {
+                                let v = deliver::failure_json(&f);
+                                println!(
+                                    "{}",
+                                    serde_json::to_string_pretty(&v).unwrap_or_default()
+                                );
+                            } else {
+                                eprintln!("pr create: {}", f.message);
+                                for d in &f.details {
+                                    eprintln!("  - {d}");
+                                }
+                            }
+                            std::process::exit(f.code);
                         }
                     }
                 }
@@ -1987,133 +2085,6 @@ fn real_main() {
                 "{}",
                 serde_json::to_string_pretty(&serde_json::Value::Object(out)).unwrap_or_default()
             );
-        }
-        Command::Deliver {
-            dir,
-            all,
-            update,
-            staged: _,
-            message,
-            message_file,
-            title,
-            body,
-            body_file,
-            base,
-            ready,
-            draft,
-            auto_merge,
-            wait,
-            timeout,
-            dry_run,
-            ticket,
-            issue,
-            json,
-            branch,
-            auto,
-        } => {
-            let die = |message: String| -> ! {
-                if json {
-                    let v = deliver::failure_json(&deliver::Failure {
-                        code: deliver::exit::REFUSED,
-                        message,
-                        details: Vec::new(),
-                    });
-                    println!("{}", serde_json::to_string_pretty(&v).unwrap_or_default());
-                } else {
-                    eprintln!("deliver: {message}");
-                }
-                std::process::exit(deliver::exit::REFUSED)
-            };
-            let read = |file: Option<String>, text: Option<String>| -> Option<String> {
-                match file {
-                    Some(f) if f == "-" => Some(read_stdin_to_string()),
-                    Some(f) => match std::fs::read_to_string(&f) {
-                        Ok(t) => Some(t),
-                        Err(e) => die(format!("could not read {f}: {e}")),
-                    },
-                    None => text,
-                }
-            };
-            if message_file.as_deref() == Some("-") && body_file.as_deref() == Some("-") {
-                die("--message-file and --body-file cannot both read stdin".into());
-            }
-            let message = read(message_file, message);
-            let body = read(body_file, body);
-            let dir = dir.map(|d| absolute_from_cwd(&d));
-            if let Some(d) = &dir {
-                if let Err(e) = std::env::set_current_dir(d) {
-                    die(format!("--dir {d}: {e}"));
-                }
-            }
-            let cwd = std::env::current_dir().unwrap_or_default();
-            if let Some(expected) = &branch {
-                if let Err(why) = common::inline_args::guard(&cwd, expected) {
-                    if json {
-                        let mut v = deliver::failure_json(&deliver::Failure {
-                            code: deliver::exit::REFUSED,
-                            message: why,
-                            details: Vec::new(),
-                        });
-                        v["verdict"] = "WRONG_DIRECTORY".into();
-                        println!("{}", serde_json::to_string_pretty(&v).unwrap_or_default());
-                    } else {
-                        eprintln!("deliver: WRONG_DIRECTORY: {why}");
-                    }
-                    std::process::exit(deliver::exit::REFUSED);
-                }
-            }
-            let slug = common::repo_slug();
-            let repo_slug = (!slug.is_empty()).then_some(slug.as_str());
-            let mut opts = deliver::Options::new(cwd);
-            opts.auto = auto;
-            opts.stage = if all {
-                deliver::Stage::All
-            } else if update {
-                deliver::Stage::Tracked
-            } else {
-                deliver::Stage::Staged
-            };
-            opts.message = message;
-            opts.title = title;
-            opts.body = body;
-            opts.base = base;
-            opts.ready = if ready {
-                Some(true)
-            } else if draft {
-                Some(false)
-            } else {
-                None
-            };
-            opts.default_draft = pr::create::draft_setting(&common::home_dir(), repo_slug);
-            opts.auto_merge = auto_merge;
-            opts.wait = wait.then(|| std::time::Duration::from_secs(timeout));
-            opts.dry_run = dry_run;
-            opts.rules = Some(pr::body_rules::Rules::load(&common::home_dir(), repo_slug));
-            opts.ticket = ticket;
-            opts.issue = issue;
-            opts.signoff = commit_signoff_on();
-            match deliver::run(&opts) {
-                Ok(report) => {
-                    if json {
-                        println!("{}", report.to_json());
-                    } else {
-                        print!("{}", report.to_text());
-                    }
-                    std::process::exit(report.code);
-                }
-                Err(f) => {
-                    if json {
-                        let v = deliver::failure_json(&f);
-                        println!("{}", serde_json::to_string_pretty(&v).unwrap_or_default());
-                    } else {
-                        eprintln!("deliver: {}", f.message);
-                        for d in &f.details {
-                            eprintln!("  - {d}");
-                        }
-                    }
-                    std::process::exit(f.code);
-                }
-            }
         }
         Command::Commit { sub } => {
             let dir = std::env::current_dir().unwrap_or_default();

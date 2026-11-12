@@ -73,14 +73,6 @@ impl Default for Rules {
 }
 
 impl Rules {
-    /// Every rule off: only the plain text checks of `pr create` run.
-    pub fn off() -> Rules {
-        Rules {
-            prose: Level::Off,
-            ..Rules::with_mode(MODE_OFF)
-        }
-    }
-
     /// The five structure rules at the level the `pr.rules` value names. An
     /// unknown value keeps each rule at its default.
     pub fn with_mode(mode: &str) -> Rules {

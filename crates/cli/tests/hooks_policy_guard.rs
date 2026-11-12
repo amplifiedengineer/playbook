@@ -194,6 +194,8 @@ fn denials_tell_an_unattended_run_what_to_do_when_the_sanctioned_path_fails() {
     let (out, _, _) = run(&bash("gh pr create --title t --body b"), &[]);
     let reason = denial(&out).expect("gh pr create is denied");
     assert!(reason.contains("playbook pr create --help"), "{reason}");
+    assert!(reason.contains("Use `playbook pr create`"), "{reason}");
+    assert!(!reason.contains("playbook deliver"), "{reason}");
     assert!(
         reason.contains("report the error text to the user, and stop"),
         "{reason}"

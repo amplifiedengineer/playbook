@@ -4,7 +4,7 @@
 //! One home for the text rules of a commit message, a PR title and a PR body.
 //! Every problem carries a rule id, the place it was found and a sentence, so
 //! a caller can list them all at once and fix them in one retry. `deliver::check`
-//! and `pr::guard` format these findings for their own callers.
+//! formats these findings for its callers.
 //!
 //! The AI attribution rule is the one the commit-message sanitizer hook uses
 //! (`common::attribution`), so every surface refuses the same lines.
@@ -66,7 +66,7 @@ pub fn is_conventional(title: &str) -> bool {
 
 /// Em and en dashes outside code, as `(1-based line, dash)`. Lines inside a
 /// fenced block and text inside inline backticks are ignored.
-pub fn dash_hits(text: &str) -> Vec<(usize, char)> {
+fn dash_hits(text: &str) -> Vec<(usize, char)> {
     let mut out = Vec::new();
     let mut fenced = false;
     for (i, line) in text.lines().enumerate() {

@@ -15,7 +15,11 @@ pub struct Rename {
 }
 
 /// Every renamed command path.
-pub const COMMAND_RENAMES: &[Rename] = &[];
+pub const COMMAND_RENAMES: &[Rename] = &[Rename {
+    old: "deliver",
+    new: "pr create",
+    extra: &[],
+}];
 
 /// The release that removes the old names.
 pub const ALIAS_REMOVAL: &str = "1.0.0";

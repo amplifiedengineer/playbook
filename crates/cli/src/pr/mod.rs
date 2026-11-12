@@ -6,7 +6,6 @@
 pub mod body_rules;
 pub mod comments;
 pub mod create;
-pub mod guard;
 pub mod land;
 pub mod prepare;
 pub mod reply;

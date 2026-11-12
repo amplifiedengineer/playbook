@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Igor Santos
 // SPDX-License-Identifier: Apache-2.0
 
-//! `playbook deliver` through the binary: the branch guard, the body from
+//! `playbook pr create` through the binary: the branch guard, the body from
 //! stdin and the JSON refusal shape.
 
 use std::io::Write;
@@ -51,9 +51,9 @@ fn repo(tag: &str) -> PathBuf {
     work
 }
 
-fn deliver(work: &Path, args: &[&str], stdin: &str) -> Output {
+fn pr_create(work: &Path, args: &[&str], stdin: &str) -> Output {
     let mut child = Command::new(env!("CARGO_BIN_EXE_playbook"))
-        .arg("deliver")
+        .args(["pr", "create"])
         .args(args)
         .env("HOME", work.parent().unwrap().join("home"))
         .env("GIT_CONFIG_GLOBAL", "/dev/null")
@@ -77,7 +77,7 @@ fn deliver(work: &Path, args: &[&str], stdin: &str) -> Output {
 fn parity_worktree_guard_a_branch_mismatch_is_wrong_directory_with_exit_3() {
     let work = repo("guard");
 
-    let o = deliver(&work, &["--branch", "other", "--json", "--dry-run"], "");
+    let o = pr_create(&work, &["--branch", "other", "--json", "--dry-run"], "");
 
     assert_eq!(o.status.code(), Some(3));
     let v: serde_json::Value = serde_json::from_slice(&o.stdout).unwrap();
@@ -88,7 +88,7 @@ fn parity_worktree_guard_a_branch_mismatch_is_wrong_directory_with_exit_3() {
 fn the_body_is_read_from_stdin_and_a_refusal_lists_rule_ids() {
     let work = repo("stdin");
 
-    let o = deliver(
+    let o = pr_create(
         &work,
         &[
             "--title",

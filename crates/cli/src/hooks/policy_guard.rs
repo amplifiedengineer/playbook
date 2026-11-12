@@ -108,7 +108,7 @@ const NO_VERIFY_REASON: &str = "Skipping git hooks (--no-verify, commit -n) is n
 
 const NO_SIGN_REASON: &str = "Turning off commit or tag signing (--no-gpg-sign, commit.gpgsign=false) is not allowed. Sign every commit and tag. If signing fails, report the error text and stop.";
 
-const PR_CREATE_REASON: &str = "Do not hand-run `gh pr create`. Use `playbook deliver` (it commits, pushes and opens or updates the PR from any worktree, `--dir <worktree>`), or the /playbook:pr-create skill, which writes the title and body and opens the PR. If the command itself fails, run `playbook pr create --help` or `playbook deliver --help`, report the error text to the user, and stop; do not fall back to `gh pr create`.";
+const PR_CREATE_REASON: &str = "Do not hand-run `gh pr create`. Use `playbook pr create` (it commits, pushes and opens or updates the PR from any worktree, `--dir <worktree>`), or the /playbook:pr-create skill, which writes the title and body and opens the PR. If the command itself fails, run `playbook pr create --help`, report the error text to the user, and stop; do not fall back to `gh pr create`.";
 
 /// Shown when a fact file is written in playbook's store: the format the
 /// system prompt no longer carries.

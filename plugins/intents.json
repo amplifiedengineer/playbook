@@ -156,10 +156,6 @@
     "required": false
   },
   {
-    "intent": "pr-deliver",
-    "required": false
-  },
-  {
     "intent": "pr-land-wait",
     "required": false
   },

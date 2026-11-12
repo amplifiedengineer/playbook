@@ -79,7 +79,7 @@ Configure and support Claude Code from the command line.
 
 playbook installs hooks and a session launcher, shows the Agent Budget Dashboard, and helps with PRs, reviews, worktrees and session handoffs.
 
-Subcommands: `adr`, `agents`, `atlassian`, `cc`, `ccd`, `ci`, `code`, `commands`, `commit`, `completions`, `config`, `deliver`, `deps`, `doc`, `doctor`, `effort`, `eval`, `gate`, `gc`, `glossary`, `handoff`, `hooks`, `learn`, `manifest`, `memory`, `migrate`, `mode`, `path`, `plan`, `plans`, `plugin`, `pr`, `prose`, `review`, `route`, `run-context`, `sanitize`, `segment`, `sessions`, `settings`, `setup`, `skills`, `state`, `statusline`, `tools`, `trust`, `uninstall`, `upgrade`, `usage`, `version`, `watch`, `worktree`
+Subcommands: `adr`, `agents`, `atlassian`, `cc`, `ccd`, `ci`, `code`, `commands`, `commit`, `completions`, `config`, `deps`, `doc`, `doctor`, `effort`, `eval`, `gate`, `gc`, `glossary`, `handoff`, `hooks`, `learn`, `manifest`, `memory`, `migrate`, `mode`, `path`, `plan`, `plans`, `plugin`, `pr`, `prose`, `review`, `route`, `run-context`, `sanitize`, `segment`, `sessions`, `settings`, `setup`, `skills`, `state`, `statusline`, `tools`, `trust`, `uninstall`, `upgrade`, `usage`, `version`, `watch`, `worktree`
 
 ### `playbook adr`
 
@@ -431,36 +431,6 @@ Example: `playbook config set pr.review.enabled true`
 - `<VALUE>`: New value; it is read as the type the setting expects
 - `--org`: Write to the org tier instead of the repo tier
 - `--global`: Write to the global tier instead of the repo tier
-
-### `playbook deliver`
-
-Commit, push and open or update a PR from any worktree
-
-Stages per flag, commits when something is staged (message from `--message` or `--message-file`), rebases onto the base, pushes, then opens or updates the PR through `gh`. Refuses the default or a protected branch and a detached HEAD, never skips hooks or signing, and only force-pushes with a lease after its own rebase. Exit codes: 0 delivered, 3 refused, 4 rebase conflict, 5 a git or gh call failed, 6 PR closed or a required check failed, 7 wait timed out, 8 auto-merge did not queue, 9 nothing to do.
-
-Example: `playbook deliver --dir ../wt -A --message "fix(x): y" --title "fix(x): y" --ready`
-
-- `--dir <DIR>`: Worktree to deliver from (default: the current directory)
-- `-A`: Stage everything first (`git add -A`)
-- `-u`: Stage tracked changes first (`git add -u`)
-- `--staged`: Commit only what is already staged (the default)
-- `--message <MESSAGE>`: Commit message
-- `--message-file <MESSAGE_FILE>`: File with the commit message
-- `--title <TITLE>`: PR title
-- `--body <BODY>`: PR body
-- `--body-file <BODY_FILE>`: File with the PR body
-- `--base <BASE>`: Base branch (default: the open PR's base, a parent PR branch, or the default branch)
-- `--ready`: Open or mark the PR ready for review
-- `--draft`: Open or return the PR as a draft
-- `--auto-merge`: Queue auto-merge and verify it queued
-- `--wait`: Wait until the PR merges, closes, or a required check fails
-- `--timeout <TIMEOUT>`: Seconds to wait with `--wait`
-- `--dry-run`: Print the plan and change nothing
-- `--ticket <TICKET>`: Ticket key for the branch (`none` turns the ticket rules off)
-- `--issue <ISSUE>`: GitHub issue number the PR handles
-- `--json`: Print JSON instead of text
-- `--branch <BRANCH>`: Refuse unless `--dir` is on this branch
-- `--auto`: Auto mode: never force a push; a branch that needs a force is parked
 
 ### `playbook deps`
 
@@ -1081,18 +1051,33 @@ Takes the command's arguments as one string (`#12 --bots --dry-run -y`). Prints 
 
 ### `playbook pr create`
 
-Push the branch and open a PR from a drafted title and body
+Commit, push and open or update a PR from any worktree
 
-Opens a draft unless the `pr.draft` setting is `false`.
+Stages per flag, commits when something is staged (message from `--message` or `--message-file`), rebases onto the base, pushes, then opens or updates the PR through `gh`. Opens a draft unless the `pr.draft` setting is `false`. Refuses the default or a protected branch and a detached HEAD, never skips hooks or signing, and only force-pushes with a lease after its own rebase. Exit codes: 0 delivered, 3 refused, 4 rebase conflict, 5 a git or gh call failed, 6 PR closed or a required check failed, 7 wait timed out, 8 auto-merge did not queue, 9 nothing to do.
 
-Example: `playbook pr create --title "fix(x): y" --body-file /tmp/body.md`
+Example: `playbook pr create --dir ../wt -A --message "fix(x): y" --title "fix(x): y" --ready`
 
-- `--title <TITLE>`: PR title, at most 72 characters
-- `--body-file <BODY_FILE>`: File holding the PR body
-- `--base <BASE>`: Base branch for the PR (default: the repo's default branch)
-- `--dir <DIR>`: Work in this directory instead of the current one
+- `--dir <DIR>`: Worktree to deliver from (default: the current directory)
+- `-A`: Stage everything first (`git add -A`)
+- `-u`: Stage tracked changes first (`git add -u`)
+- `--staged`: Commit only what is already staged (the default)
+- `--message <MESSAGE>`: Commit message
+- `--message-file <MESSAGE_FILE>`: File with the commit message
+- `--title <TITLE>`: PR title
+- `--body <BODY>`: PR body
+- `--body-file <BODY_FILE>`: File with the PR body
+- `--base <BASE>`: Base branch (default: the open PR's base, a parent PR branch, or the default branch)
+- `--ready`: Open or mark the PR ready for review
+- `--draft`: Open or return the PR as a draft
+- `--auto-merge`: Queue auto-merge and verify it queued
+- `--wait`: Wait until the PR merges, closes, or a required check fails
+- `--timeout <TIMEOUT>`: Seconds to wait with `--wait`
+- `--dry-run`: Print the plan and change nothing
 - `--ticket <TICKET>`: Ticket key for the branch (`none` turns the ticket rules off)
 - `--issue <ISSUE>`: GitHub issue number the PR handles
+- `--json`: Print JSON instead of text
+- `--branch <BRANCH>`: Refuse unless `--dir` is on this branch
+- `--auto`: Auto mode: never force a push; a branch that needs a force is parked
 
 ### `playbook pr land`
 

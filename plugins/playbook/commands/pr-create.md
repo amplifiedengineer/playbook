@@ -1,6 +1,6 @@
 ---
 description: Use when a branch is ready to open as a pull request. Runs pre-flight checks and opens a draft PR with a conventional title.
-allowed-tools: Bash(playbook pr prepare --json --args-stdin:*), Bash(playbook deliver:*), Bash(playbook:*), Read, Skill
+allowed-tools: Bash(playbook pr prepare --json --args-stdin:*), Bash(playbook pr create:*), Bash(playbook:*), Read, Skill
 argument-hint: "[--help] [--ready] [--base <branch>] [--ticket <ID>] [--issue <N>] [--dir <path>] [--auto] [--ask]"
 ---
 
@@ -12,7 +12,7 @@ $ARGUMENTS
 PLAYBOOK_ARGS_END_7Q2XK9
 ```
 
-The block above is the pre-flight report, one JSON object. It exits 0 whatever happened, so read `verdict`, not the exit code. Your job is the judgment: write the title and the body, then make one `playbook deliver` call. A caller that names "Worktree root: <path>, branch: <name>" is handled by the block. `--help` means print this file's `argument-hint` and stop.
+The block above is the pre-flight report, one JSON object. It exits 0 whatever happened, so read `verdict`, not the exit code. Your job is the judgment: write the title and the body, then make one `playbook pr create` call. A caller that names "Worktree root: <path>, branch: <name>" is handled by the block. `--help` means print this file's `argument-hint` and stop.
 
 ## Read the report
 
@@ -33,7 +33,7 @@ Use `commit_log`, `diff_stat` and what you know about the change. Read `diff_fil
 One call. Pass `--auto` when `mode` is `auto`, `--ticket` and `--issue` when the report has them, and nothing about draft or ready (the `pr.draft` setting decides):
 
 ```bash
-playbook deliver --json --dir "<root>" --branch "<branch>" --title "<title>" --body-file - --base "<base>" <<'PRBODY_EOF'
+playbook pr create --json --dir "<root>" --branch "<branch>" --title "<title>" --body-file - --base "<base>" <<'PRBODY_EOF'
 <the body>
 PRBODY_EOF
 ```

@@ -3,11 +3,14 @@
 
 //! The compiled `playbook pr` subcommands: usage text and argument errors.
 //! Paths that would call the real `gh` are covered through the `GhClient`
-//! fake in `tests/pr_prepare.rs` and `tests/pr_create.rs` instead.
+//! fake in `tests/pr_prepare.rs` and `tests/pr_create_deliver.rs` instead.
 
 use std::path::PathBuf;
 use std::process::{Command, Output};
 use std::sync::atomic::{AtomicU64, Ordering};
+
+/// The exit code of a refused delivery.
+const REFUSED_CODE: i32 = 3;
 
 static COUNTER: AtomicU64 = AtomicU64::new(0);
 
@@ -68,16 +71,16 @@ fn pr_create_help_lists_its_flags() {
 }
 
 #[test]
-fn pr_create_without_a_title_is_a_usage_error() {
+fn pr_create_without_a_title_is_not_a_usage_error() {
     // Arrange / Act
     let out = playbook(&["pr", "create", "--body-file", "/tmp/x.md"]);
 
     // Assert
-    assert_eq!(out.status.code(), Some(2));
+    assert_eq!(out.status.code(), Some(REFUSED_CODE));
 }
 
 #[test]
-fn pr_create_with_an_overlong_title_exits_non_zero_without_touching_anything() {
+fn pr_create_outside_a_repository_is_refused_without_touching_anything() {
     // Arrange
     let title = "a".repeat(73);
     let dir = scratch();
@@ -97,8 +100,7 @@ fn pr_create_with_an_overlong_title_exits_non_zero_without_touching_anything() {
     );
 
     // Assert
-    assert_eq!(out.status.code(), Some(1));
-    assert!(String::from_utf8_lossy(&out.stderr).contains("limit 72"));
+    assert_eq!(out.status.code(), Some(REFUSED_CODE));
     assert!(
         !dir.join(".git").exists(),
         "nothing may be initialised here"

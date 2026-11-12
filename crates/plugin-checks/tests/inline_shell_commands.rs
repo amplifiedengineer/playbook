@@ -166,7 +166,7 @@ fn command(name: &str) -> String {
 fn create_pull_request_makes_one_deliver_call_with_one_retry_and_no_draft_flag() {
     let text = command("pr-create.md");
 
-    let delivers = text.matches("playbook deliver --json").count();
+    let delivers = text.matches("playbook pr create --json").count();
     assert_eq!(delivers, 1, "exactly one deliver call");
     assert!(text.contains("--body-file -"), "the body goes on stdin");
     assert!(text.contains("call once more"), "one retry after a refusal");
@@ -180,7 +180,7 @@ fn create_pull_request_makes_one_deliver_call_with_one_retry_and_no_draft_flag()
     );
     let call: String = text
         .lines()
-        .filter(|l| l.starts_with("playbook deliver"))
+        .filter(|l| l.starts_with("playbook pr create"))
         .collect();
     assert!(
         !call.contains("--ready") && !call.contains("--draft"),

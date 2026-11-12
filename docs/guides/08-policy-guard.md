@@ -56,7 +56,7 @@ Each row is checked only while the guard is on. Source: `crates/cli/src/hooks/po
 | :- | :- | :- |
 | Skipping git hooks | `--no-verify` (or a long abbreviation of at least 8 characters) on `git commit`, `push`, `merge`, `rebase`, `cherry-pick` or `am`, and `-n` on `git commit`, also inside a cluster such as `-an` | The same commands without the flag, and `-n` on `git push`, which means dry run |
 | Turning signing off | `--no-gpg-sign` on `git commit`, `tag`, `merge`, `rebase`, `cherry-pick`, `revert` or `am`, and `git -c commit.gpgsign=false` or `-c tag.gpgsign=false` (also `no`, `off`, `0` or empty) | Signed commits and tags |
-| A hand-run `gh pr create` | `gh pr create`, also with `-R` or `--repo` before it | `playbook deliver`, `/playbook:pr-create` (which runs `playbook pr create`), `gh pr view`, `gh pr edit` and every other `gh` command |
+| A hand-run `gh pr create` | `gh pr create`, also with `-R` or `--repo` before it | `playbook pr create`, `/playbook:pr-create` (which runs `playbook pr create`), `gh pr view`, `gh pr edit` and every other `gh` command |
 | Memory outside playbook's store | A write to `~/.claude/memory/` or `~/.claude/projects/<project>/memory/`: a redirect into it, or `tee`, `cp`, `mv`, `rm`, `touch`, `mkdir`, `ln`, `install`, `rsync`, `dd`, `sed -i` or `perl -i` naming it | Reading those folders, and playbook's own store at `~/.config/playbook/memory/` (see the next row for how it may be written) |
 | Config database, config files and the memory store | A write to `config.db`, `playbook.db`, `memory.db`, `config.json` or the playbook `data` folder (a redirect, a writer program, an interpreter, `sed -i`, `cp`, `install`, `rsync`, `dd`, `mv`, `ln` or `sqlite3` with anything but a read), and a redirect, `tee`, `sed -i`, `mv`, `ln`, `cp`, `install`, `rsync` or `dd` into `~/.config/playbook/memory/` | Reading them (`cat`, `ls`, `jq`, `sqlite3` with a `SELECT`), copying them out, `rm`, which the rm guard judges, and writing a fact with the Write tool |
 | Protected config keys | `playbook config set` on `hooks.policyGuard.*`, `hooks.proseLint.*`, `pr.rules`, `pr.rules.*` or `pr.ticketPatterns`, and every `config import`, `config unset` and `config edit`. Matching ignores case. | `config get`, `config list`, `config export`, `config check`, and `config set` on any other key |
@@ -93,7 +93,7 @@ Skipping git hooks (--no-verify, commit -n) is not allowed. Fix what the hook re
 A hand-run `gh pr create`:
 
 ```text
-Do not hand-run `gh pr create`. Use `playbook deliver` (it commits, pushes and opens or updates the PR from any worktree, `--dir <worktree>`), or the /playbook:pr-create skill, which writes the title and body and opens the PR. ...
+Do not hand-run `gh pr create`. Use `playbook pr create` (it commits, pushes and opens or updates the PR from any worktree, `--dir <worktree>`), or the /playbook:pr-create skill, which writes the title and body and opens the PR. ...
 ```
 
 An Edit of `settings.json`:

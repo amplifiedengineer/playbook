@@ -65,7 +65,7 @@ Then it deletes the branch only if its name starts with `worktree-` (so a launch
 
 ## Delivery from a worktree
 
-`playbook deliver` (code in `crates/cli/src/deliver/`) never depends on the session's working directory. It runs `git` and `gh` with fixed argument vectors and the worktree as their directory, so a subagent that cannot change its cwd still delivers its branch. The module imports only `common/` helpers and its own `sys` adapter. The pre-commit step relies on the repo's own git hooks, which always run.
+`playbook pr create` (code in `crates/cli/src/deliver/`) never depends on the session's working directory. It runs `git` and `gh` with fixed argument vectors and the worktree as their directory, so a subagent that cannot change its cwd still delivers its branch. The module imports only `common/` helpers and its own `sys` adapter. The pre-commit step relies on the repo's own git hooks, which always run.
 
 The base is `--base`, then the open PR's base, then the nearest open PR branch that is an ancestor of HEAD (a stacked PR), then the default branch.
 

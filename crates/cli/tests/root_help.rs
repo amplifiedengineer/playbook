@@ -56,7 +56,6 @@ const AGENT: &[&str] = &[
     "pr",
     "review",
     "commit",
-    "deliver",
     "plans",
     "worktree",
     "handoff",
