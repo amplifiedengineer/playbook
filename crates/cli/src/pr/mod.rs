@@ -4,6 +4,7 @@
 //! `playbook pr`: the mechanical half of `/playbook:pr-create`.
 
 pub mod body_rules;
+pub mod checks;
 pub mod comments;
 pub mod create;
 pub mod land;

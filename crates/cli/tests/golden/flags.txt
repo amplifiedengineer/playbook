@@ -316,7 +316,7 @@ arg playbook eval bench id=jobs long=jobs short=- value_names=JOBS possible=- de
 arg playbook eval bench id=json long=json short=- value_names=JSON possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
 arg playbook eval bench id=list long=list short=- value_names=LIST possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
 arg playbook eval bench id=strategy long=strategy short=- value_names=STRATEGY possible=- defaults=- aliases=- required=false hidden=false global=false action=Append num_args=- parser=alloc::string::String conflicts=-
-command playbook pr subcommands=prepare,create,status,review-triage,rules,comments,reply,stack,ci-wait,land-wait,land,merge aliases=- groups=Pr[-]
+command playbook pr subcommands=prepare,create,status,review-triage,rules,comments,reply,stack,ci-wait,land-wait,land,merge,checks aliases=- groups=Pr[-]
 command playbook pr prepare subcommands=- aliases=- groups=Prepare[base,ticket,dir,json,args_stdin]
 arg playbook pr prepare id=base long=base short=- value_names=BASE possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
 arg playbook pr prepare id=ticket long=ticket short=- value_names=TICKET possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
@@ -393,6 +393,14 @@ arg playbook pr merge id=interval long=interval short=- value_names=INTERVAL pos
 arg playbook pr merge id=settle long=settle short=- value_names=SETTLE possible=- defaults=120 aliases=- required=false hidden=false global=false action=Set num_args=- parser=u64 conflicts=-
 arg playbook pr merge id=dir long=dir short=- value_names=DIR possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
 arg playbook pr merge id=json long=json short=- value_names=JSON possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
+command playbook pr checks subcommands=- aliases=- groups=Checks[pr,watch,fail_fast,required,timeout,interval,json]
+arg playbook pr checks id=pr long=- short=- value_names=PR possible=- defaults=- aliases=- required=true hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
+arg playbook pr checks id=watch long=watch short=- value_names=WATCH possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
+arg playbook pr checks id=fail_fast long=fail-fast short=- value_names=FAIL_FAST possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
+arg playbook pr checks id=required long=required short=- value_names=REQUIRED possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
+arg playbook pr checks id=timeout long=timeout short=- value_names=TIMEOUT possible=- defaults=1200 aliases=- required=false hidden=false global=false action=Set num_args=- parser=u64 conflicts=-
+arg playbook pr checks id=interval long=interval short=- value_names=INTERVAL possible=- defaults=20 aliases=- required=false hidden=false global=false action=Set num_args=- parser=u64 conflicts=-
+arg playbook pr checks id=json long=json short=- value_names=JSON possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
 command playbook worktree subcommands=sweep,remove,review aliases=- groups=Worktree[-]
 command playbook worktree sweep subcommands=- aliases=- groups=Sweep[dry_run]
 arg playbook worktree sweep id=dry_run long=dry-run short=- value_names=DRY_RUN possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-

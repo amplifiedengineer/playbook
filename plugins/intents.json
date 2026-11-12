@@ -144,6 +144,10 @@
     "required": false
   },
   {
+    "intent": "pr-checks",
+    "required": false
+  },
+  {
     "intent": "pr-comments",
     "required": false
   },

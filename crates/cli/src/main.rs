@@ -1620,6 +1620,30 @@ fn real_main() {
                         std::process::exit(merged.outcome.code);
                     }
                 }
+                PrCommand::Checks {
+                    pr,
+                    watch,
+                    fail_fast,
+                    required,
+                    timeout,
+                    interval,
+                    json,
+                } => {
+                    let opts = pr::checks::Opts {
+                        watch,
+                        fail_fast,
+                        required,
+                        timeout: std::time::Duration::from_secs(timeout),
+                        interval: std::time::Duration::from_secs(interval),
+                    };
+                    let report = pr::checks::run(&pr, &opts);
+                    if json {
+                        println!("{}", report.envelope());
+                    } else {
+                        println!("{}", report.render());
+                        std::process::exit(report.code());
+                    }
+                }
                 PrCommand::Status {
                     pr,
                     json,

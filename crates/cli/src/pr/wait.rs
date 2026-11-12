@@ -12,6 +12,7 @@ use std::process::Command;
 use std::time::{Duration, Instant};
 
 const GH_TIMEOUT: Duration = Duration::from_secs(60);
+const CHECK_FIELDS: &str = "name,state,bucket,link,startedAt,workflow";
 
 /// Check counts from one `gh pr checks` read.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -100,47 +101,69 @@ impl Counts {
     }
 }
 
-/// The verdict for one read, or `None` to keep waiting. Order matters: a
-/// failure wins over pending checks, and cancelled only counts once nothing
-/// is pending.
-fn ci_verdict(c: Counts) -> Option<&'static str> {
+/// The words of the check verdict, shared by `ci-wait` and `pr checks`.
+pub mod verdict {
+    pub const NONE: &str = "NONE";
+    pub const FAIL: &str = "FAIL";
+    pub const CANCELLED: &str = "CANCELLED";
+    pub const PASS: &str = "PASS";
+    pub const TIMEOUT: &str = "TIMEOUT";
+}
+
+/// The verdict for one read, or `None` to keep waiting. With `fail_fast` a
+/// failure wins over pending checks; without it every check must settle
+/// first. Cancelled only counts once nothing is pending.
+pub fn settled(c: Counts, fail_fast: bool) -> Option<&'static str> {
     if c.total == 0 {
-        Some("NONE")
-    } else if c.fail > 0 {
-        Some("FAIL")
-    } else if c.pending == 0 && c.cancel > 0 {
-        Some("CANCELLED")
-    } else if c.pending == 0 {
-        Some("PASS")
-    } else {
+        Some(verdict::NONE)
+    } else if c.fail > 0 && (fail_fast || c.pending == 0) {
+        Some(verdict::FAIL)
+    } else if c.pending > 0 {
         None
+    } else if c.cancel > 0 {
+        Some(verdict::CANCELLED)
+    } else {
+        Some(verdict::PASS)
     }
 }
 
 /// Poll until a verdict or `timeout`. `read` returns the checks JSON,
 /// `emit` prints a progress line, `sleep` waits between reads. Returns the
-/// verdict word.
+/// verdict word and the JSON of the last read.
+pub fn wait_checks(
+    timeout: Duration,
+    fail_fast: bool,
+    read: &mut dyn FnMut() -> String,
+    emit: &mut dyn FnMut(String),
+    sleep: &mut dyn FnMut(),
+) -> (&'static str, String) {
+    let start = Instant::now();
+    loop {
+        let json = read();
+        let c = Counts::from_json(&json);
+        emit(format!(
+            "checks total={} pending={} fail={} cancel={} superseded={}",
+            c.total, c.pending, c.fail, c.cancel, c.superseded
+        ));
+        if let Some(v) = settled(c, fail_fast) {
+            return (v, json);
+        }
+        if start.elapsed() >= timeout {
+            return (verdict::TIMEOUT, json);
+        }
+        sleep();
+    }
+}
+
+/// Poll until a verdict or `timeout`, stopping at the first failure. Returns
+/// the verdict word.
 pub fn ci_wait(
     timeout: Duration,
     read: &mut dyn FnMut() -> String,
     emit: &mut dyn FnMut(String),
     sleep: &mut dyn FnMut(),
 ) -> &'static str {
-    let start = Instant::now();
-    loop {
-        let c = Counts::from_json(&read());
-        emit(format!(
-            "checks total={} pending={} fail={} cancel={} superseded={}",
-            c.total, c.pending, c.fail, c.cancel, c.superseded
-        ));
-        if let Some(v) = ci_verdict(c) {
-            return v;
-        }
-        if start.elapsed() >= timeout {
-            return "TIMEOUT";
-        }
-        sleep();
-    }
+    wait_checks(timeout, true, read, emit, sleep).0
 }
 
 /// One PR status line, `state mergeState review armed`, tab separated, as the
@@ -203,24 +226,49 @@ pub fn land_wait(
 
 /// Stdout of `gh` whatever its exit status. `gh pr checks` exits non-zero
 /// while checks fail but still prints the JSON, so the status is ignored.
-fn gh_stdout(args: &[&str]) -> Option<String> {
+pub(crate) fn gh_stdout(args: &[&str]) -> Option<String> {
     let mut cmd = Command::new("gh");
     cmd.args(args);
     let out = run_with_timeout(&mut cmd, GH_TIMEOUT)?;
     Some(String::from_utf8_lossy(&out.stdout).into_owned())
 }
 
-/// The checks of `pr` as `gh` prints them, `[]` when unreadable. Only the
-/// required ones unless `all`.
-pub fn read_checks(pr: &str, all: bool) -> String {
+fn checks_args(pr: &str, all: bool) -> Vec<&str> {
     let mut args = vec!["pr", "checks", pr];
     if !all {
         args.push("--required");
     }
-    args.extend(["--json", "name,bucket,link,startedAt,workflow"]);
-    gh_stdout(&args)
+    args.extend(["--json", CHECK_FIELDS]);
+    args
+}
+
+/// The checks of `pr` as `gh` prints them, `[]` when unreadable. Only the
+/// required ones unless `all`.
+pub fn read_checks(pr: &str, all: bool) -> String {
+    gh_stdout(&checks_args(pr, all))
         .filter(|t| serde_json::from_str::<Value>(t).is_ok())
         .unwrap_or_else(|| "[]".to_string())
+}
+
+/// What `gh pr checks` says on stderr when a PR has no checks to list.
+const NO_CHECKS_REPORTED: &str = "checks reported on";
+
+/// Like `read_checks`, but an unreadable PR is an error with gh's message,
+/// and "no checks reported" is an empty list.
+pub fn try_read_checks(pr: &str, all: bool) -> Result<String, String> {
+    let mut cmd = Command::new("gh");
+    cmd.args(checks_args(pr, all));
+    let out = run_with_timeout(&mut cmd, GH_TIMEOUT)
+        .ok_or_else(|| "gh did not finish (missing, or timed out)".to_string())?;
+    let stdout = String::from_utf8_lossy(&out.stdout).into_owned();
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    if serde_json::from_str::<Value>(&stdout).is_ok() {
+        Ok(stdout)
+    } else if stderr.contains(NO_CHECKS_REPORTED) {
+        Ok("[]".to_string())
+    } else {
+        Err(stderr.trim().to_string())
+    }
 }
 
 /// The land status line of `pr`, empty when unreadable.
@@ -290,7 +338,7 @@ mod tests {
     }
 
     fn verdict_of(buckets: &[&str]) -> Option<&'static str> {
-        ci_verdict(Counts::from_json(&checks(buckets)))
+        settled(Counts::from_json(&checks(buckets)), true)
     }
 
     fn run(workflow: &str, bucket: &str, at: Option<&str>) -> Value {
@@ -306,13 +354,25 @@ mod tests {
     }
 
     #[test]
+    fn without_fail_fast_a_failure_waits_for_the_pending_checks() {
+        let c = Counts::from_json(&checks(&["fail", "pending"]));
+
+        assert_eq!(settled(c, true), Some("FAIL"));
+        assert_eq!(settled(c, false), None);
+        assert_eq!(
+            settled(Counts::from_json(&checks(&["fail", "pass"])), false),
+            Some("FAIL")
+        );
+    }
+
+    #[test]
     fn a_cancel_replaced_by_a_later_pass_is_superseded() {
         let c = counts_of(vec![
             run("ci", "cancel", Some("2026-01-01T00:00:01Z")),
             run("ci", "pass", Some("2026-01-01T00:00:02Z")),
         ]);
         assert_eq!((c.total, c.cancel, c.superseded), (1, 0, 1));
-        assert_eq!(ci_verdict(c), Some("PASS"));
+        assert_eq!(settled(c, true), Some("PASS"));
     }
 
     #[test]
@@ -322,7 +382,7 @@ mod tests {
             run("ci", "pending", Some("0001-01-01T00:00:00Z")),
         ]);
         assert_eq!((c.total, c.pending, c.cancel, c.superseded), (1, 1, 0, 1));
-        assert_eq!(ci_verdict(c), None);
+        assert_eq!(settled(c, true), None);
     }
 
     #[test]
@@ -332,20 +392,20 @@ mod tests {
             run("ci", "cancel", Some("2026-01-01T00:00:02Z")),
         ]);
         assert_eq!((c.total, c.cancel, c.superseded), (1, 1, 0));
-        assert_eq!(ci_verdict(c), Some("CANCELLED"));
+        assert_eq!(settled(c, true), Some("CANCELLED"));
     }
 
     #[test]
     fn a_lone_cancel_is_cancelled() {
         let c = counts_of(vec![run("ci", "cancel", Some("2026-01-01T00:00:01Z"))]);
-        assert_eq!(ci_verdict(c), Some("CANCELLED"));
+        assert_eq!(settled(c, true), Some("CANCELLED"));
     }
 
     #[test]
     fn runs_without_a_start_time_keep_the_old_counting() {
         let c = counts_of(vec![run("ci", "cancel", None), run("ci", "pass", None)]);
         assert_eq!((c.total, c.cancel, c.superseded), (2, 1, 0));
-        assert_eq!(ci_verdict(c), Some("CANCELLED"));
+        assert_eq!(settled(c, true), Some("CANCELLED"));
     }
 
     #[test]

@@ -292,6 +292,7 @@ pub(crate) const META: &[Meta] = &[
     user("plugin install"),
     user("plugin upgrade"),
     free("pr").for_agents(),
+    ro("pr checks"),
     ro("pr comments"),
     free("pr create"),
     free("pr merge"),

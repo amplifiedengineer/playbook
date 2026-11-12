@@ -589,6 +589,7 @@ fn table() -> Vec<Case> {
         case("pr stack", &["pr", "stack"]).code(1).err("gh repo view"),
         case( "pr ci-wait", &["pr", "ci-wait", "1", "--timeout", "1", "--interval", "1"], ).out("CI_VERDICT=NONE"),
         case( "pr land-wait", &["pr", "land-wait", "1", "--timeout", "1", "--interval", "1"], ).out("LAND_VERDICT=TIMEOUT"),
+        case("pr checks", &["pr", "checks", "1"]).code(5).out("CHECKS=UNREADABLE"),
         case("pr merge", &["pr", "merge", "1", "--no-wait"]).out("merge_rc=-1"),
         case("pr land", &["pr", "land", "1", "--settle", "0"])
             .code(6)

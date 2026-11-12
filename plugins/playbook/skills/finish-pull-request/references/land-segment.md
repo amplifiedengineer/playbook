@@ -32,15 +32,9 @@ On `CI_VERDICT=TIMEOUT` repeat it up to 5 times, then park the Segment. Waiting 
 
 **Transient, not a code failure** (rerun, don't fix) when either holds:
 - `CI_VERDICT=CANCELLED`: `concurrency: cancel-in-progress` cancelled the run behind a newer push. `CANCELLED` is not `FAILURE`.
-- The failed *step* is `Set up job`, which runs before any repo code, so the failure cannot be yours (typically a rate-limited action download taking the whole matrix red at once):
+- The failed *step* is `Set up job`, which runs before any repo code, so the failure cannot be yours (typically a rate-limited action download taking the whole matrix red at once).
 
-```bash
-# Left as gh's own --jq: it runs gh's bundled Go jq implementation, not the
-# system jq binary, so it is out of scope for this port.
-gh api "repos/{owner}/{repo}/actions/runs/<id>/jobs" \
-  --jq '.jobs[] | select(.conclusion=="failure")
-        | "\(.name) -> \(.steps[] | select(.conclusion=="failure") | .name)"'
-```
+Read both from `playbook pr checks "$PR" --json` (intent `pr-checks`): each `failed[]` entry carries `run_id`, `step` and `transient`, true for a cancelled job or a failed `Set up job` step. Without the intent, read the failed job's steps with `gh api "repos/{owner}/{repo}/actions/runs/<id>/jobs"`.
 
 Either case: `gh run rerun <id> --failed`, then return to step 2. Max 2 reruns; a third consecutive transient parks the Segment as `CI_UNSTABLE` rather than burning turns.
 

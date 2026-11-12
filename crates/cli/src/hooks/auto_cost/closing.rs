@@ -432,6 +432,8 @@ fn is_playbook_step(args: &[&str]) -> bool {
             .any(|a| matches!(*a, "--ready" | "--auto-merge" | "--wait")),
         // The read the delivery skills make after a budget stop.
         ["pr", "status", pr, "--json"] => !pr.starts_with('-'),
+        // Reading the checks is safe; `--watch` can poll for a long time.
+        ["pr", "checks", rest @ ..] => !rest.contains(&"--watch"),
         ["pr", "prepare" | "rules", ..]
         | ["commit", "prepare", ..]
         | ["worktree", "review", "teardown", ..]
@@ -538,6 +540,8 @@ mod tests {
             "playbook worktree review teardown /tmp/wt",
             "playbook pr prepare --base main",
             "playbook pr status 12 --json",
+            "playbook pr checks 12",
+            "playbook pr checks 12 --json --required",
             "playbook mode status",
             "playbook mode status --json",
             "git status && git diff",
@@ -557,6 +561,8 @@ mod tests {
             "playbook pr land 12",
             "playbook pr ci-wait 12",
             "playbook pr land-wait 12",
+            "playbook pr checks 12 --watch",
+            "playbook pr checks 12 --json --watch --fail-fast",
             "playbook pr create --ready",
             "cargo build",
             "npm test",

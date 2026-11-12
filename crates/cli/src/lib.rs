@@ -1762,6 +1762,41 @@ pub enum PrCommand {
         #[arg(long)]
         json: bool,
     },
+    /// List a PR's checks, optionally waiting, and triage the failed jobs
+    ///
+    /// Prints `CHECKS=<verdict>` (PASS, NONE, FAIL, CANCELLED, PENDING, TIMEOUT
+    /// or UNREADABLE), a line per check, and per failed job its run id, failed step
+    /// and whether it is transient (cancelled, or a failed `Set up job` step:
+    /// rerun it instead of fixing code). `--watch` polls until the checks
+    /// settle or `--timeout`; with `--fail-fast` it stops at the first failure.
+    /// Exit codes: 0 all passed or none exist, 5 the PR could not be read, 6 a
+    /// check failed or was cancelled, 7 still pending. With `--json` it prints the envelope with
+    /// `checks[]` and `failed[]` (`name`, `run_id`, `step`, `transient`) and
+    /// exits 0.
+    ///
+    /// Example: `playbook pr checks 12 --watch --fail-fast`
+    Checks {
+        /// PR number
+        pr: String,
+        /// Wait until the checks settle or the timeout passes
+        #[arg(long)]
+        watch: bool,
+        /// With --watch, stop at the first failed check
+        #[arg(long, requires = "watch")]
+        fail_fast: bool,
+        /// Only the checks the base branch requires
+        #[arg(long)]
+        required: bool,
+        /// With --watch, give up after this many seconds
+        #[arg(long, default_value_t = 1200)]
+        timeout: u64,
+        /// With --watch, seconds between reads
+        #[arg(long, default_value_t = 20)]
+        interval: u64,
+        /// Print the envelope with the checks and failed jobs, and exit 0
+        #[arg(long)]
+        json: bool,
+    },
 }
 
 /// `playbook plan` subcommands.

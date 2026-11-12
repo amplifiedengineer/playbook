@@ -125,6 +125,7 @@ pub const TOOLS: &[Tool] = &[
     ),
     t("pr-stack", "pr", "stack", "", "pr stack"),
     t("pr-merge", "pr", "merge", "", "pr merge 1"),
+    t("pr-checks", "pr", "checks", "", "pr checks 1 --json"),
     t("pr-status", "pr", "status", "", "pr status 1 --json"),
     t(
         "pr-review-triage",
