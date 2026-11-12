@@ -77,10 +77,8 @@ arg playbook init id=only long=only short=- value_names=PART possible=- defaults
 arg playbook init id=yes long=yes short=y value_names=YES possible=true,false defaults=- aliases=defaults required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
 arg playbook init id=dry_run long=dry-run short=- value_names=DRY_RUN possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=explain
 arg playbook init id=explain long=explain short=- value_names=PART possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=0..=1 parser=alloc::string::String conflicts=dry_run
-command playbook hooks subcommands=list,explain-rm aliases=- groups=Hooks[-]
+command playbook hooks subcommands=list aliases=- groups=Hooks[-]
 command playbook hooks list subcommands=- aliases=- groups=-
-command playbook hooks explain-rm subcommands=- aliases=- groups=ExplainRm[args]
-arg playbook hooks explain-rm id=args long=- short=- value_names=ARGS possible=- defaults=- aliases=- required=false hidden=false global=false action=Append num_args=1.. parser=alloc::string::String conflicts=-
 command playbook uninstall subcommands=- aliases=- groups=Uninstall[yes,dry_run,remove_binary]
 arg playbook uninstall id=yes long=yes short=- value_names=YES possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
 arg playbook uninstall id=dry_run long=dry-run short=- value_names=DRY_RUN possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
@@ -121,27 +119,13 @@ arg playbook doc read id=offset long=offset short=- value_names=OFFSET possible=
 arg playbook doc read id=limit long=limit short=- value_names=LIMIT possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=usize conflicts=-
 arg playbook doc read id=section long=section short=- value_names=SECTION possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=usize conflicts=-
 command playbook doc status subcommands=- aliases=- groups=-
-command playbook doctor subcommands=check,models,pending-migrations,plugin-version,statusline-command,hook-commands,hook-commands-for-event,hook-commands-matching aliases=- groups=Doctor[fix]
+command playbook doctor subcommands=check,models,pending-migrations aliases=- groups=Doctor[fix]
 arg playbook doctor id=fix long=fix short=- value_names=FIX possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
 command playbook doctor check subcommands=- aliases=- groups=Check[json]
 arg playbook doctor check id=json long=json short=- value_names=JSON possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
 command playbook doctor models subcommands=- aliases=- groups=Models[json]
 arg playbook doctor models id=json long=json short=- value_names=JSON possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
 command playbook doctor pending-migrations subcommands=- aliases=- groups=-
-command playbook doctor plugin-version subcommands=- aliases=- groups=PluginVersion[path]
-arg playbook doctor plugin-version id=path long=- short=- value_names=PATH possible=- defaults=- aliases=- required=true hidden=false global=false action=Set num_args=- parser=std::path::PathBuf conflicts=-
-command playbook doctor statusline-command subcommands=- aliases=- groups=StatuslineCommand[path]
-arg playbook doctor statusline-command id=path long=- short=- value_names=PATH possible=- defaults=- aliases=- required=true hidden=false global=false action=Set num_args=- parser=std::path::PathBuf conflicts=-
-command playbook doctor hook-commands subcommands=- aliases=- groups=HookCommands[path]
-arg playbook doctor hook-commands id=path long=- short=- value_names=PATH possible=- defaults=- aliases=- required=true hidden=false global=false action=Set num_args=- parser=std::path::PathBuf conflicts=-
-command playbook doctor hook-commands-for-event subcommands=- aliases=- groups=HookCommandsForEvent[path,event,guards]
-arg playbook doctor hook-commands-for-event id=path long=- short=- value_names=PATH possible=- defaults=- aliases=- required=true hidden=false global=false action=Set num_args=- parser=std::path::PathBuf conflicts=-
-arg playbook doctor hook-commands-for-event id=event long=- short=- value_names=EVENT possible=- defaults=- aliases=- required=true hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
-arg playbook doctor hook-commands-for-event id=guards long=- short=- value_names=GUARDS possible=- defaults=- aliases=- required=false hidden=false global=false action=Append num_args=1.. parser=alloc::string::String conflicts=-
-command playbook doctor hook-commands-matching subcommands=- aliases=- groups=HookCommandsMatching[path,pattern,event]
-arg playbook doctor hook-commands-matching id=path long=- short=- value_names=PATH possible=- defaults=- aliases=- required=true hidden=false global=false action=Set num_args=- parser=std::path::PathBuf conflicts=-
-arg playbook doctor hook-commands-matching id=pattern long=- short=- value_names=PATTERN possible=- defaults=- aliases=- required=true hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
-arg playbook doctor hook-commands-matching id=event long=- short=- value_names=EVENT possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
 command playbook migrate subcommands=- aliases=- groups=Migrate[status,dry_run,json,no_plugin]
 arg playbook migrate id=status long=status short=- value_names=STATUS possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=dry_run
 arg playbook migrate id=dry_run long=dry-run short=- value_names=DRY_RUN possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
@@ -241,7 +225,7 @@ arg playbook cc worktree id=branch long=- short=- value_names=BRANCH possible=- 
 arg playbook cc worktree id=env_base long=- short=- value_names=ENV_BASE possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
 command playbook ccd subcommands=- aliases=- groups=Ccd[args]
 arg playbook ccd id=args long=- short=- value_names=ARGS possible=- defaults=- aliases=- required=false hidden=false global=false action=Append num_args=1.. parser=alloc::string::String conflicts=-
-command playbook usage subcommands=warm,ingest,collect,status,stop,doctor,prune,account,machine aliases=- groups=Usage[json,summary,range,account,utc,local]
+command playbook usage subcommands=warm,collect,status,stop,doctor,prune,account,machine aliases=- groups=Usage[json,summary,range,account,utc,local]
 arg playbook usage id=json long=json short=- value_names=JSON possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=summary
 arg playbook usage id=summary long=summary short=- value_names=SUMMARY possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=json
 arg playbook usage id=range long=range short=- value_names=RANGE possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
@@ -249,7 +233,6 @@ arg playbook usage id=account long=account short=- value_names=KEY_OR_NAME possi
 arg playbook usage id=utc long=utc short=- value_names=UTC possible=true,false defaults=- aliases=- required=false hidden=false global=true action=SetTrue num_args=- parser=bool conflicts=local
 arg playbook usage id=local long=local short=- value_names=LOCAL possible=true,false defaults=- aliases=- required=false hidden=false global=true action=SetTrue num_args=- parser=bool conflicts=utc
 command playbook usage warm subcommands=- aliases=- groups=-
-command playbook usage ingest subcommands=- aliases=- groups=-
 command playbook usage collect subcommands=- aliases=- groups=Collect[port,idle_seconds]
 arg playbook usage collect id=port long=port short=- value_names=PORT possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=u16 conflicts=-
 arg playbook usage collect id=idle_seconds long=idle-seconds short=- value_names=IDLE_SECONDS possible=- defaults=600 aliases=- required=false hidden=false global=false action=Set num_args=- parser=u64 conflicts=-

@@ -22,12 +22,6 @@ const LEGACY_HYPHENATED: &[&str] = &[
     "sanitize commit-msg",
     "sanitize pr-text",
     "doctor pending-migrations",
-    "doctor plugin-version",
-    "doctor statusline-command",
-    "doctor hook-commands",
-    "doctor hook-commands-for-event",
-    "doctor hook-commands-matching",
-    "hooks explain-rm",
     "watch dry-run",
     "watch install-service",
     "watch uninstall-service",
@@ -156,5 +150,5 @@ fn legacy_list_has_no_stale_entries() {
 
     // Assert
     assert!(found.is_empty(), "stale legacy entries: {found:?}");
-    assert_eq!(LEGACY_HYPHENATED.len(), 22);
+    assert_eq!(LEGACY_HYPHENATED.len(), 16);
 }

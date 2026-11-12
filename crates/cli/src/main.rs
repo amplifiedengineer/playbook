@@ -872,10 +872,6 @@ fn real_main() {
         }
         Command::Hooks { sub } => match sub {
             playbook::HooksCommand::List => print!("{}", init::catalog::hooks_list()),
-            playbook::HooksCommand::ExplainRm { .. } => {
-                eprintln!("playbook hooks explain-rm was removed: the rm guard now denies only rm of / or your home folder (docs/guides/07-rm-guard.md)");
-                std::process::exit(2);
-            }
         },
         Command::Settings { sub } => match sub {
             SettingsCommand::Gen { src, seed } => match settings::gen::generate(&src, &seed) {
@@ -2542,29 +2538,6 @@ fn real_main() {
                     playbook::models::report(&home, &home.join(".claude"), &cwd, json)
                 );
             }
-            DoctorCommand::PluginVersion { path } => {
-                println!("{}", doctor::field::plugin_version(&path));
-            }
-            DoctorCommand::StatuslineCommand { path } => {
-                println!("{}", doctor::field::statusline_command(&path));
-            }
-            DoctorCommand::HookCommands { path } => {
-                for command in doctor::field::hook_commands(&path) {
-                    println!("{command}");
-                }
-            }
-            DoctorCommand::HookCommandsForEvent {
-                path,
-                event,
-                guards,
-            } => {
-                let guard_refs: Vec<&str> = guards.iter().map(String::as_str).collect();
-                for (guard, count) in
-                    doctor::field::hook_commands_for_event(&path, &event, &guard_refs)
-                {
-                    println!("{guard}={count}");
-                }
-            }
             DoctorCommand::PendingMigrations => {
                 let home = common::home_dir();
                 let claude_home = home.join(".claude");
@@ -2579,15 +2552,6 @@ fn real_main() {
                 for line in init::migrate::pending_manual(&ctx) {
                     println!("{line}");
                 }
-            }
-            DoctorCommand::HookCommandsMatching {
-                path,
-                pattern,
-                event,
-            } => {
-                let count =
-                    doctor::field::hook_commands_matching(&path, event.as_deref(), &pattern);
-                println!("{count}");
             }
         },
         Command::Trust { path } => {

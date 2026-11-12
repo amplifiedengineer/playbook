@@ -475,7 +475,6 @@ fn table() -> Vec<Case> {
             .err("plugin: installing playbook@amplifiedengineer")
             .writes(),
         case("hooks list", &["hooks", "list"]).out("Safety guards").plain(),
-        case("hooks explain-rm", &["hooks", "explain-rm", "ls"]).code(2).err("was removed"),
         case("skills sync", &["skills", "sync", "--dry-run"]).out("no other agents found"),
         case("uninstall", &["uninstall"]).code(1).err("nothing was changed"),
         case("uninstall", &["uninstall", "--dry-run"]).pre(&["setup", "--yes"]),
@@ -509,11 +508,6 @@ fn table() -> Vec<Case> {
         case("migrate", &["migrate", "--dry-run"]).out("dry run: nothing was written").plain(),
         case("migrate", &["migrate", "--status", "--dry-run"]).code(2).err("cannot be used with").plain(),
         case( "doctor pending-migrations", &["doctor", "pending-migrations"], ).writes(),
-        case( "doctor plugin-version", &["doctor", "plugin-version", "{ROOT}/none.json"], ),
-        case( "doctor statusline-command", &["doctor", "statusline-command", "{ROOT}/none.json"], ),
-        case( "doctor hook-commands", &["doctor", "hook-commands", "{ROOT}/none.json"], ),
-        case( "doctor hook-commands-for-event", &[ "doctor", "hook-commands-for-event", "{ROOT}/none.json", "PreToolUse", ], ),
-        case( "doctor hook-commands-matching", &[ "doctor", "hook-commands-matching", "{ROOT}/none.json", "playbook", ], ),
         case( "run-context", &["run-context", "--command", "implement", "--args", "--auto"], ).out("\"mode\":\"auto\""),
         // mode and settings
         case("mode status", &["mode", "status"]).out("mode: ask"),
@@ -552,7 +546,6 @@ fn table() -> Vec<Case> {
         // usage and sessions
         case("usage status", &["usage", "status"]).out("telemetry: off").writes(),
         case("usage warm", &["usage", "warm"]).writes(),
-        case("usage ingest", &["usage", "ingest"]).code(1).err("was removed").writes(),
         case("usage prune", &["usage", "prune"]).out("removed 0").writes(),
         case("usage doctor", &["usage", "doctor"]).out("Where pbtop can read limits"),
         case("usage machine", &["usage", "machine"]).out("id: ").writes(),

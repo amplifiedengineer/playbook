@@ -11,9 +11,6 @@ pub enum UsageCommand {
     /// Warm the usage store in the background (run by the `usage-warm` hook)
     #[command(hide = true)]
     Warm,
-    /// Removed: use `playbook usage --summary`, the terminal view warms itself
-    #[command(hide = true)]
-    Ingest,
     /// Run the local OpenTelemetry receiver in the foreground
     ///
     /// Listens on 127.0.0.1 only (default port 47318, chosen once and then kept; a

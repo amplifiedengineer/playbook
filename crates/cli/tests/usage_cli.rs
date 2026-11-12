@@ -237,19 +237,6 @@ fn the_web_dashboard_flag_and_subcommand_are_gone() {
     }
 }
 
-#[test]
-fn usage_ingest_is_removed_and_says_what_to_run_instead() {
-    let home = Home::new("ingest-removed");
-
-    let out = home.run(&["usage", "ingest"]);
-
-    assert!(!out.status.success());
-    let err = stderr(&out);
-    assert!(err.contains("was removed"), "{err}");
-    assert!(err.contains("playbook usage --summary"), "{err}");
-    assert!(stdout(&out).is_empty(), "{}", stdout(&out));
-}
-
 fn json_range(home: &Home, range: &str) -> serde_json::Value {
     let out = home.run(&["usage", "--json", "--range", range]);
     assert!(out.status.success(), "{range}: {}", stderr(&out));

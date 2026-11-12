@@ -1,39 +1,20 @@
 // SPDX-FileCopyrightText: 2026 Igor Santos
 // SPDX-License-Identifier: Apache-2.0
 
-//! Reads the JSON shapes `commands/doctor.md`'s Layer 5, 6, and 7 checks
-//! need: `.claude-plugin/plugin.json`'s `.version`, `settings.json`'s
-//! `.statusLine.command`, and every hook `.command` string nested under
-//! `settings.json`'s `.hooks`. All three used to shell out to `jq`, so a
-//! missing `jq` produced the same empty result as the field itself being
-//! absent or the hooks list being empty, silently misreporting a healthy
-//! install. `playbook` is already required for all three layers to mean
-//! anything, so this trades an optional external dependency for one that was
-//! already assumed.
+//! Reads the settings.json shapes `doctor check` and the migrations need:
+//! the `.statusLine.command` string, every hook `.command` nested under
+//! `.hooks`, and an exact per-guard command count scoped to one event.
 //!
-//! Deliberately not a general JSON query command: each function names the one
-//! shape it reads. A future call site needing a different field gets its own
-//! function here, not a flag on a generic getter.
-//!
-//! Also covers two counting idioms other call sites shelled out to `jq` for:
-//! an exact per-guard command count scoped to one event, and a regex-match
-//! count via the `regex` crate, mirroring `jq`'s `test($pattern)`.
+//! Deliberately not a general JSON query: each function names the one shape it
+//! reads. A call site needing a different field gets its own function here, not
+//! a flag on a generic getter.
 
 use serde_json::Value;
 use std::path::Path;
 
-/// Reads `.version` from a `plugin.json`-shaped file. Empty on any failure:
-/// unreadable file, invalid JSON, or a missing field, matching
-/// `jq -r '.version // ""'`'s null-or-missing fallback. Diverges from `jq`
-/// on one edge case both real call sites never hit: a non-string value (a
-/// number, say) reads as empty here, where `jq -r` would print it raw.
-pub fn plugin_version(path: &Path) -> String {
-    string_field(path, &["version"])
-}
-
-/// Reads `.statusLine.command` from a `settings.json`-shaped file. Same
-/// empty-on-missing-or-null behavior as [`plugin_version`], including its
-/// non-string divergence from `jq -r`.
+/// Reads `.statusLine.command` from a `settings.json`-shaped file. Empty on
+/// any failure: unreadable file, invalid JSON, a missing field or a non-string
+/// value (where `jq -r` would print a number raw).
 pub fn statusline_command(path: &Path) -> String {
     string_field(path, &["statusLine", "command"])
 }
@@ -111,35 +92,9 @@ pub fn hook_commands_for_event(path: &Path, event: &str, guards: &[&str]) -> Vec
         .collect()
 }
 
-/// Counts hook `.command` entries under `settings.json`'s `.hooks` (every
-/// event, or one when `event` is given) that contain `pattern` as an
-/// unanchored regular expression match, mirroring the repeated `jq
-/// ... | select(test($pattern)) | length` shell idiom found at several call
-/// sites (`jq`'s `test` is an ERE substring search, not a full-string
-/// match). Same empty/zero-on-any-shape-mismatch behavior as
-/// [`hook_commands`]; also zero if `pattern` fails to compile as a regex.
-///
-/// Diverges from `jq -r` on one edge case, the same one [`hook_commands`]
-/// already documents for its own `to_entries` step: any non-object `.hooks`
-/// value, including a missing key, hard-errors in real `jq` (exit 5, empty
-/// stdout) rather than degrading gracefully, where this returns zero.
-pub fn hook_commands_matching(path: &Path, event: Option<&str>, pattern: &str) -> usize {
-    let Ok(re) = regex::Regex::new(pattern) else {
-        return 0;
-    };
-    let commands = match event {
-        Some(event) => event_hook_commands(path, event),
-        None => hook_commands(path),
-    };
-    commands
-        .iter()
-        .filter(|command| re.is_match(command))
-        .count()
-}
-
 /// Every hook `.command` string wired under one event in a
 /// `settings.json`-shaped file's `.hooks`, the traversal
-/// [`hook_commands_for_event`] and [`hook_commands_matching`] share:
+/// [`hook_commands_for_event`] uses:
 /// `.hooks[$event][]?.hooks[]?.command // ""`. Same empty-on-any-shape-mismatch
 /// behavior as [`hook_commands`].
 fn event_hook_commands(path: &Path, event: &str) -> Vec<String> {
@@ -225,66 +180,6 @@ mod tests {
         fn drop(&mut self) {
             let _ = fs::remove_file(&self.path);
         }
-    }
-
-    #[test]
-    fn plugin_version_reads_the_version_field() {
-        // Arrange
-        let f = Fixture::new("plugin-version-present", r#"{"version": "0.15.0"}"#);
-
-        // Act
-        let got = plugin_version(&f.path);
-
-        // Assert
-        assert_eq!(got, "0.15.0");
-    }
-
-    #[test]
-    fn plugin_version_is_empty_when_field_is_missing() {
-        // Arrange
-        let f = Fixture::new("plugin-version-missing", r#"{"name": "playbook"}"#);
-
-        // Act
-        let got = plugin_version(&f.path);
-
-        // Assert
-        assert_eq!(got, "");
-    }
-
-    #[test]
-    fn plugin_version_is_empty_when_file_is_missing() {
-        // Arrange
-        let path = std::env::temp_dir().join("playbook-doctor-field-does-not-exist.json");
-
-        // Act
-        let got = plugin_version(&path);
-
-        // Assert
-        assert_eq!(got, "");
-    }
-
-    #[test]
-    fn plugin_version_is_empty_on_invalid_json() {
-        // Arrange
-        let f = Fixture::new("plugin-version-invalid", "not json");
-
-        // Act
-        let got = plugin_version(&f.path);
-
-        // Assert
-        assert_eq!(got, "");
-    }
-
-    #[test]
-    fn plugin_version_is_empty_when_value_is_not_a_string() {
-        // Arrange
-        let f = Fixture::new("plugin-version-non-string", r#"{"version": 15}"#);
-
-        // Act
-        let got = plugin_version(&f.path);
-
-        // Assert
-        assert_eq!(got, "");
     }
 
     #[test]
@@ -671,179 +566,5 @@ mod tests {
 
         // Assert
         assert_eq!(got, vec![("rm-workspace-guard".to_string(), 0)]);
-    }
-
-    #[test]
-    fn hook_commands_matching_counts_matches_across_all_events_when_event_is_none() {
-        // Arrange
-        let f = Fixture::new(
-            "matching-across-events",
-            r#"{
-                "hooks": {
-                    "PreToolUse": [
-                        {"hooks": [
-                            {"command": "playbook hook rm-workspace-guard"},
-                            {"command": "playbook hook bg-await-guard"},
-                            {"command": "/legacy/other.sh"}
-                        ]}
-                    ],
-                    "Stop": [
-                        {"hooks": [
-                            {"command": "playbook hook no-slop-guard"},
-                            {"command": "playbook hook session-init"}
-                        ]}
-                    ]
-                }
-            }"#,
-        );
-
-        // Act
-        let got = hook_commands_matching(
-            &f.path,
-            None,
-            "rm-workspace-guard|bg-await-guard|no-slop-guard",
-        );
-
-        // Assert
-        assert_eq!(got, 3);
-    }
-
-    #[test]
-    fn hook_commands_matching_scopes_the_count_to_one_event() {
-        // Arrange
-        let f = Fixture::new(
-            "matching-scoped-event",
-            r#"{
-                "hooks": {
-                    "PreToolUse": [
-                        {"hooks": [
-                            {"command": "playbook hook rm-workspace-guard"},
-                            {"command": "playbook hook bg-await-guard"},
-                            {"command": "/legacy/other.sh"}
-                        ]}
-                    ],
-                    "Stop": [
-                        {"hooks": [
-                            {"command": "playbook hook no-slop-guard"},
-                            {"command": "playbook hook session-init"}
-                        ]}
-                    ]
-                }
-            }"#,
-        );
-
-        // Act
-        let got = hook_commands_matching(
-            &f.path,
-            Some("PreToolUse"),
-            "rm-workspace-guard|bg-await-guard|no-slop-guard",
-        );
-
-        // Assert
-        assert_eq!(got, 2);
-    }
-
-    #[test]
-    fn hook_commands_matching_is_zero_for_a_pattern_matching_nothing() {
-        // Arrange
-        let f = Fixture::new(
-            "matching-no-match",
-            r#"{"hooks": {"PreToolUse": [{"hooks": [{"command": "playbook hook rm-workspace-guard"}]}]}}"#,
-        );
-
-        // Act
-        let got = hook_commands_matching(&f.path, None, "no-such-guard");
-
-        // Assert
-        assert_eq!(got, 0);
-    }
-
-    #[test]
-    fn hook_commands_matching_is_zero_when_hooks_key_is_absent() {
-        // Arrange
-        let f = Fixture::new("matching-hooks-absent", r#"{"other": true}"#);
-
-        // Act
-        let got = hook_commands_matching(&f.path, None, "guard");
-
-        // Assert
-        assert_eq!(got, 0);
-    }
-
-    #[test]
-    fn hook_commands_matching_is_zero_when_hooks_is_not_an_object() {
-        // Arrange
-        let f = Fixture::new(
-            "matching-hooks-wrong-shape",
-            r#"{"hooks": "not an object"}"#,
-        );
-
-        // Act
-        let got = hook_commands_matching(&f.path, None, "guard");
-
-        // Assert
-        assert_eq!(got, 0);
-    }
-
-    #[test]
-    fn hook_commands_matching_is_zero_when_the_scoped_event_has_no_hooks_wired() {
-        // Arrange: hooks exist, just none wired under the requested event, the
-        // common case for an event no guard uses yet.
-        let f = Fixture::new(
-            "matching-scoped-event-key-absent",
-            r#"{"hooks": {"Stop": [{"hooks": [{"command": "playbook hook no-slop-guard"}]}]}}"#,
-        );
-
-        // Act
-        let got = hook_commands_matching(&f.path, Some("PreToolUse"), "guard");
-
-        // Assert
-        assert_eq!(got, 0);
-    }
-
-    #[test]
-    fn hook_commands_matching_is_zero_when_event_value_is_not_an_array() {
-        // Arrange
-        let f = Fixture::new(
-            "matching-event-not-array",
-            r#"{"hooks": {"PreToolUse": "not an array"}}"#,
-        );
-
-        // Act
-        let got = hook_commands_matching(&f.path, None, "guard");
-
-        // Assert
-        assert_eq!(got, 0);
-    }
-
-    #[test]
-    fn hook_commands_matching_is_zero_when_group_has_no_hooks_array() {
-        // Arrange
-        let f = Fixture::new(
-            "matching-group-no-hooks",
-            r#"{"hooks": {"PreToolUse": [{"matcher": "Write"}]}}"#,
-        );
-
-        // Act
-        let got = hook_commands_matching(&f.path, None, "guard");
-
-        // Assert
-        assert_eq!(got, 0);
-    }
-
-    #[test]
-    fn hook_commands_matching_is_zero_when_command_value_is_not_a_string() {
-        // Arrange: divergence from `jq -r`, documented on `hook_commands`; no
-        // real settings.json ever has a non-string command.
-        let f = Fixture::new(
-            "matching-non-string-command",
-            r#"{"hooks": {"PreToolUse": [{"hooks": [{"command": 5}]}]}}"#,
-        );
-
-        // Act
-        let got = hook_commands_matching(&f.path, None, "guard");
-
-        // Assert
-        assert_eq!(got, 0);
     }
 }

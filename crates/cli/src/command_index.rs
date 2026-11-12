@@ -229,13 +229,8 @@ pub(crate) const META: &[Meta] = &[
         .purpose("Check the playbook setup, or read one fact the check uses")
         .for_users(),
     ro("doctor check"),
-    ro("doctor hook-commands"),
-    ro("doctor hook-commands-for-event"),
-    ro("doctor hook-commands-matching"),
     ro("doctor models"),
     ro("doctor pending-migrations"),
-    ro("doctor plugin-version"),
-    ro("doctor statusline-command"),
     user("effort").for_users(),
     user("effort apply"),
     free("effort choose"),

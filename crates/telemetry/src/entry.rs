@@ -14,10 +14,6 @@ use playbook_store::Connection;
 use std::path::Path;
 use std::time::Duration;
 
-/// What the removed `usage ingest` says to anyone who still calls it.
-const INGEST_REMOVED: &str =
-    "`usage ingest` was removed: use `playbook usage --summary`, the terminal view warms itself";
-
 /// How long `usage stop` waits for the collector before it may kill it.
 const STOP_BUDGET: Duration = Duration::from_secs(3);
 
@@ -149,7 +145,6 @@ pub fn run(
     match sub {
         // Answered above, before the data file is created.
         Some(UsageCommand::Doctor { .. } | UsageCommand::Stop) => Ok(String::new()),
-        Some(UsageCommand::Ingest) => Err(INGEST_REMOVED.to_string()),
         Some(UsageCommand::Warm) => super::warm::run_warm(paths).map(|()| String::new()),
         Some(UsageCommand::Collect { port, idle_seconds }) => {
             let stop = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));

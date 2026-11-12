@@ -2271,59 +2271,6 @@ pub enum DoctorCommand {
     ///
     /// Prints one line per finding, or nothing when none is pending.
     PendingMigrations,
-    /// Print the version from a plugin manifest
-    ///
-    /// Prints an empty line if the file is missing, unreadable, or has no version.
-    ///
-    /// Example: `playbook doctor plugin-version plugin.json`
-    PluginVersion {
-        /// Path of the plugin manifest to read
-        path: PathBuf,
-    },
-    /// Print the status line command from a settings.json
-    ///
-    /// Prints an empty line if the file is missing, unreadable, or has none.
-    ///
-    /// Example: `playbook doctor statusline-command settings.json`
-    StatuslineCommand {
-        /// Path of the settings.json to read
-        path: PathBuf,
-    },
-    /// List every hook command in a settings.json, one per line
-    ///
-    /// Prints nothing if the file is unreadable, invalid, or has no hooks.
-    ///
-    /// Example: `playbook doctor hook-commands settings.json`
-    HookCommands {
-        /// Path of the settings.json to read
-        path: PathBuf,
-    },
-    /// Count the commands wired to each named guard for one event
-    ///
-    /// Prints one `guard=count` line per guard.
-    ///
-    /// Example: `playbook doctor hook-commands-for-event settings.json PreToolUse rm-workspace-guard`
-    HookCommandsForEvent {
-        /// Path of the settings.json to read
-        path: PathBuf,
-        /// Event name, such as `PreToolUse`
-        event: String,
-        /// Guard names, such as `rm-workspace-guard`
-        guards: Vec<String>,
-    },
-    /// Count hook commands that match a pattern
-    ///
-    /// Counts across every event, or only one if you name it.
-    ///
-    /// Example: `playbook doctor hook-commands-matching settings.json guard`
-    HookCommandsMatching {
-        /// Path of the settings.json to read
-        path: PathBuf,
-        /// Regex to look for anywhere in a command
-        pattern: String,
-        /// Event to count, every event when left out
-        event: Option<String>,
-    },
 }
 
 /// `playbook doc` subcommands.
@@ -2621,13 +2568,6 @@ pub enum HooksCommand {
     /// Lists the hooks setup adds to settings.json, grouped by purpose.
     /// Changes nothing.
     List,
-    /// Removed: the rm guard is a short fixed rule now (prints a note)
-    #[command(hide = true)]
-    ExplainRm {
-        /// Ignored
-        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
-        args: Vec<String>,
-    },
 }
 
 /// `playbook cc` subcommands.

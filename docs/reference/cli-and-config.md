@@ -578,7 +578,7 @@ Example: `playbook doctor pending-migrations`
 
 - `--fix`: Run the safe migrations for playbook's own files, then list what needs you
 
-Subcommands: `check`, `hook-commands`, `hook-commands-for-event`, `hook-commands-matching`, `models`, `pending-migrations`, `plugin-version`, `statusline-command`
+Subcommands: `check`, `models`, `pending-migrations`
 
 ### `playbook doctor check`
 
@@ -587,40 +587,6 @@ Check the seven playbook layers and print a status table
 Reads your settings, shell files and PATH, and lists a PASS, INFO, WARN or FAIL row for each layer, then the review config, stale worktrees and pending migration notices. Always exits 0 when it could run the checks.
 
 - `--json`: Print the rows as JSON
-
-### `playbook doctor hook-commands`
-
-List every hook command in a settings.json, one per line
-
-Prints nothing if the file is unreadable, invalid, or has no hooks.
-
-Example: `playbook doctor hook-commands settings.json`
-
-- `<PATH>`: Path of the settings.json to read
-
-### `playbook doctor hook-commands-for-event`
-
-Count the commands wired to each named guard for one event
-
-Prints one `guard=count` line per guard.
-
-Example: `playbook doctor hook-commands-for-event settings.json PreToolUse rm-workspace-guard`
-
-- `<PATH>`: Path of the settings.json to read
-- `<EVENT>`: Event name, such as `PreToolUse`
-- `<GUARDS>`: Guard names, such as `rm-workspace-guard`
-
-### `playbook doctor hook-commands-matching`
-
-Count hook commands that match a pattern
-
-Counts across every event, or only one if you name it.
-
-Example: `playbook doctor hook-commands-matching settings.json guard`
-
-- `<PATH>`: Path of the settings.json to read
-- `<PATTERN>`: Regex to look for anywhere in a command
-- `<EVENT>`: Event to count, every event when left out
 
 ### `playbook doctor models`
 
@@ -635,26 +601,6 @@ Also says whether your own fallback replaces playbook's, and when the effort in 
 List the manual migration findings that need you
 
 Prints one line per finding, or nothing when none is pending.
-
-### `playbook doctor plugin-version`
-
-Print the version from a plugin manifest
-
-Prints an empty line if the file is missing, unreadable, or has no version.
-
-Example: `playbook doctor plugin-version plugin.json`
-
-- `<PATH>`: Path of the plugin manifest to read
-
-### `playbook doctor statusline-command`
-
-Print the status line command from a settings.json
-
-Prints an empty line if the file is missing, unreadable, or has none.
-
-Example: `playbook doctor statusline-command settings.json`
-
-- `<PATH>`: Path of the settings.json to read
 
 ### `playbook effort`
 
