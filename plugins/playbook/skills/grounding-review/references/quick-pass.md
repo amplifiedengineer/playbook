@@ -118,7 +118,7 @@ Spawn ONE `reviewer` subagent at **medium effort** (Opus model, set by the agent
 
 The subagent prompt MUST include:
 
-- The PR diff and `HEAD_SHA`, plus numbered excerpts of each changed file, the scoped test command and the stated limit to read beyond them only when needed (the "Review brief builder" in `skills/delegating-subagents/references/briefs.md`), and its `Callers` block only when `code.briefFactsTokens` is above 0.
+- The PR diff and `HEAD_SHA`, plus numbered excerpts of each changed file, the scoped test command and the stated limit to read beyond them only when needed (the "Review brief builder" in `skills/delegating-subagents/references/briefs.md`), and its `Callers` block only when the user asked for code facts.
 - How to read files: **worktree mode** → the absolute `$WT` path with "read and grep files under $WT; do not install or build"; **in-place mode** (`WT` empty) → "read the local working tree, which is at HEAD_SHA".
 - The full **Voice rules (mandatory)** and **Anti-patterns to refuse** sections from this pass, verbatim, plus the instruction to load `playbook:grounding-review` for the rest of the discipline. The reviewer loads no other skill and writes no comment body.
 - The output contract in Step 3: it MUST return exactly that report of plain findings, with no `Post:` block.

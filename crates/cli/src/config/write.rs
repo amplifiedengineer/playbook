@@ -256,17 +256,7 @@ fn validate_number(key: &str, value: &Value) -> Result<(), ConfigError> {
             whole.is_some_and(keys::gate_max_rounds_in_range),
             "a whole number from 1 to 20",
         ),
-        "fix.maxFiles"
-        | "fix.maxLines"
-        | "review.stackMaxPrs"
-        | "review.stackMaxLines"
-        | "review.suggest.deepLines"
-        | "review.suggest.quickLines"
-        | "review.suggest.deepFiles"
-        | "review.suggest.packageSpan"
-        | "review.suggest.untestedLines"
-        => (whole.is_some_and(|n| n >= 1), "a positive integer"),
-        "pr.bodyMaxChars" => (whole.is_some_and(|n| n >= 1), "a positive integer"),
+        "fix.maxFiles" | "fix.maxLines" => (whole.is_some_and(|n| n >= 1), "a positive integer"),
         _ => {
             return match whole {
                 Some(n) if n >= 0 => Ok(()),

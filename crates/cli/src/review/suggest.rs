@@ -12,38 +12,25 @@
 
 use crate::common::re::static_regex;
 use crate::pr::shared::{gh, git, reject_option_like};
-use crate::pr::stack::{detect, Gh, StackPr, State};
+use crate::pr::stack::{detect, Gh, StackPr, State, DEFAULT_MAX_PRS};
 use crate::pr::triage::Review;
 use regex::Regex;
 use serde::Serialize;
 use std::collections::BTreeSet;
 use std::sync::LazyLock;
 
-/// A positive count from the config tiers, or `default` when unset or invalid.
-fn config_count(key: &str, default: u64) -> u64 {
-    let home = crate::common::home_dir();
-    let slug = crate::common::repo_slug();
-    let slug = (!slug.is_empty()).then_some(slug.as_str());
-    crate::config::resolve(key, &home, slug)
-        .ok()
-        .and_then(|(v, _)| v.as_u64())
-        .filter(|n| *n >= 1)
-        .unwrap_or(default)
-}
-
-/// The cuts the rules compare against. Each one is a `review.suggest.*`
-/// config key, so a team can move them.
+/// The cuts the rules compare against.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Cfg {
-    /// More changed lines than this is a large change (`deepLines`).
+    /// More changed lines than this is a large change.
     pub deep_lines: u64,
-    /// At most this many changed lines is a small change (`quickLines`).
+    /// At most this many changed lines is a small change.
     pub quick_lines: u64,
-    /// More files than this is a wide change (`deepFiles`).
+    /// More files than this is a wide change.
     pub deep_files: u64,
-    /// This many packages or crates touched is a cross-cutting change (`packageSpan`).
+    /// This many packages or crates touched is a cross-cutting change.
     pub package_span: u64,
-    /// Code lines at which a change with almost no tests is a risk (`untestedLines`).
+    /// Code lines at which a change with almost no tests is a risk.
     pub untested_lines: u64,
 }
 
@@ -55,19 +42,6 @@ impl Cfg {
         package_span: 3,
         untested_lines: 150,
     };
-
-    /// The defaults, with any `review.suggest.*` key a config tier sets.
-    pub fn load() -> Cfg {
-        let read = config_count;
-        let d = Cfg::DEFAULT;
-        Cfg {
-            deep_lines: read("review.suggest.deepLines", d.deep_lines),
-            quick_lines: read("review.suggest.quickLines", d.quick_lines),
-            deep_files: read("review.suggest.deepFiles", d.deep_files),
-            package_span: read("review.suggest.packageSpan", d.package_span),
-            untested_lines: read("review.suggest.untestedLines", d.untested_lines),
-        }
-    }
 }
 
 /// One changed file.
@@ -643,7 +617,7 @@ pub enum StackFacts {
     Alone(Facts),
     /// The merged facts of every open PR in the stack.
     Scored(Facts, StackScope),
-    /// More open PRs than `review.stackMaxPrs`: nothing was fetched, and the
+    /// More open PRs than the stack limit: nothing was fetched, and the
     /// signals hold only the line and file sums `gh` already reported for the
     /// stack. They are sizes, not a classification, so they never go to `decide`.
     OverBudget(StackScope, Signals),
@@ -808,7 +782,7 @@ fn over_budget(stack: StackScope, signals: Signals, max_prs: u64) -> Suggestion 
         recommendation: Review::Deep,
         confidence: Confidence::High,
         reasons: vec![format!(
-            "{} open PRs in the stack, over review.stackMaxPrs ({max_prs}).",
+            "{} open PRs in the stack, over the limit of {max_prs}.",
             stack.open.len()
         )],
         rules: vec!["stack-over-budget"],
@@ -856,12 +830,13 @@ pub fn run(pr: Option<&str>, base: Option<&str>, scope: Scope) -> Result<Suggest
     if number.is_none() && scope == Scope::Stack {
         return Err("--scope stack needs a PR number".to_string());
     }
-    let cfg = Cfg::load();
+    let cfg = Cfg::DEFAULT;
     match (number, scope) {
-        (Some(n), Scope::Stack) => {
-            let max_prs = config_count("review.stackMaxPrs", 6);
-            from_stack(stack_facts(&|a| gh(a), n, max_prs)?, &cfg, max_prs)
-        }
+        (Some(n), Scope::Stack) => from_stack(
+            stack_facts(&|a| gh(a), n, DEFAULT_MAX_PRS)?,
+            &cfg,
+            DEFAULT_MAX_PRS,
+        ),
         (Some(n), Scope::ThisPr) => decided(pr_facts(&|a| gh(a), n)?, &cfg, Scope::ThisPr, None),
         (None, _) => decided(local_facts(base)?, &cfg, Scope::ThisPr, None),
     }
@@ -1058,20 +1033,6 @@ mod tests {
     }
 
     #[test]
-    fn the_built_in_cuts_match_the_config_key_defaults() {
-        let d = Cfg::DEFAULT;
-        for (key, want) in [
-            ("review.suggest.deepLines", d.deep_lines),
-            ("review.suggest.quickLines", d.quick_lines),
-            ("review.suggest.deepFiles", d.deep_files),
-            ("review.suggest.packageSpan", d.package_span),
-            ("review.suggest.untestedLines", d.untested_lines),
-        ] {
-            assert_eq!(crate::config::keys::default_value(key).and_then(|v| v.as_u64()), Some(want), "{key}");
-        }
-    }
-
-    #[test]
     fn the_by_hand_reference_lists_every_lock_manifest_and_cut() {
         let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../../plugins/playbook/skills/grounding-review/references/review-routing.md");
         let text = std::fs::read_to_string(path).unwrap();
@@ -1079,9 +1040,10 @@ mod tests {
             assert!(text.contains(&format!("`{name}`")), "review-routing.md lacks `{name}`");
         }
         let d = Cfg::DEFAULT;
-        for (key, n) in [("deepLines", d.deep_lines), ("quickLines", d.quick_lines), ("deepFiles", d.deep_files), ("packageSpan", d.package_span), ("untestedLines", d.untested_lines)] {
-            let row = text.lines().find(|l| l.contains(&format!("`review.suggest.{key}`"))).unwrap_or_else(|| panic!("no row for {key}"));
-            assert!(row.contains(&n.to_string()), "{key}: `{row}` lacks the default {n}");
+        for (cut, n) in [("Large change", d.deep_lines), ("Small change", d.quick_lines), ("Wide change", d.deep_files), ("Cross-cutting", d.package_span), ("Untested code", d.untested_lines)] {
+            let row = text.lines().find(|l| l.starts_with(&format!("| {cut} |"))).unwrap_or_else(|| panic!("no row for {cut}"));
+            assert!(row.contains(&n.to_string()), "{cut}: `{row}` lacks the value {n}");
+            assert!(!row.contains("review.suggest"), "{cut}: `{row}` names a retired key");
         }
         for word in ["authentication", "oauth", "jwt", "rbac", "acl", "bun.lockb", "CODEOWNERS", "command.rs"] {
             assert!(text.contains(word), "review-routing.md lacks {word}");
@@ -1407,7 +1369,7 @@ mod tests {
         // Assert
         assert_eq!((s.recommendation, s.confidence, s.scope), (Review::Deep, Confidence::High, Scope::Stack));
         assert_eq!(s.rules, vec!["stack-over-budget"]);
-        assert_eq!(s.reasons, vec!["3 open PRs in the stack, over review.stackMaxPrs (2)."]);
+        assert_eq!(s.reasons, vec!["3 open PRs in the stack, over the limit of 2."]);
         assert_eq!(s.signals.lines, 36);
     }
 

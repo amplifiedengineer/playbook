@@ -158,22 +158,119 @@ fn an_unreadable_plan_is_an_error() {
     assert!(String::from_utf8_lossy(&out.stderr).contains("/no/such/plan.md"));
 }
 
+const FACTS_PLAN: &str = "## Implementation Plan\n\n### Per-Work-Unit Detail\n\n#### WU-0: Total\n- **Files:** `src/lib.rs`\n- **Changes:** rename `compute_total`\n";
+
 #[test]
 fn a_facts_budget_with_no_index_adds_no_block_and_still_writes_the_brief() {
-    let (dir, plan, graph) = setup("facts");
+    // Arrange
+    let (dir, plan, graph) = setup("facts-none");
     let out_dir = dir.join("briefs");
-    let set = Command::new(env!("CARGO_BIN_EXE_playbook"))
-        .args(["config", "set", "--global", "code.briefFactsTokens", "500"])
+
+    // Act
+    let out = run(
+        &dir,
+        &[
+            plan.to_str().unwrap(),
+            "WU-0",
+            "--out",
+            out_dir.to_str().unwrap(),
+            "--graph",
+            graph.to_str().unwrap(),
+            "--facts-tokens",
+            "500",
+        ],
+    );
+
+    // Assert
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let text = fs::read_to_string(out_dir.join("wu-0.brief.md")).unwrap();
+    assert!(!text.contains("## Callers"), "{text}");
+}
+
+#[test]
+fn a_facts_budget_adds_the_callers_block_from_the_code_index() {
+    // Arrange
+    let dir = scratch("facts-index");
+    let plan = dir.join("plan.md");
+    let graph = dir.join("graph.json");
+    fs::write(&plan, FACTS_PLAN).unwrap();
+    fs::write(&graph, GRAPH).unwrap();
+    fs::create_dir_all(dir.join("src")).unwrap();
+    fs::write(
+        dir.join("src/lib.rs"),
+        "pub fn compute_total() -> u32 { 1 }\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("src/main.rs"),
+        "fn main() { let _ = compute_total(); }\n",
+    )
+    .unwrap();
+    for git_args in [
+        &["init", "--quiet"][..],
+        &[
+            "remote",
+            "add",
+            "origin",
+            "https://github.com/test-owner/test-repo.git",
+        ][..],
+    ] {
+        let status = Command::new("git")
+            .args(git_args)
+            .current_dir(&dir)
+            .env("HOME", &dir)
+            .status()
+            .unwrap();
+        assert!(status.success());
+    }
+    let indexed = Command::new(env!("CARGO_BIN_EXE_playbook"))
+        .args(["code", "index"])
         .current_dir(&dir)
         .env("HOME", &dir)
         .output()
         .unwrap();
     assert!(
-        set.status.success(),
+        indexed.status.success(),
         "{}",
-        String::from_utf8_lossy(&set.stderr)
+        String::from_utf8_lossy(&indexed.stderr)
     );
+    let out_dir = dir.join("briefs");
+    let args = [
+        plan.to_str().unwrap(),
+        "WU-0",
+        "--out",
+        out_dir.to_str().unwrap(),
+        "--graph",
+        graph.to_str().unwrap(),
+        "--facts-tokens",
+        "200",
+    ];
 
+    // Act
+    let out = run(&dir, &args);
+
+    // Assert
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let text = fs::read_to_string(out_dir.join("wu-0.brief.md")).unwrap();
+    assert!(text.contains("## Callers"), "{text}");
+    assert!(text.contains("compute_total"), "{text}");
+}
+
+#[test]
+fn without_the_flag_no_callers_block_is_added() {
+    // Arrange
+    let (dir, plan, graph) = setup("facts-default");
+    let out_dir = dir.join("briefs");
+
+    // Act
     let out = run(
         &dir,
         &[
@@ -186,11 +283,8 @@ fn a_facts_budget_with_no_index_adds_no_block_and_still_writes_the_brief() {
         ],
     );
 
-    assert!(
-        out.status.success(),
-        "{}",
-        String::from_utf8_lossy(&out.stderr)
-    );
+    // Assert
+    assert!(out.status.success());
     let text = fs::read_to_string(out_dir.join("wu-0.brief.md")).unwrap();
     assert!(!text.contains("## Callers"), "{text}");
 }

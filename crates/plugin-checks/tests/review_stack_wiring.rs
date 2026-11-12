@@ -87,7 +87,8 @@ fn review_asks_the_scope_before_the_depth() {
 fn routing_scores_a_whole_stack_on_the_union_of_the_open_files() {
     let text = read("skills/grounding-review/references/review-routing.md");
     assert!(text.contains("union of the open PRs' files"));
-    assert!(text.contains("review.stackMaxPrs"));
+    assert!(text.contains("over the limit of <max>"));
+    assert!(!text.contains("review.stackMaxPrs"));
 }
 
 #[test]

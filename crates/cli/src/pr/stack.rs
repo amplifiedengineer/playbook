@@ -10,8 +10,8 @@ use super::shared::gh;
 use serde_json::{json, Value};
 
 /// Default ceilings above which the review command asks again.
-const DEFAULT_MAX_PRS: u64 = 6;
-const DEFAULT_MAX_LINES: u64 = 3000;
+pub const DEFAULT_MAX_PRS: u64 = 6;
+pub const DEFAULT_MAX_LINES: u64 = 3000;
 
 /// Longest branch chain followed in either direction; guards against loops.
 const MAX_CHAIN: usize = 25;
@@ -155,13 +155,13 @@ impl Stack {
         let mut over = Vec::new();
         if open_count > limits.max_prs {
             over.push(format!(
-                "{open_count} open PRs, limit {} (review.stackMaxPrs)",
+                "{open_count} open PRs, limit {} (--max-prs)",
                 limits.max_prs
             ));
         }
         if open_lines > limits.max_lines {
             over.push(format!(
-                "{open_lines} changed lines, limit {} (review.stackMaxLines)",
+                "{open_lines} changed lines, limit {} (--max-lines)",
                 limits.max_lines
             ));
         }
@@ -680,7 +680,7 @@ mod tests {
     }
 
     #[test]
-    fn over_budget_names_the_key_to_change() {
+    fn over_budget_names_the_flag_to_change() {
         let s = detect(&fake(Some("api-5")), Some(3)).unwrap();
         let j = s.to_json(Limits {
             max_prs: 4,
@@ -688,7 +688,7 @@ mod tests {
         });
         assert_eq!(j["over_budget"], true);
         let reasons = j["over_budget_reasons"].to_string();
-        assert!(reasons.contains("review.stackMaxPrs") && reasons.contains("review.stackMaxLines"));
+        assert!(reasons.contains("--max-prs") && reasons.contains("--max-lines"));
     }
 
     fn stack_of(pairs: &[(State, u64)]) -> Stack {

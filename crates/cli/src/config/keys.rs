@@ -57,7 +57,6 @@ pub const KNOWN_KEYS: &[&str] = &[
     "pr.rules.issue",
     "pr.rules.ticketLine",
     "pr.rules.scope",
-    "pr.bodyMaxChars",
     "pr.ticketPatterns",
     "worktreeCleanup.enabled",
     "mode",
@@ -74,13 +73,6 @@ pub const KNOWN_KEYS: &[&str] = &[
     "gate.maxRounds",
     "fix.maxFiles",
     "fix.maxLines",
-    "review.stackMaxPrs",
-    "review.stackMaxLines",
-    "review.suggest.deepLines",
-    "review.suggest.quickLines",
-    "review.suggest.deepFiles",
-    "review.suggest.packageSpan",
-    "review.suggest.untestedLines",
     "security.defaults",
     "usage.theme",
     "usage.maskAccount",
@@ -94,7 +86,6 @@ pub const KNOWN_KEYS: &[&str] = &[
     "hygiene.enabled",
     "docs.convert",
     "docs.anydocPath",
-    "code.briefFactsTokens",
     "launcher.shortName",
     "systemPrompt.enabled",
     "attribution.enabled",
@@ -159,6 +150,15 @@ pub static FIXED_KEYS: LazyLock<Vec<(&'static str, Value)>> = LazyLock::new(|| {
         ("usage.telemetryMaxRows", json!(500_000)),
         ("usage.autoIngest", json!(true)),
         ("usage.autoIngestMinutes", json!(10)),
+        ("review.suggest.deepLines", json!(400)),
+        ("review.suggest.quickLines", json!(60)),
+        ("review.suggest.deepFiles", json!(25)),
+        ("review.suggest.packageSpan", json!(3)),
+        ("review.suggest.untestedLines", json!(150)),
+        ("review.stackMaxPrs", json!(6)),
+        ("review.stackMaxLines", json!(3000)),
+        ("pr.bodyMaxChars", json!(1200)),
+        ("code.briefFactsTokens", json!(0)),
     ]
 });
 
@@ -227,7 +227,6 @@ pub const LOCAL_ONLY_KEYS: &[&str] = &[
     "pr.rules.issue",
     "pr.rules.ticketLine",
     "pr.rules.scope",
-    "pr.bodyMaxChars",
     "pr.ticketPatterns",
     "worktreeCleanup.enabled",
     "mode",
@@ -238,20 +237,12 @@ pub const LOCAL_ONLY_KEYS: &[&str] = &[
     "gate.maxRounds",
     "fix.maxFiles",
     "fix.maxLines",
-    "review.stackMaxPrs",
-    "review.stackMaxLines",
-    "review.suggest.deepLines",
-    "review.suggest.quickLines",
-    "review.suggest.deepFiles",
-    "review.suggest.packageSpan",
-    "review.suggest.untestedLines",
     "security.defaults",
     "usage.telemetry",
     "usage.ui.state",
     "hygiene.enabled",
     "docs.convert",
     "docs.anydocPath",
-    "code.briefFactsTokens",
     "launcher.shortName",
     "systemPrompt.enabled",
     "attribution.enabled",
@@ -329,7 +320,6 @@ pub fn default_value(key: &str) -> Option<Value> {
         "pr.rules.length" | "pr.rules.issue" | "pr.rules.scope" => {
             Some(Value::String("warn".to_string()))
         }
-        "pr.bodyMaxChars" => Some(Value::Number(1200.into())),
         "pr.ticketPatterns" => Some(Value::Array(vec![Value::String(
             "[A-Z][A-Z0-9]+-[0-9]+".to_string(),
         )])),
@@ -346,13 +336,6 @@ pub fn default_value(key: &str) -> Option<Value> {
         "gate.maxRounds" => Some(Value::Number(GATE_MAX_ROUNDS_DEFAULT.into())),
         "fix.maxFiles" => Some(Value::Number(3.into())),
         "fix.maxLines" => Some(Value::Number(500.into())),
-        "review.stackMaxPrs" => Some(Value::Number(6.into())),
-        "review.stackMaxLines" => Some(Value::Number(3000.into())),
-        "review.suggest.deepLines" => Some(Value::Number(400.into())),
-        "review.suggest.quickLines" => Some(Value::Number(60.into())),
-        "review.suggest.deepFiles" => Some(Value::Number(25.into())),
-        "review.suggest.packageSpan" => Some(Value::Number(3.into())),
-        "review.suggest.untestedLines" => Some(Value::Number(150.into())),
         "security.defaults" => Some(Value::Bool(false)),
         "usage.theme" => Some(Value::String("default".to_string())),
         "usage.maskAccount" => Some(Value::Bool(false)),
@@ -364,7 +347,6 @@ pub fn default_value(key: &str) -> Option<Value> {
         "hygiene.enabled" => Some(Value::Bool(true)),
         "docs.convert" => Some(Value::String("auto".to_string())),
         "docs.anydocPath" => Some(Value::String(String::new())),
-        "code.briefFactsTokens" => Some(Value::Number(0.into())),
         "launcher.shortName" => Some(Value::Bool(false)),
         "systemPrompt.enabled" => Some(Value::Bool(true)),
         "attribution.enabled" => Some(Value::Bool(false)),
@@ -446,14 +428,10 @@ const LEGACY_KEY_NAMES: &[&str] = &[
     "autoReview.type",
     "autoReview.fix",
     "autoMerge.enabled",
-    "pr.bodyMaxChars",
     "worktreeCleanup.enabled",
     "maxEffortLevel",
     "auto.agentBudgetUsd",
     "auto.sessionCeilingUsd",
-    "review.stackMaxPrs",
-    "review.stackMaxLines",
-    "code.briefFactsTokens",
     "systemPrompt.enabled",
     "watch.maxCatchupHours",
     "watch.limits.actionsPerDay",
@@ -466,7 +444,7 @@ const COMPOUND_GROUPS: &[&str] = &["proseLint", "policyGuard"];
 
 /// The exact size of `KNOWN_KEYS`; each Segment that cuts keys lowers it.
 #[cfg(test)]
-const KEY_CEILING: usize = 67;
+const KEY_CEILING: usize = 58;
 
 #[cfg(test)]
 mod tests {
@@ -555,7 +533,7 @@ mod tests {
     #[test]
     fn the_shape_rule_rejects_camel_case_groups_and_long_leaves() {
         for key in [
-            "review.stackMaxLines",
+            "reviewStack.maxLines",
             "autoReview.enabled",
             "maxEffortLevel",
         ] {
@@ -640,6 +618,35 @@ mod tests {
             ("usage.telemetryMaxRows", json!(500_000)),
             ("usage.autoIngest", json!(true)),
             ("usage.autoIngestMinutes", json!(10)),
+        ];
+
+        // Act
+        let fixed = FIXED_KEYS.clone();
+
+        // Assert
+        for (key, value) in cut {
+            assert!(
+                fixed.contains(&(key, value)),
+                "{key} is not fixed to its old default"
+            );
+            assert!(!KNOWN_KEYS.contains(&key), "{key} is still known");
+            assert!(default_value(key).is_none(), "{key} still has a default");
+        }
+    }
+
+    #[test]
+    fn every_cut_review_stack_body_and_brief_key_is_fixed_to_its_old_default() {
+        // Arrange
+        let cut = [
+            ("review.suggest.deepLines", json!(400)),
+            ("review.suggest.quickLines", json!(60)),
+            ("review.suggest.deepFiles", json!(25)),
+            ("review.suggest.packageSpan", json!(3)),
+            ("review.suggest.untestedLines", json!(150)),
+            ("review.stackMaxPrs", json!(6)),
+            ("review.stackMaxLines", json!(3000)),
+            ("pr.bodyMaxChars", json!(1200)),
+            ("code.briefFactsTokens", json!(0)),
         ];
 
         // Act
@@ -763,17 +770,6 @@ mod tests {
         assert!(model_override_error("models.sonnet", "sonnet").is_some());
         assert!(model_override_error("models.sonnet", "claude-sonnet-5-5-1").is_some());
         assert_eq!(model_override_error("mode", "anything"), None);
-    }
-
-    #[test]
-    fn the_stack_review_limits_are_known_keys_with_defaults() {
-        assert!(KNOWN_KEYS.contains(&"review.stackMaxPrs"));
-        assert!(KNOWN_KEYS.contains(&"review.stackMaxLines"));
-        assert_eq!(default_value("review.stackMaxPrs"), Some(Value::from(6)));
-        assert_eq!(
-            default_value("review.stackMaxLines"),
-            Some(Value::from(3000))
-        );
     }
 
     #[test]

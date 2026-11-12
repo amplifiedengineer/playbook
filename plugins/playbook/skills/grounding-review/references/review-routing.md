@@ -6,7 +6,7 @@ How `/playbook:review` picks a quick or a deep review. Load this file when the `
 
 These are the same rules `playbook review suggest` applies. Use them in order and stop at the first class that has a hit.
 
-Gather the facts first. For the whole-stack scope, gather them for each open PR and apply every rule below to the union of the open PRs' files, adding the lines of a path that appears in more than one PR. Merged PRs are left out and closed PRs skipped. The answer is deep, high confidence, with the reason `<n> open PRs in the stack, over review.stackMaxPrs (<max>).`, when the open PR count is over `review.stackMaxPrs` (default 6); fetch nothing more in that case. This `stack-over-budget` answer is the one outside the rule list. For a PR: `gh api --paginate repos/{owner}/{repo}/pulls/<n>/files` (each file has `filename`, `additions`, `deletions` and `status`, which is `renamed` for a move), `gh pr view <n> --json labels,author`, and `gh api /user -q .login` to see whether the PR is yours. For a local branch: `git diff -M --numstat origin/<default>...HEAD`, and the change counts as yours. Add the added and deleted lines of each file.
+Gather the facts first. For the whole-stack scope, gather them for each open PR and apply every rule below to the union of the open PRs' files, adding the lines of a path that appears in more than one PR. Merged PRs are left out and closed PRs skipped. The answer is deep, high confidence, with the reason `<n> open PRs in the stack, over the limit of <max>.`, when the open PR count is over 6; fetch nothing more in that case. This `stack-over-budget` answer is the one outside the rule list. For a PR: `gh api --paginate repos/{owner}/{repo}/pulls/<n>/files` (each file has `filename`, `additions`, `deletions` and `status`, which is `renamed` for a move), `gh pr view <n> --json labels,author`, and `gh api /user -q .login` to see whether the PR is yours. For a local branch: `git diff -M --numstat origin/<default>...HEAD`, and the change counts as yours. Add the added and deleted lines of each file.
 
 Sort every changed file into one kind. A file that fits more than one kind takes the first in this list:
 
@@ -19,15 +19,15 @@ Sort every changed file into one kind. A file that fits more than one kind takes
 
 Size means the changed lines of code, tests and plugin files. Docs and lock file lines do not count toward size, but every changed file counts toward the file total. Packages means the distinct folders under `crates/`, `packages/`, `apps/`, `services/`, `libs/` and `plugins/` that hold a file which is not docs or a lock file. All other paths count together as one package.
 
-The cuts, with their config keys (read them with the `config-get` intent; use the default when it is not set):
+The cuts are fixed:
 
-| Cut | Default | Config key |
-|---|---|---|
-| Large change | more than 400 lines | `review.suggest.deepLines` |
-| Small change | at most 60 lines | `review.suggest.quickLines` |
-| Wide change | more than 25 files (all kinds) | `review.suggest.deepFiles` |
-| Cross-cutting | 3 or more packages | `review.suggest.packageSpan` |
-| Untested code | 150 or more lines | `review.suggest.untestedLines` |
+| Cut | Value |
+|---|---|
+| Large change | more than 400 lines |
+| Small change | at most 60 lines |
+| Wide change | more than 25 files (all kinds) |
+| Cross-cutting | 3 or more packages |
+| Untested code | 150 or more lines |
 
 The classes, in order:
 

@@ -15,8 +15,8 @@
 //!   (`~/.claude/projects/*/memory/`) or the retired `~/.claude/memory/`.
 //!
 //! - changing protected settings: `playbook config set` on a
-//!   `hooks.proseLint.*`, `pr.rules.*`, `pr.bodyMaxChars`,
-//!   `pr.ticketPatterns` key, `config import`, `config unset` or `config edit`,
+//!   `hooks.proseLint.*`, `pr.rules.*`, `pr.ticketPatterns` key, `config import`,
+//!   `config unset` or `config edit`,
 //!   a write to the config database or a config file (a redirect into it, a
 //!   writer program, an interpreter, `sed -i`, or `sqlite3` with anything but
 //!   a read), or an inline `WORKTREE_BASE_DIR=` assignment. Reading the
@@ -245,11 +245,10 @@ fn is_fact_file(path: &str, memory_dir: &Path) -> bool {
 /// The config keys the model may not change: the policy guard's own switch,
 /// the prose lint mode and the pull request rules.
 /// Matched on lowercase prefixes.
-const PROTECTED_KEY_PREFIXES: [&str; 5] = [
+const PROTECTED_KEY_PREFIXES: [&str; 4] = [
     "hooks.policyguard",
     "hooks.proselint",
     "pr.rules.",
-    "pr.bodymaxchars",
     "pr.ticketpatterns",
 ];
 
@@ -753,7 +752,6 @@ mod tests {
             "pb config set hooks.proseLint.mode off",
             "nohup pb config set pr.rules.template off",
             "playbook config set --global pr.rules.prose off",
-            "playbook config set pr.bodyMaxChars 100000",
             "playbook config set --org acme pr.ticketPatterns '[\"X-1\"]'",
             "playbook config unset pr.rules.length",
             "/usr/local/bin/playbook config import cfg.json",

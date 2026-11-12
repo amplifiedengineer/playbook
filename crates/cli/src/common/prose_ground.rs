@@ -23,7 +23,7 @@ pub const REVIEW_MAX_SENTENCES: usize = 2;
 pub const REPLY_MAX_SENTENCES: usize = 2;
 /// Most characters in a commit title.
 pub const TITLE_MAX_CHARS: usize = 72;
-/// Most characters in a PR body (the `pr.bodyMaxChars` default).
+/// Most characters in a PR body (the length rule's cap).
 pub const PR_BODY_MAX_CHARS: usize = 1200;
 /// Most sentences in the Summary of a PR body.
 pub const SUMMARY_MAX_SENTENCES: usize = 3;

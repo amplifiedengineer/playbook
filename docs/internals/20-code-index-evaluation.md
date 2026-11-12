@@ -24,7 +24,7 @@ The rule works in integer basis points. The margin is 3.0 accuracy points, or 30
 - Tokens per task fall with the index.
 - No query kind with at least 5 tasks loses more than 300 basis points on its point estimate. A kind with fewer tasks is listed and does not block.
 
-`code-bench decide REPORT_FILE` applies the rule and prints the value for `code.briefFactsTokens`, which is 1,500 when the rule holds and 0 otherwise. It only reports. Changing the default is a committed change that follows a real report.
+`code-bench decide REPORT_FILE` applies the rule and prints the value for `playbook plan brief --facts-tokens`, which is 1,500 when the rule holds and 0 otherwise. It only reports. Changing the default is a committed change that follows a real report.
 
 ## Report figures
 
@@ -51,6 +51,6 @@ The fixture does not meet the rule: its lower bound of -700 is below -300. The d
 
 ## Status
 
-No real report exists yet. A real run needs a model key and real oracle answers, so `code.briefFactsTokens` stays at its default of 0. The owner adds the `code-e2e` environment with the secret `CODE_E2E_ANTHROPIC_API_KEY`, sets the repository variable `CODE_CI_PILOT_GATE_RAN` and reads the first report. When the rule holds on a committed real report, a separate change sets the default to 1,500.
+No real report exists yet. A real run needs a model key and real oracle answers, so `--facts-tokens` stays at its default of 0. The owner adds the `code-e2e` environment with the secret `CODE_E2E_ANTHROPIC_API_KEY`, sets the repository variable `CODE_CI_PILOT_GATE_RAN` and reads the first report. When the rule holds on a committed real report, a separate change sets the default to 1,500.
 
 The `claude` CLI has no temperature option, so the request carries the fixed temperature for tests to assert, but a real call cannot set it.

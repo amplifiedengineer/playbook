@@ -30,7 +30,7 @@ pub const TASK_COUNT: usize = 30;
 pub const MODEL_SNAPSHOT: &str = "claude-sonnet-4-5-20250929";
 /// The fixed temperature, in whole units.
 pub const TEMPERATURE: u32 = 0;
-/// The value `code.briefFactsTokens` takes when the rule holds.
+/// The value `--facts-tokens` takes when the rule holds.
 pub const BRIEF_FACTS_TOKENS_ON: u32 = 1_500;
 /// The value it keeps otherwise.
 pub const BRIEF_FACTS_TOKENS_OFF: u32 = 0;

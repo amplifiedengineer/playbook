@@ -234,7 +234,7 @@ pub struct Context<'a> {
 
 /// The code facts of a brief and the token budget that bounds them.
 pub struct CodeFacts<'a> {
-    /// `code.briefFactsTokens`. 0 means no block.
+    /// The `--facts-tokens` budget. 0 means no block.
     pub budget_tokens: usize,
     /// Ranked facts for one Work Unit, best first.
     pub source: &'a dyn Fn(&Wu) -> Vec<String>,
@@ -652,11 +652,11 @@ mod tests {
     }
 
     #[test]
-    fn briefs_md_has_one_callers_rule_gated_by_the_key() {
+    fn briefs_md_has_one_callers_rule_gated_by_the_flag() {
         let rules = include_str!(
             "../../../plugins/playbook/skills/delegating-subagents/references/briefs.md"
         );
         assert_eq!(rules.matches("**Callers,").count(), 1);
-        assert!(rules.contains("code.briefFactsTokens"));
+        assert!(rules.contains("--facts-tokens"));
     }
 }

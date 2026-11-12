@@ -45,7 +45,7 @@ playbook review suggest 4265 --scope stack   # measure every open PR in the stac
 
 The triage is `playbook pr review-triage`. It says quick only when three small model reads agree the change cannot break behavior, and deep otherwise, so a failed triage never lightens a review. The rule list that `playbook review suggest` uses is in the [review routing reference](../../plugins/playbook/skills/grounding-review/references/review-routing.md), and `review.suggest.*` config keys move its cuts, see [config keys](../reference/config-keys.md). In auto mode the command never waits.
 
-With `--scope stack` the files of every open PR in the stack are measured together, so a stack of small PRs can be recommended deep when the whole is large. Merged PRs never count and are never reviewed or commented on, and closed PRs are skipped. A stack with more open PRs than `review.stackMaxPrs` is answered deep without reading their files.
+With `--scope stack` the files of every open PR in the stack are measured together, so a stack of small PRs can be recommended deep when the whole is large. Merged PRs never count and are never reviewed or commented on, and closed PRs are skipped. A stack with more than 6 open PRs is answered deep without reading their files.
 
 `/playbook:review --quick` and `/playbook:review --deep` run the two passes directly. The two sections below describe them.
 
@@ -101,7 +101,7 @@ What a whole-stack review does:
 - **Findings go to the PR that holds the line.** `playbook pr stack map` matches each finding's `file:line` against the diff hunks of the open PRs and creates one pending review per PR. A finding no open PR changes is shown in the report and not posted.
 - **Fixed higher up is dropped.** A finding on code that an open PR above changes or removes is not posted. The report lists it as `fixed above in #<n>`. `playbook pr stack map` does the check and returns it as `fixed_above`.
 - **Safe against change.** If a PR was pushed to, retargeted or closed after the review started, its findings are held back and listed as stale.
-- **Cost guard.** The command asks again before it starts when the open PRs exceed `review.stackMaxPrs` (default 6) or `review.stackMaxLines` (default 3000). See [Config keys](../reference/config-keys.md).
+- **Cost guard.** The command asks again before it starts when the open PRs exceed 6 or change more than 3000 lines in total. `playbook pr stack` takes `--max-prs` and `--max-lines` to change them for one run.
 
 ## How findings are graded
 

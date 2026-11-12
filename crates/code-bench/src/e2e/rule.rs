@@ -45,7 +45,7 @@ pub fn failures(r: &Report) -> Vec<Failure> {
     out
 }
 
-/// The value `code.briefFactsTokens` should take for this report.
+/// The value `--facts-tokens` should take for this report.
 pub fn default_tokens(r: &Report) -> u32 {
     if failures(r).is_empty() {
         BRIEF_FACTS_TOKENS_ON

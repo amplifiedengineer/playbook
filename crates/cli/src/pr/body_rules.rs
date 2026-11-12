@@ -17,7 +17,7 @@ use std::path::Path;
 /// The key shape used when `pr.ticketPatterns` is not set.
 pub const DEFAULT_TICKET_PATTERN: &str = r"[A-Z][A-Z0-9]+-[0-9]+";
 
-/// Body length cap in characters when `pr.bodyMaxChars` is not set.
+/// Body length cap in characters.
 pub const DEFAULT_MAX_CHARS: usize = 1200;
 
 /// What a failed rule does.
@@ -100,11 +100,6 @@ impl Rules {
         rules.ticket_line = level("pr.rules.ticketLine", rules.ticket_line);
         rules.scope = level("pr.rules.scope", rules.scope);
         rules.prose = level("hooks.proseLint.mode", rules.prose);
-        if let Some(n) = get("pr.bodyMaxChars").and_then(|v| v.as_u64()) {
-            if n > 0 {
-                rules.max_chars = usize::try_from(n).unwrap_or(DEFAULT_MAX_CHARS);
-            }
-        }
         if let Some(Value::Array(items)) = get("pr.ticketPatterns") {
             let list: Vec<String> = items
                 .iter()

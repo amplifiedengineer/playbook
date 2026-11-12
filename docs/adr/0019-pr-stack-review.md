@@ -80,3 +80,7 @@ Per-PR `gh` calls (diffs, summaries) run through `common::par::map`, capped at 4
 - The branch-chain source is best effort. A stack whose bottom PR was merged and whose branch was deleted looks like a smaller stack.
 - Delivery was in four PRs: detection, `--context` and `map`, the command integration with the config keys, then docs.
 - Not proven against a live stack: the whole-stack review flow in the two commands is instructions for the model, covered by the CLI tests for detection, context and mapping but not by an end to end run.
+
+## Note 2026-11-13: new names
+
+The keys `review.stackMaxPrs` and `review.stackMaxLines` are no longer config keys. Their values are fixed at 6 open PRs and 3000 changed lines. A stored value is ignored.

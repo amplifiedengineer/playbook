@@ -26,7 +26,6 @@ Set a key with `playbook config set <key> <value>` and read it with `playbook co
 | `pr.rules.issue` | `warn` | `off`, `warn`, `block` |
 | `pr.rules.ticketLine` | `block` | `off`, `warn`, `block` |
 | `pr.rules.scope` | `warn` | `off`, `warn`, `block` |
-| `pr.bodyMaxChars` | `1200` | a number, see the config keys page for the range |
 | `pr.ticketPatterns` | `["[A-Z][A-Z0-9]+-[0-9]+"]` | see the config keys page |
 | `worktreeCleanup.enabled` | `true` | `true`, `false` |
 | `mode` | `ask` | `ask`, `auto` |
@@ -43,13 +42,6 @@ Set a key with `playbook config set <key> <value>` and read it with `playbook co
 | `gate.maxRounds` | `5` | a number, see the config keys page for the range |
 | `fix.maxFiles` | `3` | a number, see the config keys page for the range |
 | `fix.maxLines` | `500` | a number, see the config keys page for the range |
-| `review.stackMaxPrs` | `6` | a number, see the config keys page for the range |
-| `review.stackMaxLines` | `3000` | a number, see the config keys page for the range |
-| `review.suggest.deepLines` | `400` | a number, see the config keys page for the range |
-| `review.suggest.quickLines` | `60` | a number, see the config keys page for the range |
-| `review.suggest.deepFiles` | `25` | a number, see the config keys page for the range |
-| `review.suggest.packageSpan` | `3` | a number, see the config keys page for the range |
-| `review.suggest.untestedLines` | `150` | a number, see the config keys page for the range |
 | `security.defaults` | `false` | `true`, `false` |
 | `usage.theme` | `default` | `default`, `spectrum`, `dark`, `light`, `mono` |
 | `usage.maskAccount` | `false` | `true`, `false` |
@@ -63,7 +55,6 @@ Set a key with `playbook config set <key> <value>` and read it with `playbook co
 | `hygiene.enabled` | `true` | `true`, `false` |
 | `docs.convert` | `auto` | `auto`, `off` |
 | `docs.anydocPath` | empty | see the config keys page |
-| `code.briefFactsTokens` | `0` | a number, see the config keys page for the range |
 | `launcher.shortName` | `false` | `true`, `false` |
 | `systemPrompt.enabled` | `true` | `true`, `false` |
 | `attribution.enabled` | `false` | `true`, `false` |
@@ -986,7 +977,7 @@ Subcommands: `brief`, `checkpoint`, `cleanup`
 
 Write the brief file for each Work Unit
 
-`/playbook:implement` gives these files to its subagents. Each `<OUT>/<wu-id>.brief.md` holds a short header (plan, worktree, scoped verify), the Work Unit's own section of the plan verbatim, and a "Relevant memory" list of the facts anchored to its files or matching its title. With `code.briefFactsTokens` above 0 it adds a `Callers` block of use sites from the code index, cut to that many tokens. Every id is checked first: a missing one writes nothing and exits 1. Prints the paths written, one per line.
+`/playbook:implement` gives these files to its subagents. Each `<OUT>/<wu-id>.brief.md` holds a short header (plan, worktree, scoped verify), the Work Unit's own section of the plan verbatim, and a "Relevant memory" list of the facts anchored to its files or matching its title. With `--facts-tokens` above 0 it adds a `Callers` block of use sites from the code index, cut to that many tokens. Every id is checked first: a missing one writes nothing and exits 1. Prints the paths written, one per line.
 
 Example: `playbook plan brief docs/plan.md WU-1 WU-2 --out /tmp/briefs --verify 'cargo test {tests}'`
 
@@ -998,6 +989,7 @@ Example: `playbook plan brief docs/plan.md WU-1 WU-2 --out /tmp/briefs --verify 
 - `--verify <VERIFY>`: Scoped verify command; `{tests}` and `{files}` become the Work Unit's paths
 - `--repo <REPO>`: Repo slug (`owner/name`) for the memory scope; defaults to the origin remote's
 - `--graph <GRAPH>`: Graph JSON file; defaults to the graph in `~/.config/playbook/data/memory.db`
+- `--facts-tokens <N>`: Most tokens of code facts to add to each brief; 0 adds none
 
 ### `playbook plan checkpoint`
 
@@ -1286,9 +1278,9 @@ Example: `playbook review size --base main`
 
 Recommend a quick or a deep review from the diff
 
-Reads the changed files from git (the branch against the default branch, no network) or from `gh` when a PR number is given, and applies a fixed rule list: size, files, packages touched, risky paths (auth, crypto, secrets, CI, release, hooks, guards, migrations, dependencies, the command surface, plugin commands, skills and agents over the small cut), a security label, the test ratio, and changes that cannot alter behavior (docs, lock files, renames, tests). Prints `recommendation=quick|deep`, `confidence=high|low`, up to four `reason:` lines, a `signals:` line, a `scope=` line and, with `--scope stack`, a `stack:` line. Low confidence means no rule was decisive; the answer then leans quick for your own change (a local branch always is) and deep otherwise. Docs and lock file lines do not count toward size, and files outside crates, packages, apps, services, libs and plugins count together as one `root` package. The cuts are the `review.suggest.*` config keys.
+Reads the changed files from git (the branch against the default branch, no network) or from `gh` when a PR number is given, and applies a fixed rule list: size, files, packages touched, risky paths (auth, crypto, secrets, CI, release, hooks, guards, migrations, dependencies, the command surface, plugin commands, skills and agents over the small cut), a security label, the test ratio, and changes that cannot alter behavior (docs, lock files, renames, tests). Prints `recommendation=quick|deep`, `confidence=high|low`, up to four `reason:` lines, a `signals:` line, a `scope=` line and, with `--scope stack`, a `stack:` line. Low confidence means no rule was decisive; the answer then leans quick for your own change (a local branch always is) and deep otherwise. Docs and lock file lines do not count toward size, and files outside crates, packages, apps, services, libs and plugins count together as one `root` package.
 
-`--scope stack` measures every open PR in the PR's stack together: merged PRs are left out, closed PRs are skipped, and a PR outside a stack is measured alone. A stack with more open PRs than `review.stackMaxPrs` is answered deep without reading their files.
+`--scope stack` measures every open PR in the PR's stack together: merged PRs are left out, closed PRs are skipped, and a PR outside a stack is measured alone. A stack with more than 6 open PRs is answered deep without reading their files.
 
 Example: `playbook review suggest 4265 --json`
 

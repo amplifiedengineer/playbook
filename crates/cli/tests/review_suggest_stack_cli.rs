@@ -191,22 +191,6 @@ fn a_merged_given_pr_stops_the_review_and_names_the_pr() {
 }
 
 #[test]
-fn a_stack_over_the_pr_budget_is_deep_without_fetching_any_files() {
-    // Arrange
-    let sb = small_stack();
-    let set = sb.playbook(&["config", "set", "--global", "review.stackMaxPrs", "1"]);
-    assert!(set.status.success(), "{}", stderr(&set));
-    // Act
-    let o = sb.suggest("3", "stack");
-    // Assert
-    assert!(o.status.success(), "{}", stderr(&o));
-    let v = json(&o);
-    assert_eq!(v["recommendation"], "deep");
-    assert_eq!(v["rules"], serde_json::json!(["stack-over-budget"]));
-    assert!(!sb.calls().contains("/files"), "{}", sb.calls());
-}
-
-#[test]
 fn one_failed_fetch_fails_the_whole_call() {
     // Arrange
     let sb = Sandbox::new(&[(2, "crates/cli/src/two.rs", 20)], "ana");

@@ -1803,7 +1803,7 @@ pub enum PlanCommand {
     /// `/playbook:implement` gives these files to its subagents. Each `<OUT>/<wu-id>.brief.md` holds a short header (plan, worktree,
     /// scoped verify), the Work Unit's own section of the plan verbatim, and a
     /// "Relevant memory" list of the facts anchored to its files or matching
-    /// its title. With `code.briefFactsTokens` above 0 it adds a `Callers`
+    /// its title. With `--facts-tokens` above 0 it adds a `Callers`
     /// block of use sites from the code index, cut to that many tokens. Every id is checked first: a missing one writes nothing and
     /// exits 1. Prints the paths written, one per line.
     ///
@@ -1832,6 +1832,9 @@ pub enum PlanCommand {
         /// Graph JSON file; defaults to the graph in `~/.config/playbook/data/memory.db`
         #[arg(long)]
         graph: Option<PathBuf>,
+        /// Most tokens of code facts to add to each brief; 0 adds none
+        #[arg(long, value_name = "N", default_value_t = 0)]
+        facts_tokens: usize,
     },
 }
 
@@ -2028,13 +2031,12 @@ pub enum ReviewCommand {
     /// was decisive; the answer then leans quick for your own change (a local
     /// branch always is) and deep otherwise. Docs and lock file lines do not
     /// count toward size, and files outside crates, packages, apps, services,
-    /// libs and plugins count together as one `root` package. The cuts are
-    /// the `review.suggest.*` config keys.
+    /// libs and plugins count together as one `root` package.
     ///
     /// `--scope stack` measures every open PR in the PR's stack together:
     /// merged PRs are left out, closed PRs are skipped, and a PR outside a
-    /// stack is measured alone. A stack with more open PRs than
-    /// `review.stackMaxPrs` is answered deep without reading their files.
+    /// stack is measured alone. A stack with more than 6 open PRs
+    /// is answered deep without reading their files.
     ///
     /// Example: `playbook review suggest 4265 --json`
     Suggest {

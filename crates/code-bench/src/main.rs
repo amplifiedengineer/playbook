@@ -217,7 +217,7 @@ fn end_to_end(args: &[String]) -> Result<(), String> {
     std::fs::write(out, report.to_json().map_err(|e| e.to_string())?).map_err(|e| e.to_string())
 }
 
-/// Prints the value `code.briefFactsTokens` should take for a real report.
+/// Prints the value `--facts-tokens` should take for a real report.
 /// It only reports the decision; the flip is a committed change.
 fn decide(args: &[String]) -> Result<(), String> {
     let [file] = args else {

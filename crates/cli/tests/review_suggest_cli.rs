@@ -82,7 +82,7 @@ fn a_workflow_change_is_a_high_confidence_deep_in_json() {
 }
 
 #[test]
-fn a_small_change_is_quick_and_a_config_key_moves_the_cut() {
+fn a_small_change_is_quick_and_the_cut_is_not_a_config_key() {
     let dir = repo("cfg", &[("src/a.py", 10)]);
     let (_, out, _) = suggest(&dir, &[]);
     assert!(
@@ -100,14 +100,10 @@ fn a_small_change_is_quick_and_a_config_key_moves_the_cut() {
             "5",
         ],
     );
-    assert!(
-        set.status.success(),
-        "{}",
-        String::from_utf8_lossy(&set.stderr)
-    );
+    assert!(!set.status.success(), "a fixed key must not be settable");
     let (_, out, _) = suggest(&dir, &[]);
     assert!(
-        out.starts_with("recommendation=quick\nconfidence=low\n"),
+        out.starts_with("recommendation=quick\nconfidence=high\n"),
         "{out}"
     );
 }

@@ -265,7 +265,7 @@ This is not optional when the commit looks fine. The report is the only place a 
 
 **With TDD (default).** A Work Unit with N test scenarios means up to 3N dispatches: for each scenario, in dependency order:
 
-Every implementer brief also carries numbered excerpts of the files the step edits, the scoped verify command and the limit to read beyond them only when needed ("Implementer brief builder" in `skills/delegating-subagents/references/briefs.md`). With `code.briefFactsTokens` above 0, `playbook plan brief` also adds a `## Callers` block from the code index; at 0 it adds none.
+Every implementer brief also carries numbered excerpts of the files the step edits, the scoped verify command and the limit to read beyond them only when needed ("Implementer brief builder" in `skills/delegating-subagents/references/briefs.md`). With `--facts-tokens <N>` above 0 (only when the user asked for code facts), `playbook plan brief` also adds a `## Callers` block from the code index; without it, it adds none.
 
 1. **RED** - `implementer` subagent (`subagent_type: playbook:implementer`): "Write ONLY the failing tests encoding this Gherkin scenario, AAA-structured. Don't touch production code." Then run the verify command: tests MUST fail (if they pass, the test proves nothing - fix it). On success, commit: `git commit -m "wip(<wu-id>): red - <scenario-id>"`, signed and signed off, inside the WU's tree. Never pushed.
 2. **GREEN** - `implementer` subagent: "Write ONLY the minimal implementation to pass." Run verify: tests MUST pass (on failure, spawn a follow-up `implementer` with the error output). On success, commit: `wip(<wu-id>): green - <scenario-id>`.

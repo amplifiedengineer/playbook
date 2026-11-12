@@ -4,16 +4,16 @@ Read this after Step 1 of the review command has resolved `PR_NUMBER`. A stack i
 
 ## 1. Detect
 
-Read the two limits, `review.stackMaxPrs` and `review.stackMaxLines`. Intent: config-get. If the session's tool map (printed at session start) lists it, use that command for each key. Otherwise do this: use the defaults, 6 PRs and 3000 changed lines.
+The two limits are fixed: 6 PRs and 3000 changed lines.
 
-Then find the stack. Intent: pr-stack. If the session's tool map lists it, use that command with the arguments as one quoted string: `"<PR_NUMBER> --json --max-prs <stackMaxPrs> --max-lines <stackMaxLines>"`. If it fails, or the JSON has `in_stack: false`, the PR is not in a stack: stop reading this file, say nothing about stacks, and review exactly as the command says. Print each entry of `warnings` once.
+Then find the stack. Intent: pr-stack. If the session's tool map lists it, use that command with the arguments as one quoted string: `"<PR_NUMBER> --json"`. If it fails, or the JSON has `in_stack: false`, the PR is not in a stack: stop reading this file, say nothing about stacks, and review exactly as the command says. Print each entry of `warnings` once.
 
 Otherwise do this, by branch names:
 
 1. `gh repo view --json defaultBranchRef -q .defaultBranchRef.name` gives the default branch. `gh pr view <PR_NUMBER> --json number,title,state,baseRefName,headRefName,headRefOid,additions,deletions,mergedAt` gives the start.
 2. Walk down: while the lowest PR's base is not the default branch, run `gh pr list --state all --head <base> --json number,title,state,baseRefName,headRefName,headRefOid,additions,deletions,mergedAt --limit 20` and put the match below. Walk up: run the same with `--base <head of the topmost PR>` and put the match above. Stop a walk when nothing matches, a PR repeats, or the chain holds 25 PRs. When several PRs match, follow the open one with the lowest number (then merged, then closed) and print `<branch> matches <n> PRs; following #<n>` once.
 3. Fewer than 2 PRs in the chain: the PR is not in a stack. Stop reading this file and say nothing about stacks.
-4. Build what the rest of this file reads: `prs`, bottom first, each with `position` (1 at the bottom), `number`, `state` (`closed` with a `mergedAt` counts as `merged`), `base`, `head`, `head_sha` and `role`; `open_count`; `merged_count`; `open_lines` (additions plus deletions of the open PRs); `ask`, true; and `over_budget`, true when `open_count` is over `stackMaxPrs` or `open_lines` over `stackMaxLines`, with one line per breach in `over_budget_reasons`. Keep it as JSON in a `stack.json` file under `/tmp/pr-stack-<PR_NUMBER>/` for section 5.
+4. Build what the rest of this file reads: `prs`, bottom first, each with `position` (1 at the bottom), `number`, `state` (`closed` with a `mergedAt` counts as `merged`), `base`, `head`, `head_sha` and `role`; `open_count`; `merged_count`; `open_lines` (additions plus deletions of the open PRs); `ask`, true; and `over_budget`, true when `open_count` is over 6 or `open_lines` over 3000, with one line per breach in `over_budget_reasons`. Keep it as JSON in a `stack.json` file under `/tmp/pr-stack-<PR_NUMBER>/` for section 5.
 
 Read `prs` (bottom first), `open_count`, `merged_count`, `open_lines`, `ask` and `over_budget`. Each PR has a `role`:
 
@@ -38,7 +38,7 @@ If `ask` is true and the arguments hold neither flag, say it plainly first, in t
   1. This PR only. This is the default.
   2. Whole stack.
 
-When the scope is a whole stack and `over_budget` is true, ask once more before starting, naming the reasons from `over_budget_reasons`: continue anyway, this PR only, or stop. The limits are `review.stackMaxPrs` and `review.stackMaxLines`.
+When the scope is a whole stack and `over_budget` is true, ask once more before starting, naming the reasons from `over_budget_reasons`: continue anyway, this PR only, or stop. The limits are 6 open PRs and 3000 changed lines.
 
 ## 2b. This PR only
 
@@ -52,7 +52,7 @@ Give the digest to the reviewers with the diff. It is the only view of the upper
 
 Whole-stack scope only.
 
-Intent: pr-stack. If the session's tool map (printed at session start) lists it, use that command with the arguments as one quoted string: `"<PR_NUMBER> --context --max-prs <n> --max-lines <n>"`. It prints `context_file`, `stack_file` and one `diff_file_<n>` per open PR. Otherwise do this, in `/tmp/pr-stack-<PR_NUMBER>/`: write each open PR's diff with `gh pr diff <n> > pr-<n>.diff` (that path is its `diff_file`), and write `context.md` (the `context_file`) listing every PR bottom first with its number, title, role (REVIEW, CONTEXT for merged, SKIPPED for closed), branch and base, its description cut to a few paragraphs, and for a merged PR its files from `gh pr view <n> --json body,files`. The `stack.json` from section 1 is the `stack_file`.
+Intent: pr-stack. If the session's tool map (printed at session start) lists it, use that command with the arguments as one quoted string: `"<PR_NUMBER> --context"`. It prints `context_file`, `stack_file` and one `diff_file_<n>` per open PR. Otherwise do this, in `/tmp/pr-stack-<PR_NUMBER>/`: write each open PR's diff with `gh pr diff <n> > pr-<n>.diff` (that path is its `diff_file`), and write `context.md` (the `context_file`) listing every PR bottom first with its number, title, role (REVIEW, CONTEXT for merged, SKIPPED for closed), branch and base, its description cut to a few paragraphs, and for a merged PR its files from `gh pr view <n> --json body,files`. The `stack.json` from section 1 is the `stack_file`.
 
 Read `context_file` once. Pass its path and every `diff_file` path to the reviewer or reviewers, so the whole stack is read with one context. Merged PRs appear in `context_file` as a short summary. If a summary is too thin to follow the code, summarize that PR with the agent routing gives for the `mechanical` kind (see `playbook:delegating-subagents`), not with the review model.
 
