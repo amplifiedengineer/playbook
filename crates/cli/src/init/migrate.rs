@@ -70,6 +70,8 @@ pub const PLUGIN_UPDATE_MODE_MIGRATION: &str = "plugin-update-mode";
 /// The `Owned` notice that the policy guard is now off by default. It changes
 /// nothing and is recorded once it has run.
 pub const POLICY_GUARD_NOTICE_MIGRATION: &str = "policy-guard-off-by-default";
+/// The `Owned` move of stored config rows from a renamed key's old name to its new one.
+pub const RENAME_CONFIG_KEYS_MIGRATION: &str = "rename-config-keys";
 /// The step name of that notice, which the heal line shows in full.
 pub const POLICY_GUARD_NOTICE_STEP: &str = "policy guard";
 /// What the notice says (docs/guides/08-policy-guard.md).
@@ -443,7 +445,38 @@ pub fn registry() -> Vec<Migration> {
             scope: Scope::Owned,
             run: fixed_config_keys,
         },
+        Migration {
+            id: RENAME_CONFIG_KEYS_MIGRATION,
+            since: "next",
+            kind: Kind::Auto,
+            scope: Scope::Owned,
+            run: rename_config_keys,
+        },
     ]
+}
+
+/// Moves every stored row of a renamed config key to its new name, in every
+/// tier. Where a scope already holds the new name, that row stays.
+fn rename_config_keys(ctx: &Ctx) -> Outcome {
+    const STEP: &str = "config key names";
+    let root = playbook_root_from(&ctx.home);
+    let mut moved = 0;
+    for rename in crate::config::keys::renames() {
+        match crate::config::store::rename_key(&root, rename.old, rename.new) {
+            Ok(n) => moved += n,
+            Err(err) => return Outcome::Failed(StepReport::failed(STEP, err.to_string())),
+        }
+    }
+    if moved == 0 {
+        return Outcome::Done(StepReport::skipped(
+            STEP,
+            "no stored row has an old key name",
+        ));
+    }
+    Outcome::Done(StepReport::wired(
+        STEP,
+        format!("moved {moved} stored config row(s) to their new key names"),
+    ))
 }
 
 /// The stored values of `key` that differ from its built-in `fixed` value.
@@ -3439,6 +3472,89 @@ mod tests {
 
         // Assert
         assert!(matches!(entry.kind, Kind::Manual));
+        assert_eq!(since, Since::Next);
+    }
+
+    /// The two stored names of a rename, as booleans (the test table's
+    /// rows are booleans).
+    fn flag(key: &str) -> bool {
+        crate::config::keys::default_value(key)
+            .and_then(|v| v.as_bool())
+            .expect("a boolean key")
+    }
+
+    #[test]
+    fn rename_config_keys_moves_rows_in_every_tier_and_is_a_no_op_the_second_time() {
+        use crate::config::{keys, store, write};
+        for row in keys::renames() {
+            // Arrange
+            let h = home("rename-keys-moves");
+            let root = playbook_root_from(&h);
+            let stored = serde_json::json!(!flag(row.new));
+            store::put(&root, write::Tier::Global, None, row.old, &stored).unwrap();
+            store::put(&root, write::Tier::Org, Some("o/r"), row.old, &stored).unwrap();
+            store::put(&root, write::Tier::Repo, Some("o/r"), row.old, &stored).unwrap();
+
+            // Act
+            let first = rename_config_keys(&ctx(&h));
+            let second = rename_config_keys(&ctx(&h));
+
+            // Assert
+            let found = store::lookup(&root, row.new, Some("o/r")).unwrap();
+            assert_eq!(found.global, Some(stored.clone()), "{}", row.new);
+            assert_eq!(found.org, Some(stored.clone()), "{}", row.new);
+            assert_eq!(found.repo, Some(stored), "{}", row.new);
+            assert!(store::stored_values(&root, row.old).unwrap().is_empty());
+            let Outcome::Done(moved) = first else {
+                panic!("{}: the first run is recorded", row.old);
+            };
+            assert!(moved.detail.contains("3"), "{}", moved.detail);
+            let Outcome::Done(nothing) = second else {
+                panic!("{}: the second run is recorded", row.old);
+            };
+            assert!(nothing.detail.contains("no stored"), "{}", nothing.detail);
+        }
+    }
+
+    #[test]
+    fn rename_config_keys_keeps_the_new_row_when_both_exist() {
+        use crate::config::{keys, store, write};
+        for row in keys::renames() {
+            // Arrange
+            let h = home("rename-keys-both");
+            let root = playbook_root_from(&h);
+            let (old, new) = (
+                serde_json::json!(flag(row.new)),
+                serde_json::json!(!flag(row.new)),
+            );
+            store::put(&root, write::Tier::Repo, Some("o/r"), row.old, &old).unwrap();
+            store::put(&root, write::Tier::Repo, Some("o/r"), row.new, &new).unwrap();
+
+            // Act
+            let outcome = rename_config_keys(&ctx(&h));
+
+            // Assert
+            assert!(matches!(outcome, Outcome::Done(_)));
+            let found = store::lookup(&root, row.new, Some("o/r")).unwrap();
+            assert_eq!(found.repo, Some(new), "{}", row.new);
+            assert!(store::stored_values(&root, row.old).unwrap().is_empty());
+        }
+    }
+
+    #[test]
+    fn rename_config_keys_is_an_unattended_migration_that_waits_for_the_next_release() {
+        // Arrange
+        let entry = registry()
+            .into_iter()
+            .find(|m| m.id == RENAME_CONFIG_KEYS_MIGRATION)
+            .expect("registered");
+
+        // Act
+        let since = entry.since();
+
+        // Assert
+        assert!(matches!(entry.kind, Kind::Auto));
+        assert!(matches!(entry.scope, Scope::Owned));
         assert_eq!(since, Since::Next);
     }
 }

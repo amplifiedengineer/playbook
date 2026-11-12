@@ -25,6 +25,16 @@ pub fn deprecation_line(old: &str, new: &str) -> String {
     format!("playbook {old} is renamed, use: playbook {new} (the old name is removed in {ALIAS_REMOVAL})")
 }
 
+/// The stderr line for a config key that was renamed.
+pub fn key_alias_line(old: &str, new: &str) -> String {
+    format!("config key {old} is renamed, use: {new} (the old name is removed in {ALIAS_REMOVAL})")
+}
+
+/// The line for `given` when it is an old name of `canonical`.
+pub fn key_notice(given: &str, canonical: &str) -> Option<String> {
+    (given != canonical).then(|| key_alias_line(given, canonical))
+}
+
 /// Commands that dispatch before clap and keep their names.
 const NEVER_REWRITTEN: &str = "hook";
 
@@ -268,5 +278,33 @@ mod tests {
             // Assert
             assert_eq!(got.is_some(), printed, "terminal {terminal}, args {args:?}");
         }
+    }
+
+    #[test]
+    fn the_key_notice_names_both_keys_and_the_removal_release() {
+        // Arrange
+        let (old, new) = ("old.key", "new.key");
+
+        // Act
+        let line = key_alias_line(old, new);
+
+        // Assert
+        for part in [old, new, ALIAS_REMOVAL] {
+            assert!(line.contains(part), "{line}");
+        }
+    }
+
+    #[test]
+    fn a_key_notice_exists_only_for_a_renamed_name() {
+        // Arrange
+        let renamed = ("old.key", "new.key");
+
+        // Act
+        let for_old = key_notice(renamed.0, renamed.1);
+        let for_new = key_notice(renamed.1, renamed.1);
+
+        // Assert
+        assert_eq!(for_old, Some(key_alias_line(renamed.0, renamed.1)));
+        assert_eq!(for_new, None);
     }
 }

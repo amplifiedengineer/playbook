@@ -29,6 +29,7 @@ pub fn set(
     home: &Path,
     repo_slug: Option<&str>,
 ) -> Result<(), ConfigError> {
+    let key = keys::canonical_key(key);
     validate_key_and_value(key, value)?;
     require_global_for_user_key(key, tier == Tier::Global)?;
     check_cap_order(tier, key, value, home, repo_slug)?;
@@ -275,4 +276,30 @@ fn validate_number(key: &str, value: &Value) -> Result<(), ConfigError> {
         value: value.to_string(),
         constraint,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::{keys, store};
+
+    #[test]
+    fn set_with_an_old_name_writes_the_new_name() {
+        for row in keys::renames() {
+            // Arrange
+            let home = crate::testing::scratch_root("write-old-name");
+            let root = crate::common::paths::playbook_root_from(&home);
+            let value = keys::default_value(row.new).expect("the new name is known");
+
+            // Act
+            let outcome = set(Tier::Repo, row.old, &value, &home, Some("o/r"));
+
+            // Assert
+            assert!(outcome.is_ok(), "{}: {outcome:?}", row.old);
+            let found = store::lookup(&root, row.new, Some("o/r")).unwrap();
+            assert_eq!(found.repo, Some(value), "{}", row.new);
+            let old_row = store::lookup(&root, row.old, Some("o/r")).unwrap();
+            assert!(old_row.repo.is_none(), "{}", row.old);
+        }
+    }
 }

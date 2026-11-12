@@ -457,13 +457,19 @@ pub fn import(root: &Path, doc: &Value) -> Result<usize, ConfigError> {
         let Some(obj) = map.as_object() else {
             return Ok(());
         };
-        for (key, value) in obj {
+        for (given, value) in obj {
+            // A document naming both an old and a new key keeps the new one.
+            let Some(key) =
+                super::keys::canonical_unless_shadowed(given, |key| obj.contains_key(key))
+            else {
+                continue;
+            };
             if super::keys::is_retired(key) {
                 continue;
             }
             super::write::validate_key_and_value(key, value)?;
             super::write::require_global_for_user_key(key, tier == "global")?;
-            rows.push((tier, scope.to_string(), key.clone(), value.clone()));
+            rows.push((tier, scope.to_string(), key.to_string(), value.clone()));
         }
         Ok(())
     };
@@ -633,6 +639,36 @@ fn replace_matching(
     }
     tx.commit().map_err(broken(root))?;
     Ok(changed)
+}
+
+/// Moves every row stored under `old` to `new`, in every tier and scope, in
+/// one transaction. A scope that already holds a `new` row keeps it and drops
+/// the `old` row. A store that holds nothing is not created. Returns how many
+/// `old` rows were removed.
+pub fn rename_key(root: &Path, old: &str, new: &str) -> Result<usize, ConfigError> {
+    if !has_data(root) {
+        return Ok(0);
+    }
+    let mut conn = open(root)?;
+    let tx = conn
+        .transaction_with_behavior(playbook_store::TransactionBehavior::Immediate)
+        .map_err(broken(root))?;
+    let shadowed = tx
+        .execute(
+            "DELETE FROM config WHERE key = ?1 AND EXISTS \
+             (SELECT 1 FROM config n WHERE n.key = ?2 \
+              AND n.tier = config.tier AND n.scope = config.scope)",
+            params![old, new],
+        )
+        .map_err(broken(root))?;
+    let moved = tx
+        .execute(
+            "UPDATE config SET key = ?2 WHERE key = ?1",
+            params![old, new],
+        )
+        .map_err(broken(root))?;
+    tx.commit().map_err(broken(root))?;
+    Ok(shadowed + moved)
 }
 
 /// The keys the global tier holds, sorted. Empty when there is no database.
@@ -1427,5 +1463,55 @@ mod tests {
             assert_eq!(h.join().unwrap(), Some(json!("auto")));
         }
         assert!(r.join("config.json.migrated").exists());
+    }
+
+    #[test]
+    fn import_maps_an_old_name_and_keeps_the_new_one_when_both_are_present() {
+        for row in crate::config::keys::renames() {
+            // Arrange
+            let r = root("store-import-renamed");
+            let default = crate::config::keys::default_value(row.new)
+                .unwrap()
+                .as_bool()
+                .unwrap();
+            let only_old = json!({ "global": { row.old: !default } });
+            let both = json!({ "global": { row.old: default, row.new: !default } });
+
+            // Act
+            let count_old = import(&r, &only_old).unwrap();
+            let by_old = lookup(&r, row.new, None).unwrap().global;
+            let count_both = import(&r, &both).unwrap();
+            let by_both = lookup(&r, row.new, None).unwrap().global;
+
+            // Assert
+            assert_eq!(count_old, 1, "{}", row.old);
+            assert_eq!(by_old, Some(json!(!default)), "{}", row.old);
+            assert_eq!(count_both, 1, "{}", row.new);
+            assert_eq!(by_both, Some(json!(!default)), "{}", row.new);
+            assert!(lookup(&r, row.old, None).unwrap().global.is_none());
+        }
+    }
+
+    #[test]
+    fn rename_key_moves_every_tier_and_a_new_row_wins() {
+        // Arrange
+        let r = root("store-rename-key");
+        put(&r, Tier::Global, None, "legacy.one", &json!(1)).unwrap();
+        put(&r, Tier::Repo, Some("o/r"), "legacy.one", &json!(2)).unwrap();
+        put(&r, Tier::Org, Some("o/r"), "legacy.one", &json!(3)).unwrap();
+        put(&r, Tier::Org, Some("o/r"), "kept.one", &json!(4)).unwrap();
+
+        // Act
+        let moved = rename_key(&r, "legacy.one", "kept.one").unwrap();
+        let again = rename_key(&r, "legacy.one", "kept.one").unwrap();
+
+        // Assert
+        let found = lookup(&r, "kept.one", Some("o/r")).unwrap();
+        assert_eq!(moved, 3);
+        assert_eq!(again, 0);
+        assert_eq!(found.global, Some(json!(1)));
+        assert_eq!(found.repo, Some(json!(2)));
+        assert_eq!(found.org, Some(json!(4)));
+        assert!(stored_values(&r, "legacy.one").unwrap().is_empty());
     }
 }

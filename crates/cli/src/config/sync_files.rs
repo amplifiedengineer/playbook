@@ -241,4 +241,25 @@ mod tests {
         // Assert
         assert!(err.to_string().starts_with("cannot "), "{err}");
     }
+
+    #[test]
+    fn the_sync_files_hold_the_new_name_of_a_renamed_shared_key() {
+        for row in keys::renames().iter().filter(|r| keys::is_shared(r.new)) {
+            // Arrange
+            let home = scratch_home("renamed-shared");
+            let default = keys::default_value(row.new).unwrap().as_bool().unwrap();
+            set(Tier::Global, row.old, &json!(!default), &home, None).unwrap();
+
+            // Act
+            write_sync_files(&home).expect("write should succeed");
+
+            // Assert
+            let list = read(&home, KEY_LIST_FILE)["include"].to_string();
+            let values = read(&home, VALUES_FILE)["values"].clone();
+            assert!(list.contains(row.new), "{list}");
+            assert!(!list.contains(row.old), "{list}");
+            assert_eq!(values[row.new], json!((!default).to_string()));
+            assert!(values.get(row.old).is_none(), "{values}");
+        }
+    }
 }

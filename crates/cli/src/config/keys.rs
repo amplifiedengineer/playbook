@@ -163,6 +163,62 @@ pub static FIXED_KEYS: LazyLock<Vec<(&'static str, Value)>> = LazyLock::new(|| {
     ]
 });
 
+/// A key that changed its name: `config get`, `set`, `import` and
+/// `apply-proposal` accept `old` and act on `new`, and a stored `old` row
+/// still applies until the `rename-config-keys` migration moves it.
+#[derive(Debug, Clone, Copy)]
+pub struct KeyRename {
+    pub old: &'static str,
+    pub new: &'static str,
+}
+
+/// Every renamed key. A rename adds one row here and renames the key in
+/// [`KNOWN_KEYS`] and its classification list.
+pub const KEY_RENAMES: &[KeyRename] = &[];
+
+/// The table unit tests run against, because the real one has no row that
+/// every kind of test can use.
+#[cfg(test)]
+const TEST_KEY_RENAMES: &[KeyRename] = &[KeyRename {
+    old: "legacy.draftPr",
+    new: "pr.draft",
+}];
+
+/// The rename table this build reads.
+pub fn renames() -> &'static [KeyRename] {
+    #[cfg(test)]
+    {
+        TEST_KEY_RENAMES
+    }
+    #[cfg(not(test))]
+    {
+        KEY_RENAMES
+    }
+}
+
+/// The current name of `key`: its new name when it was renamed, else `key`.
+pub fn canonical_key(key: &str) -> &str {
+    renames()
+        .iter()
+        .find(|rename| rename.old == key)
+        .map_or(key, |rename| rename.new)
+}
+
+/// The current name of `given`, or `None` when `given` is an old name and
+/// `present` says its new name is also there, so the new one wins.
+pub fn canonical_unless_shadowed(given: &str, present: impl Fn(&str) -> bool) -> Option<&str> {
+    let key = canonical_key(given);
+    (key == given || !present(key)).then_some(key)
+}
+
+/// The names `key` had before it was renamed.
+pub fn old_names(key: &str) -> impl Iterator<Item = &'static str> + '_ {
+    renames()
+        .iter()
+        .filter(move |rename| rename.new == key)
+        .map(|rename| rename.old)
+}
+
 /// Whether `key` was removed: a stored value is never read, `config set`
 /// refuses it and `config import` skips it.
 pub fn is_retired(key: &str) -> bool {
@@ -967,5 +1023,85 @@ mod tests {
     fn gc_enabled_is_a_boolean_defaulting_to_true() {
         assert!(KNOWN_KEYS.contains(&"gc.enabled"));
         assert_eq!(default_value("gc.enabled"), Some(Value::Bool(true)));
+    }
+
+    /// Every rename pair of the table the build under test uses.
+    fn pairs() -> Vec<(&'static str, &'static str)> {
+        renames().iter().map(|r| (r.old, r.new)).collect()
+    }
+
+    #[test]
+    fn every_rename_maps_a_retired_name_to_a_known_one() {
+        // Arrange
+        let all: Vec<&KeyRename> = KEY_RENAMES.iter().chain(renames()).collect();
+
+        for row in all {
+            // Act
+            let old_known = KNOWN_KEYS.contains(&row.old);
+            let new_known = KNOWN_KEYS.contains(&row.new);
+            let old_listed = SHARED_KEYS.contains(&row.old) || LOCAL_ONLY_KEYS.contains(&row.old);
+
+            // Assert
+            assert!(!old_known, "{} must not stay a known key", row.old);
+            assert!(!old_listed, "{} must not stay classified", row.old);
+            assert!(!is_retired(row.old), "{} is renamed, not retired", row.old);
+            if KEY_RENAMES.iter().any(|r| r.old == row.old) {
+                assert!(new_known, "{} must be a known key", row.new);
+            }
+        }
+    }
+
+    #[test]
+    fn no_rename_chains_or_repeats_an_old_name() {
+        // Arrange
+        let rows = pairs();
+
+        for (index, (old, new)) in rows.iter().enumerate() {
+            // Act
+            let chained = rows.iter().any(|(other_old, _)| other_old == new);
+            let repeated = rows[index + 1..].iter().any(|(other, _)| other == old);
+
+            // Assert
+            assert!(!chained, "{new} is both a new name and an old name");
+            assert!(!repeated, "{old} appears twice");
+        }
+    }
+
+    #[test]
+    fn canonical_key_maps_each_old_name_to_its_new_name_and_leaves_others() {
+        for (old, new) in pairs() {
+            // Act
+            let from_old = canonical_key(old);
+            let from_new = canonical_key(new);
+
+            // Assert
+            assert_eq!(from_old, new);
+            assert_eq!(from_new, new);
+        }
+        assert_eq!(canonical_key("not.a.renamed.key"), "not.a.renamed.key");
+    }
+
+    #[test]
+    fn old_names_lists_every_old_name_of_a_key() {
+        for (old, new) in pairs() {
+            // Act
+            let names: Vec<&str> = old_names(new).collect();
+
+            // Assert
+            assert!(names.contains(&old), "{new}: {names:?}");
+        }
+        assert_eq!(old_names("mode").count(), 0);
+    }
+
+    #[test]
+    fn a_shared_key_is_judged_by_its_new_name_only() {
+        for (old, new) in pairs() {
+            // Act
+            let old_shared = is_shared(old);
+
+            // Assert
+            assert!(!old_shared, "{old}");
+            assert_eq!(is_shared(new), SHARED_KEYS.contains(&new), "{new}");
+        }
     }
 }

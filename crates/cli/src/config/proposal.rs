@@ -141,18 +141,24 @@ type Classified = (Vec<Change>, Vec<(String, String)>);
 fn classify(proposal: &Proposal, root: &Path) -> Result<Classified, super::ConfigError> {
     let mut changes = Vec::new();
     let mut rejected = Vec::new();
-    for (key, text) in &proposal.proposed {
+    for (given, text) in &proposal.proposed {
+        // A proposal naming both an old and a new key keeps the new one.
+        let Some(key) =
+            keys::canonical_unless_shadowed(given, |key| proposal.proposed.contains_key(key))
+        else {
+            continue;
+        };
         match check(key, text) {
             Ok(value) => changes.push(Change {
-                key: key.clone(),
+                key: key.to_string(),
                 value,
                 old: store::lookup(root, key, None)?
                     .global
                     .as_ref()
                     .map(value_text),
-                from: proposal.from.get(key).cloned().unwrap_or_default(),
+                from: proposal.from.get(given).cloned().unwrap_or_default(),
             }),
-            Err(reason) => rejected.push((key.clone(), reason)),
+            Err(reason) => rejected.push((given.clone(), reason)),
         }
     }
     Ok((changes, rejected))
@@ -194,4 +200,114 @@ fn note_shadowed(
         "note: project settings override the applied value for {}.",
         shadowed.join(", ")
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    /// The previous release's `check`: it knows only the old names.
+    fn previous_release_rejects(key: &str, known_then: &[&str]) -> bool {
+        !known_then.contains(&key)
+    }
+
+    fn propose(home: &Path, proposed: &Value) {
+        let path = crate::usage::data::data_dir(home).join(PROPOSAL_FILE);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        let doc = json!({ "created_at": 1_700_000_000, "proposed": proposed, "from": {} });
+        std::fs::write(path, doc.to_string()).unwrap();
+    }
+
+    /// Runs `apply-proposal --yes` and returns its exit code and stdout.
+    fn apply(home: &Path) -> (i32, String) {
+        let mut input = std::io::Cursor::new(Vec::new());
+        let (mut out, mut err) = (Vec::new(), Vec::new());
+        let mut io = Streams {
+            input: &mut input,
+            out: &mut out,
+            err: &mut err,
+        };
+        let code = run(home, None, true, &mut io).unwrap();
+        (code, String::from_utf8(out).unwrap())
+    }
+
+    fn global(home: &Path, key: &str) -> Option<Value> {
+        let root = crate::common::paths::playbook_root_from(home);
+        store::lookup(&root, key, None).unwrap().global
+    }
+
+    #[test]
+    fn a_proposal_with_an_old_name_applies_to_the_new_name() {
+        for row in keys::renames() {
+            // Arrange
+            let home = crate::testing::scratch_root("proposal-old-name");
+            propose(&home, &json!({ row.old: "true" }));
+
+            // Act
+            let (code, shown) = apply(&home);
+
+            // Assert
+            assert_eq!(code, 0, "{shown}");
+            assert_eq!(global(&home, row.new), Some(json!(true)), "{}", row.new);
+            assert_eq!(global(&home, row.old), None, "{}", row.old);
+            assert!(!shown.contains("rejected"), "{shown}");
+        }
+    }
+
+    #[test]
+    fn a_proposal_naming_both_names_keeps_the_new_value() {
+        for row in keys::renames() {
+            // Arrange
+            let home = crate::testing::scratch_root("proposal-both-names");
+            propose(&home, &json!({ row.old: "false", row.new: "true" }));
+
+            // Act
+            let (code, shown) = apply(&home);
+
+            // Assert
+            assert_eq!(code, 0, "{shown}");
+            assert_eq!(global(&home, row.new), Some(json!(true)), "{}", row.new);
+            assert_eq!(shown.matches(row.new).count(), 1, "{shown}");
+        }
+    }
+
+    #[test]
+    fn a_proposal_with_a_retired_key_is_rejected_and_listed() {
+        // Arrange
+        let home = crate::testing::scratch_root("proposal-retired");
+        let (retired, _) = keys::FIXED_KEYS[0].clone();
+        propose(&home, &json!({ retired: "9" }));
+
+        // Act
+        let (code, shown) = apply(&home);
+
+        // Assert
+        assert_eq!(code, 0);
+        assert!(shown.contains(&format!("rejected {retired}:")), "{shown}");
+        assert_eq!(global(&home, retired), None);
+    }
+
+    #[test]
+    fn the_previous_release_rejects_the_new_names_the_sync_files_now_carry() {
+        // Arrange
+        let current: Vec<&str> = keys::SHARED_KEYS.to_vec();
+        let renamed_to: Vec<&str> = keys::renames().iter().map(|r| r.new).collect();
+        let known_then: Vec<&str> = current
+            .iter()
+            .filter(|key| !renamed_to.contains(key))
+            .copied()
+            .chain(keys::renames().iter().map(|r| r.old))
+            .collect();
+
+        for row in keys::renames() {
+            // Act
+            let new_rejected = previous_release_rejects(row.new, &known_then);
+            let old_rejected = previous_release_rejects(row.old, &known_then);
+
+            // Assert
+            assert!(new_rejected, "{}", row.new);
+            assert!(!old_rejected, "{}", row.old);
+        }
+    }
 }

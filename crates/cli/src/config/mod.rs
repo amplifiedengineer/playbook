@@ -214,6 +214,7 @@ pub fn resolve(
     home: &Path,
     repo_slug: Option<&str>,
 ) -> Result<(Value, Source), ConfigError> {
+    let key = keys::canonical_key(key);
     // Checked up front, not just as the post-tiers fallback: a tier file can
     // legitimately contain an arbitrary dotted path (a stale key from a
     // retired setting, a typo, a future key written by a newer binary), and
@@ -229,7 +230,7 @@ pub fn resolve(
     };
 
     let root = crate::common::paths::playbook_root_from(home);
-    let found = store::lookup(&root, key, repo_slug)?;
+    let found = lookup_with_old_rows(&root, key, repo_slug)?;
     if let Some(value) = found.repo {
         return Ok((value, Source::Repo));
     }
@@ -243,6 +244,24 @@ pub fn resolve(
     // Never `None` here: the top-of-function check already proved `key` is
     // known, so a default value always exists.
     Ok((known_default(key), Source::Default))
+}
+
+/// The rows of `key` per tier, where a tier without a row under `key` falls
+/// back to a row under an old name of it, so a setting stored before a rename
+/// keeps applying until the `rename-config-keys` migration moves it.
+fn lookup_with_old_rows(
+    root: &Path,
+    key: &str,
+    repo_slug: Option<&str>,
+) -> Result<store::TierValues, ConfigError> {
+    let mut found = store::lookup(root, key, repo_slug)?;
+    for old in keys::old_names(key) {
+        let older = store::lookup(root, old, repo_slug)?;
+        found.repo = found.repo.or(older.repo);
+        found.org = found.org.or(older.org);
+        found.global = found.global.or(older.global);
+    }
+    Ok(found)
 }
 
 /// A value `resolve_valid` dropped: the tier that held it and why it was
@@ -275,6 +294,7 @@ pub fn resolve_valid(
     home: &Path,
     repo_slug: Option<&str>,
 ) -> Result<(Value, Source, Option<IgnoredValue>), ConfigError> {
+    let key = keys::canonical_key(key);
     let (value, source) = resolve(key, home, repo_slug)?;
     let value = legacy_word(key, &value).map_or(value, Value::from);
     if let Some(problem) = value
@@ -643,5 +663,63 @@ mod tests {
         assert!(result.is_ok(), "zero zero means no budget");
 
         let _ = fs::remove_dir_all(&home);
+    }
+
+    /// An old and a new row of the same setting, each tier holding one value.
+    fn stored_under(home: &Path, tier: Tier, name: &str, value: Value) {
+        let root = crate::common::paths::playbook_root_from(home);
+        store::put(&root, tier, Some("o/r"), name, &value).unwrap();
+    }
+
+    #[test]
+    fn an_old_row_is_read_under_both_names() {
+        for row in keys::renames() {
+            // Arrange
+            let home = scratch_home("fallback-old-row");
+            let stored = json!(!keys::default_value(row.new).unwrap().as_bool().unwrap());
+            stored_under(&home, Tier::Repo, row.old, stored.clone());
+
+            // Act
+            let by_new = resolve(row.new, &home, Some("o/r")).unwrap();
+            let by_old = resolve(row.old, &home, Some("o/r")).unwrap();
+
+            // Assert
+            assert_eq!(by_new, (stored.clone(), Source::Repo), "{}", row.new);
+            assert_eq!(by_old, (stored, Source::Repo), "{}", row.old);
+        }
+    }
+
+    #[test]
+    fn a_new_row_beats_an_old_row_in_the_same_tier() {
+        for row in keys::renames() {
+            // Arrange
+            let home = scratch_home("fallback-new-wins");
+            let default = keys::default_value(row.new).unwrap().as_bool().unwrap();
+            stored_under(&home, Tier::Repo, row.old, json!(default));
+            stored_under(&home, Tier::Repo, row.new, json!(!default));
+
+            // Act
+            let got = resolve(row.new, &home, Some("o/r")).unwrap();
+
+            // Assert
+            assert_eq!(got, (json!(!default), Source::Repo), "{}", row.new);
+        }
+    }
+
+    #[test]
+    fn an_old_repo_row_still_beats_a_new_global_row() {
+        for row in keys::renames() {
+            // Arrange
+            let home = scratch_home("fallback-tier-order");
+            let default = keys::default_value(row.new).unwrap().as_bool().unwrap();
+            stored_under(&home, Tier::Repo, row.old, json!(default));
+            stored_under(&home, Tier::Global, row.new, json!(!default));
+
+            // Act
+            let got = resolve(row.new, &home, Some("o/r")).unwrap();
+
+            // Assert
+            assert_eq!(got, (json!(default), Source::Repo), "{}", row.new);
+        }
     }
 }

@@ -1571,19 +1571,25 @@ fn real_main() {
                 Some(slug.as_str())
             };
             match sub {
-                ConfigCommand::Get { key } => match config::resolve_valid(&key, &home, repo_slug) {
-                    Ok(resolved) => print_resolved("config get", &key, resolved),
-                    Err(err) => {
-                        eprintln!("config get: {err}");
-                        std::process::exit(1);
+                ConfigCommand::Get { key } => {
+                    let canonical = config::keys::canonical_key(&key);
+                    print_key_notice(&args, &key, canonical);
+                    match config::resolve_valid(canonical, &home, repo_slug) {
+                        Ok(resolved) => print_resolved("config get", canonical, resolved),
+                        Err(err) => {
+                            eprintln!("config get: {err}");
+                            std::process::exit(1);
+                        }
                     }
-                },
+                }
                 ConfigCommand::Set {
-                    key,
+                    key: given,
                     value,
                     org,
                     global,
                 } => {
+                    let key = config::keys::canonical_key(&given).to_string();
+                    print_key_notice(&args, &given, &key);
                     if org && global {
                         eprintln!("config set: --org and --global are mutually exclusive");
                         std::process::exit(1);
@@ -2790,6 +2796,17 @@ fn source_label(source: config::Source) -> &'static str {
 fn refresh_sync_files(home: &std::path::Path) {
     if let Err(err) = config::sync_files::write_sync_files(home) {
         eprintln!("config set: warning: sync files not refreshed: {err}");
+    }
+}
+
+/// Prints the alias line for a renamed config key, on a terminal and without
+/// `--json`, as the command renames do.
+fn print_key_notice(args: &[std::ffi::OsString], given: &str, canonical: &str) {
+    let line = playbook::renames::key_notice(given, canonical);
+    if let Some(line) =
+        playbook::renames::printable_notice(args, line, std::io::stderr().is_terminal())
+    {
+        eprintln!("{line}");
     }
 }
 
