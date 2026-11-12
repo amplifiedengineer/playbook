@@ -328,21 +328,7 @@ Example: `playbook commands pr`
 
 Run the git steps of `/playbook:commit`
 
-Subcommands: `all`, `prepare`, `run`
-
-### `playbook commit all`
-
-Stage everything, commit with a drafted message, and push
-
-Refuses the default branch. Stages with `git add -A`, prints `NO_STAGED_CHANGES` when there is nothing to commit, drafts a conventional message from the staged files with no model unless `-m` is given, then commits, rebases when behind and pushes like `run`. A rejected push is never forced. Exits 1 on any failure.
-
-Example: `playbook commit all`
-
-- `-m, --message <MESSAGE>`: Commit message (default: drafted from the staged files)
-- `--auto`: Auto mode: never force a push
-- `--no-signoff`: Leave the sign-off trailer off
-- `--json`: Print one JSON report that always exits 0, the outcome in `verdict`
-- `--args-stdin`: Read the flags and the worktree phrase from stdin; stages per `-A`/`-u`
+Subcommands: `prepare`, `run`
 
 ### `playbook commit prepare`
 
@@ -360,11 +346,15 @@ Example: `playbook commit prepare -A`
 
 Commit, rebase when behind, and push
 
-Reads the message from stdin, or from `--message-file`. Adds a sign-off per `commit.signOff` and signs when `user.signingkey` is set. A rejected push is never forced. Exits 1 on any failure.
+Reads the message from stdin, or from `--message-file`. With `-A`, `-m` or `--json` it drafts the message from the staged files with no model instead, unless `-m` gives one, and refuses the default branch. Adds a sign-off per `commit.signOff` and signs when `user.signingkey` is set. A rejected push is never forced. Exits 1 on any failure.
 
 Example: `playbook commit run --message-file /tmp/msg.txt`
 
 - `--message-file <MESSAGE_FILE>`: File with the commit message (default: read stdin)
+- `-A`: Stage everything first (`git add -A`) and draft the message
+- `-m, --message <MESSAGE>`: Commit message (default: drafted from the staged files)
+- `--json`: Print one JSON report that always exits 0, the outcome in `verdict`
+- `--args-stdin`: Read the flags and the worktree phrase from stdin; stages per `-A`/`-u`
 - `-a`: Replace the last commit
 - `--auto`: Auto mode: never force a push
 - `--no-signoff`: Leave the sign-off trailer off

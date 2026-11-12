@@ -1,13 +1,13 @@
 ---
 description: Use when committing staged changes and pushing. Stages, formats, makes a signed commit, and pushes.
-allowed-tools: Bash(playbook commit all --json --args-stdin:*), Bash(playbook:*), Bash(git:*), Read, Skill
+allowed-tools: Bash(playbook commit run --json --args-stdin:*), Bash(playbook:*), Bash(git:*), Read, Skill
 argument-hint: "[--all|-A] [--update|-u] [--amend|-a] [--no-signoff] [--auto] [--ask]"
 ---
 
 # Commit and Push
 
 ```!
-playbook commit all --json --args-stdin <<'PLAYBOOK_ARGS_END_7Q2XK9'
+playbook commit run --json --args-stdin <<'PLAYBOOK_ARGS_END_7Q2XK9'
 $ARGUMENTS
 PLAYBOOK_ARGS_END_7Q2XK9
 ```

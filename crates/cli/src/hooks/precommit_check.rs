@@ -60,7 +60,7 @@ pub fn run(payload: &Payload) {
 
 /// The staged-diff warnings for the repo at `dir` (the process cwd when
 /// `None`), one sentence each. Empty when nothing is staged or git fails.
-/// `commit all` reports these in its `warnings`, because a commit made inside
+/// `commit run -A` reports these in its `warnings`, because a commit made inside
 /// the binary never fires the hook.
 pub fn findings_in(dir: Option<&std::path::Path>) -> Vec<String> {
     // Outside a repo this exits non-zero, which is the same silent return.

@@ -1937,15 +1937,13 @@ pub enum CommitCommand {
         #[arg(short = 'a')]
         amend: bool,
     },
-    /// Stage everything, commit with a drafted message, and push
+    /// Deprecated name for `playbook commit run -A`
     ///
-    /// Refuses the default branch. Stages with `git add -A`, prints
-    /// `NO_STAGED_CHANGES` when there is nothing to commit, drafts a
-    /// conventional message from the staged files with no model unless `-m`
-    /// is given, then commits, rebases when behind and pushes like `run`.
-    /// A rejected push is never forced. Exits 1 on any failure.
-    ///
-    /// Example: `playbook commit all`
+    /// Stages with `git add -A`, drafts a message unless `-m` is given and
+    /// commits like `commit run -A`. With `--json --args-stdin` the staging
+    /// comes from `-A` or `-u` in the text on stdin. Hidden from the command
+    /// list and kept until 1.0.0.
+    #[command(hide = true)]
     All {
         /// Commit message (default: drafted from the staged files)
         #[arg(short = 'm', long)]
@@ -1965,15 +1963,29 @@ pub enum CommitCommand {
     },
     /// Commit, rebase when behind, and push
     ///
-    /// Reads the message from stdin, or from `--message-file`. Adds a
-    /// sign-off per `commit.signOff` and signs when `user.signingkey` is set.
-    /// A rejected push is never forced. Exits 1 on any failure.
+    /// Reads the message from stdin, or from `--message-file`. With `-A`,
+    /// `-m` or `--json` it drafts the message from the staged files with no
+    /// model instead, unless `-m` gives one, and refuses the default branch.
+    /// Adds a sign-off per `commit.signOff` and signs when `user.signingkey`
+    /// is set. A rejected push is never forced. Exits 1 on any failure.
     ///
     /// Example: `playbook commit run --message-file /tmp/msg.txt`
     Run {
         /// File with the commit message (default: read stdin)
-        #[arg(long)]
+        #[arg(long, conflicts_with_all = ["message", "all", "json"])]
         message_file: Option<PathBuf>,
+        /// Stage everything first (`git add -A`) and draft the message
+        #[arg(short = 'A')]
+        all: bool,
+        /// Commit message (default: drafted from the staged files)
+        #[arg(short = 'm', long)]
+        message: Option<String>,
+        /// Print one JSON report that always exits 0, the outcome in `verdict`
+        #[arg(long)]
+        json: bool,
+        /// Read the flags and the worktree phrase from stdin; stages per `-A`/`-u`
+        #[arg(long, requires = "json")]
+        args_stdin: bool,
         /// Replace the last commit
         #[arg(short = 'a')]
         amend: bool,

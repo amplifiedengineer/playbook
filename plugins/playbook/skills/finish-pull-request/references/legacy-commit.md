@@ -30,12 +30,12 @@ When `$ARGUMENTS` holds `--all` or `-A` and no message, and holds none of `--upd
 1. Take the worktree root from "Worktree root: <path>" in the prompt. Run this one `Bash` call, with that root as the working directory (`cd "<root>" &&`, or the current directory when the prompt names none). Add `--auto` when the arguments hold it and `--no-signoff` when they hold it:
 
 ```bash
-cd "<root>" && playbook commit all
+cd "<root>" && playbook commit run -A
 ```
 
 2. Print its output as your final message and stop. It prints the branch, the new short SHA and the message, or `NO_STAGED_CHANGES`, or the error. It refuses the default branch, never forces a push and exits 1 on any failure.
 
-If `playbook commit all` is not found, run `playbook --version`, tell the user to run `brew upgrade playbook` (Homebrew) or `playbook upgrade`, and stop.
+If `playbook commit run -A` is not found, run `playbook --version`, tell the user to run `brew upgrade playbook` (Homebrew) or `playbook upgrade`, and stop.
 
 With a message, or with any other flag, follow the steps below.
 

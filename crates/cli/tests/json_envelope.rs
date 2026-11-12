@@ -31,6 +31,10 @@ const ROWS: &[Row] = &[
         code: 1,
     },
     Row {
+        args: &["commit", "run", "-A", "--json"],
+        code: 1,
+    },
+    Row {
         args: &["pr", "status", "1", "--json"],
         code: 5,
     },

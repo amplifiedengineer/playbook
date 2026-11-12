@@ -1,9 +1,10 @@
 // SPDX-FileCopyrightText: 2026 Igor Santos
 // SPDX-License-Identifier: Apache-2.0
 
-//! `playbook commit all`: stage everything, draft a conventional message from
-//! the staged files with no model, then commit, rebase when behind and push
-//! through the same code as `commit run`.
+//! The drafting commit behind `playbook commit run -A` and the hidden legacy
+//! `playbook commit all`: stage, draft a conventional message from the staged
+//! files with no model, then commit, rebase when behind and push through the
+//! same code as the message-file path of `commit run`.
 
 use super::typecheck::{kind_of, Kind};
 use super::{current_branch, git_text, prepare, run};
@@ -23,12 +24,16 @@ pub struct Options {
     pub message: Option<String>,
     pub auto: bool,
     pub no_signoff: bool,
-    /// `git add -A` first. `playbook commit all` always does.
+    /// `git add -A` first.
     pub stage_all: bool,
     /// `git add -u` first.
     pub stage_update: bool,
     /// Replace the last commit; its message is kept unless `message` is set.
     pub amend: bool,
+    /// Skip the conventional commit type guard.
+    pub no_type_check: bool,
+    /// Skip the prose check on a given message; a drafted one is never checked.
+    pub no_prose_check: bool,
 }
 
 /// One staged file: its git status letter and path.
@@ -171,8 +176,8 @@ pub fn run(dir: &Path, opts: Options, config_signoff: bool) -> Result<String, St
             amend: opts.amend,
             auto: opts.auto,
             no_signoff: opts.no_signoff,
-            no_prose_check: drafted,
-            ..Default::default()
+            no_prose_check: drafted || opts.no_prose_check,
+            no_type_check: opts.no_type_check,
         },
         config_signoff,
     );
@@ -187,14 +192,12 @@ pub fn run(dir: &Path, opts: Options, config_signoff: bool) -> Result<String, St
     ))
 }
 
-/// The `--json --args-stdin` form. Parses `text` (the command's arguments and
-/// the worktree phrase), runs in the named root and reports in the shared
-/// envelope. It never fails the process: the outcome is in `verdict`.
-pub fn run_inline(
-    text: &str,
-    message_override: Option<String>,
-    config_signoff: bool,
-) -> serde_json::Value {
+/// The `--json` form. Parses `text` (the command's arguments and the
+/// worktree phrase), runs in the named root and reports in the shared
+/// envelope. `base` carries the message and the check skips given on the
+/// command line; staging, mode and amend come from `text`. It never fails the
+/// process: the outcome is in `verdict`.
+pub fn run_inline(text: &str, base: Options, config_signoff: bool) -> serde_json::Value {
     use crate::common::inline_args;
     use crate::json::envelope::wrap;
     use serde_json::json;
@@ -248,12 +251,14 @@ pub fn run_inline(
     };
     let root = Path::new(&top);
     let opts = Options {
-        message: message_override.or_else(|| parsed.message.clone()),
+        message: base.message.or_else(|| parsed.message.clone()),
         auto,
         no_signoff: parsed.no_signoff,
         stage_all: parsed.stage_all,
         stage_update: parsed.tracked,
         amend: parsed.amend,
+        no_type_check: base.no_type_check,
+        no_prose_check: base.no_prose_check,
     };
     // Before the commit: afterwards nothing is staged to look at. A protected
     // branch is refused by `run` without touching the index.

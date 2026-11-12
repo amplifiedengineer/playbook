@@ -13,6 +13,17 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 static N: AtomicU64 = AtomicU64::new(0);
 
+/// Fixed commit date, so one fixture gives one SHA on every run.
+const PINNED_DATE: &str = "2026-01-02T03:04:05+00:00";
+
+/// `commit all` kept for old plugins.
+const LEGACY_ALL: &[&str] = &["commit", "all"];
+/// Its replacement.
+const RUN_ALL: &[&str] = &["commit", "run", "-A"];
+/// The `--json --args-stdin` form of each.
+const LEGACY_INLINE: &[&str] = &["commit", "all", "--json", "--args-stdin"];
+const RUN_INLINE: &[&str] = &["commit", "run", "--json", "--args-stdin"];
+
 struct Repo {
     root: PathBuf,
     work: PathBuf,
@@ -29,6 +40,8 @@ fn git_in(dir: &Path, args: &[&str]) -> Output {
         .env("GIT_AUTHOR_EMAIL", "t@t")
         .env("GIT_COMMITTER_NAME", "t")
         .env("GIT_COMMITTER_EMAIL", "t@t")
+        .env("GIT_AUTHOR_DATE", PINNED_DATE)
+        .env("GIT_COMMITTER_DATE", PINNED_DATE)
         .output()
         .unwrap()
 }
@@ -81,6 +94,8 @@ impl Repo {
             .env("GIT_AUTHOR_EMAIL", "t@t")
             .env("GIT_COMMITTER_NAME", "t")
             .env("GIT_COMMITTER_EMAIL", "t@t")
+            .env("GIT_AUTHOR_DATE", PINNED_DATE)
+            .env("GIT_COMMITTER_DATE", PINNED_DATE)
             .current_dir(&self.work)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
@@ -554,7 +569,7 @@ fn turning_the_scope_rule_off_lets_a_stacked_commit_through() {
     assert!(!out(&o).contains("WARN"), "{}", out(&o));
 }
 
-// commit all
+// commit run -A
 
 /// Writes `file` under the work tree, creating its folders.
 fn put(r: &Repo, file: &str, body: &str) {
@@ -568,10 +583,10 @@ fn last_subject(r: &Repo) -> String {
 }
 
 #[test]
-fn all_drafts_a_docs_message_for_a_docs_only_change() {
+fn run_all_drafts_a_docs_message_for_a_docs_only_change() {
     let r = Repo::new("all-docs");
     put(&r, "docs/guide.md", "g\n");
-    let o = r.pb(&["commit", "all"], "");
+    let o = r.pb(&["commit", "run", "-A"], "");
     assert!(o.status.success(), "{}{}", out(&o), err(&o));
     assert_eq!(last_subject(&r), "docs: add guide.md");
     assert_eq!(r.remote_head("feat"), git(&r.work, &["rev-parse", "HEAD"]));
@@ -579,81 +594,81 @@ fn all_drafts_a_docs_message_for_a_docs_only_change() {
 }
 
 #[test]
-fn all_drafts_a_test_message_for_test_files_only() {
+fn run_all_drafts_a_test_message_for_test_files_only() {
     let r = Repo::new("all-test");
     put(&r, "crates/cli/tests/a.rs", "t\n");
-    assert!(r.pb(&["commit", "all"], "").status.success());
+    assert!(r.pb(&["commit", "run", "-A"], "").status.success());
     assert_eq!(last_subject(&r), "test(cli): add a.rs");
 }
 
 #[test]
-fn all_drafts_a_fix_when_every_file_is_modified() {
+fn run_all_drafts_a_fix_when_every_file_is_modified() {
     let r = Repo::new("all-fix");
     put(&r, "src/x.rs", "x\n");
     git(&r.work, &["add", "."]);
     git(&r.work, &["commit", "-q", "-m", "add x"]);
     put(&r, "src/x.rs", "y\n");
-    assert!(r.pb(&["commit", "all"], "").status.success());
+    assert!(r.pb(&["commit", "run", "-A"], "").status.success());
     assert_eq!(last_subject(&r), "fix(src): update src");
 }
 
 #[test]
-fn all_drafts_a_feat_when_a_source_file_is_added() {
+fn run_all_drafts_a_feat_when_a_source_file_is_added() {
     let r = Repo::new("all-feat");
     put(&r, "crates/cli/src/new.rs", "n\n");
-    assert!(r.pb(&["commit", "all"], "").status.success());
+    assert!(r.pb(&["commit", "run", "-A"], "").status.success());
     assert_eq!(last_subject(&r), "feat(cli): add new.rs");
 }
 
 #[test]
-fn all_drafts_a_dependency_message_for_a_lock_file() {
+fn run_all_drafts_a_dependency_message_for_a_lock_file() {
     let r = Repo::new("all-deps");
     put(&r, "Cargo.lock", "l\n");
-    assert!(r.pb(&["commit", "all"], "").status.success());
+    assert!(r.pb(&["commit", "run", "-A"], "").status.success());
     assert_eq!(last_subject(&r), "chore(deps): update dependencies");
 }
 
 #[test]
-fn all_omits_the_scope_when_the_files_span_areas() {
+fn run_all_omits_the_scope_when_the_files_span_areas() {
     let r = Repo::new("all-mixed");
     put(&r, "crates/cli/src/a.rs", "a\n");
     put(&r, "plugins/p/b.md", "b\n");
-    assert!(r.pb(&["commit", "all"], "").status.success());
+    assert!(r.pb(&["commit", "run", "-A"], "").status.success());
     assert_eq!(last_subject(&r), "feat: update files");
 }
 
 #[test]
-fn all_uses_the_given_message() {
+fn run_all_uses_the_given_message() {
     let r = Repo::new("all-msg");
     put(&r, "docs/guide.md", "g\n");
-    let o = r.pb(&["commit", "all", "-m", "docs: my own words"], "");
+    let o = r.pb(&["commit", "run", "-A", "-m", "docs: my own words"], "");
     assert!(o.status.success(), "{}{}", out(&o), err(&o));
     assert_eq!(last_subject(&r), "docs: my own words");
 }
 
 #[test]
-fn all_with_nothing_to_stage_says_so_and_exits_zero() {
+fn run_all_with_nothing_to_stage_says_so_and_exits_zero() {
     let r = Repo::new("all-none");
-    let o = r.pb(&["commit", "all"], "");
+    let o = r.pb(&["commit", "run", "-A"], "");
     assert!(o.status.success());
     assert!(out(&o).contains("NO_STAGED_CHANGES"), "{}", out(&o));
 }
 
 #[test]
-fn all_refuses_the_default_branch() {
+fn run_all_refuses_the_default_branch() {
     let r = Repo::new("all-prot");
     git(&r.work, &["checkout", "-q", "main"]);
     put(&r, "b.txt", "b\n");
-    let o = r.pb(&["commit", "all"], "");
+    let o = r.pb(&["commit", "run", "-A"], "");
     assert!(!o.status.success());
     assert!(err(&o).contains("HEAD is on 'main'"), "{}", err(&o));
 }
 
 #[test]
-fn all_rebases_when_behind_and_pushes() {
+fn run_all_rebases_when_behind_and_pushes() {
     let r = Repo::new("all-rebase");
     put(&r, "b.txt", "b\n");
-    assert!(r.pb(&["commit", "all"], "").status.success());
+    assert!(r.pb(&["commit", "run", "-A"], "").status.success());
     let other = r.root.join("other");
     git(
         &r.root,
@@ -664,17 +679,17 @@ fn all_rebases_when_behind_and_pushes() {
     git(&other, &["commit", "-q", "-m", "main moves"]);
     git(&other, &["push", "-q", "origin", "main"]);
     put(&r, "c.txt", "c\n");
-    let o = r.pb(&["commit", "all"], "");
+    let o = r.pb(&["commit", "run", "-A"], "");
     assert!(o.status.success(), "{}{}", out(&o), err(&o));
     assert!(out(&o).contains("Rebasing"), "{}", out(&o));
     assert_eq!(r.remote_head("feat"), git(&r.work, &["rev-parse", "HEAD"]));
 }
 
 #[test]
-fn all_never_forces_a_rejected_push() {
+fn run_all_never_forces_a_rejected_push() {
     let r = Repo::new("all-reject");
     put(&r, "b.txt", "b\n");
-    assert!(r.pb(&["commit", "all"], "").status.success());
+    assert!(r.pb(&["commit", "run", "-A"], "").status.success());
     let other = r.root.join("other");
     git(
         &r.root,
@@ -693,21 +708,21 @@ fn all_never_forces_a_rejected_push() {
     git(&other, &["push", "-q", "origin", "feat"]);
     let theirs = r.remote_head("feat");
     put(&r, "c.txt", "c\n");
-    let o = r.pb(&["commit", "all"], "");
+    let o = r.pb(&["commit", "run", "-A"], "");
     assert!(!o.status.success());
     assert_eq!(r.remote_head("feat"), theirs);
 }
 
 #[test]
-fn all_follows_the_signoff_setting() {
+fn run_all_follows_the_signoff_setting() {
     let r = Repo::new("all-sign");
     put(&r, "b.txt", "b\n");
-    assert!(r.pb(&["commit", "all"], "").status.success());
+    assert!(r.pb(&["commit", "run", "-A"], "").status.success());
     assert!(git(&r.work, &["log", "-1", "--format=%B"]).contains("Signed-off-by"));
 
     put(&r, "c.txt", "c\n");
     assert!(r
-        .pb(&["commit", "all", "--no-signoff"], "")
+        .pb(&["commit", "run", "-A", "--no-signoff"], "")
         .status
         .success());
     assert!(!git(&r.work, &["log", "-1", "--format=%B"]).contains("Signed-off-by"));
@@ -720,17 +735,21 @@ fn all_follows_the_signoff_setting() {
         .status
         .success());
     put(&r, "d.txt", "d\n");
-    assert!(r.pb(&["commit", "all"], "").status.success());
+    assert!(r.pb(&["commit", "run", "-A"], "").status.success());
     assert!(!git(&r.work, &["log", "-1", "--format=%B"]).contains("Signed-off-by"));
 }
 
-// commit all --json --args-stdin
+// commit run --json --args-stdin
 
-/// Runs `commit all --json --args-stdin` from `cwd` and parses the report.
+/// Runs `commit run --json --args-stdin` from `cwd` and parses the report.
 /// The process always exits 0, whatever the verdict.
 fn inline(r: &Repo, cwd: &Path, text: &str) -> serde_json::Value {
+    inline_with(RUN_INLINE, r, cwd, text)
+}
+
+fn inline_with(args: &[&str], r: &Repo, cwd: &Path, text: &str) -> serde_json::Value {
     let mut child = Command::new(env!("CARGO_BIN_EXE_playbook"))
-        .args(["commit", "all", "--json", "--args-stdin"])
+        .args(args)
         .env("HOME", r.root.join("home"))
         .env("GIT_CONFIG_GLOBAL", "/dev/null")
         .env("GIT_CONFIG_SYSTEM", "/dev/null")
@@ -738,6 +757,8 @@ fn inline(r: &Repo, cwd: &Path, text: &str) -> serde_json::Value {
         .env("GIT_AUTHOR_EMAIL", "t@t")
         .env("GIT_COMMITTER_NAME", "t")
         .env("GIT_COMMITTER_EMAIL", "t@t")
+        .env("GIT_AUTHOR_DATE", PINNED_DATE)
+        .env("GIT_COMMITTER_DATE", PINNED_DATE)
         .env_remove("PLAYBOOK_MODE")
         .current_dir(cwd)
         .stdin(Stdio::piped())
@@ -757,7 +778,7 @@ fn inline(r: &Repo, cwd: &Path, text: &str) -> serde_json::Value {
 }
 
 #[test]
-fn inline_pushes_with_a_drafted_message_and_reports_it() {
+fn run_inline_pushes_with_a_drafted_message_and_reports_it() {
     let r = Repo::new("inline-push");
     put(&r, "docs/guide.md", "g\n");
 
@@ -772,7 +793,7 @@ fn inline_pushes_with_a_drafted_message_and_reports_it() {
 }
 
 #[test]
-fn inline_with_no_flags_commits_only_what_is_staged() {
+fn run_inline_with_no_flags_commits_only_what_is_staged() {
     let r = Repo::new("inline-staged");
     put(&r, "docs/staged.md", "s\n");
     git(&r.work, &["add", "docs/staged.md"]);
@@ -785,7 +806,7 @@ fn inline_with_no_flags_commits_only_what_is_staged() {
 }
 
 #[test]
-fn inline_reports_no_staged_changes_with_ok_true() {
+fn run_inline_reports_no_staged_changes_with_ok_true() {
     let r = Repo::new("inline-none");
 
     let v = inline(&r, &r.work, "");
@@ -795,7 +816,7 @@ fn inline_reports_no_staged_changes_with_ok_true() {
 }
 
 #[test]
-fn parity_default_branch_inline_refuses_main_with_exit_0() {
+fn parity_default_branch_run_inline_refuses_main_with_exit_0() {
     let r = Repo::new("inline-main");
     git(&r.work, &["checkout", "-q", "main"]);
     put(&r, "docs/x.md", "x\n");
@@ -812,7 +833,7 @@ fn parity_default_branch_inline_refuses_main_with_exit_0() {
 }
 
 #[test]
-fn inline_long_flags_stage_and_amend_like_the_short_ones() {
+fn run_inline_long_flags_stage_and_amend_like_the_short_ones() {
     let r = Repo::new("inline-long");
     put(&r, "docs/a.md", "a\n");
     assert_eq!(inline(&r, &r.work, "--all")["verdict"], "PUSHED");
@@ -828,7 +849,7 @@ fn inline_long_flags_stage_and_amend_like_the_short_ones() {
 }
 
 #[test]
-fn parity_worktree_guard_inline_a_wrong_branch_is_wrong_directory() {
+fn parity_worktree_guard_run_inline_a_wrong_branch_is_wrong_directory() {
     let r = Repo::new("inline-wrong");
     put(&r, "docs/x.md", "x\n");
     let text = format!("-A Worktree root: {}, branch: other", r.work.display());
@@ -840,7 +861,7 @@ fn parity_worktree_guard_inline_a_wrong_branch_is_wrong_directory() {
 }
 
 #[test]
-fn parity_root_cwd_inline_acts_on_the_named_root_not_the_session_cwd() {
+fn parity_root_cwd_run_inline_acts_on_the_named_root_not_the_session_cwd() {
     let r = Repo::new("inline-root");
     put(&r, "docs/x.md", "x\n");
     let text = format!("-A Worktree root: {}, branch: feat", r.work.display());
@@ -853,7 +874,7 @@ fn parity_root_cwd_inline_acts_on_the_named_root_not_the_session_cwd() {
 }
 
 #[test]
-fn parity_no_force_inline_auto_amend_is_parked() {
+fn parity_no_force_run_inline_auto_amend_is_parked() {
     let r = Repo::new("inline-park");
     put(&r, "docs/a.md", "a\n");
     assert_eq!(inline(&r, &r.work, "-A")["verdict"], "PUSHED");
@@ -867,7 +888,7 @@ fn parity_no_force_inline_auto_amend_is_parked() {
 }
 
 #[test]
-fn parity_precommit_warnings_inline_names_a_secret_shaped_file() {
+fn parity_precommit_warnings_run_inline_names_a_secret_shaped_file() {
     let r = Repo::new("inline-warn");
     put(&r, "creds/id_rsa", "k\n");
 
@@ -878,11 +899,113 @@ fn parity_precommit_warnings_inline_names_a_secret_shaped_file() {
 }
 
 #[test]
-fn inline_conflicting_modes_are_refused_with_exit_0() {
+fn run_inline_conflicting_modes_are_refused_with_exit_0() {
     let r = Repo::new("inline-conflict");
 
     let v = inline(&r, &r.work, "--auto --ask");
 
     assert_eq!(v["verdict"], "REFUSED");
     assert!(v["error"].as_str().unwrap().contains("conflict"));
+}
+
+// commit all, kept as a hidden legacy command
+
+/// Commits `file` on a fresh repo with `args` and returns the subject, the
+/// SHA and what the command printed.
+fn commit_fixture(tag: &str, args: &[&str]) -> (String, String, Output) {
+    let r = Repo::new(tag);
+    put(&r, "docs/guide.md", "g\n");
+    let o = r.pb(args, "");
+    (last_subject(&r), git(&r.work, &["rev-parse", "HEAD"]), o)
+}
+
+#[test]
+fn legacy_all_commits_the_same_commit_as_run_all() {
+    // Arrange
+    let legacy_args = LEGACY_ALL;
+    let new_args = RUN_ALL;
+
+    // Act
+    let (legacy_subject, legacy_sha, legacy) = commit_fixture("legacy-plain", legacy_args);
+    let (new_subject, new_sha, new) = commit_fixture("legacy-plain-new", new_args);
+
+    // Assert
+    assert!(legacy.status.success(), "{}{}", out(&legacy), err(&legacy));
+    assert_eq!(legacy_subject, "docs: add guide.md");
+    assert_eq!(legacy_subject, new_subject);
+    assert_eq!(legacy_sha, new_sha);
+    let report = |o: &Output| -> Vec<String> {
+        out(o)
+            .lines()
+            .filter(|l| {
+                ["BRANCH=", "COMMIT=", "MESSAGE="]
+                    .iter()
+                    .any(|k| l.starts_with(k))
+            })
+            .map(str::to_string)
+            .collect()
+    };
+    assert_eq!(report(&legacy).len(), 3, "{}", out(&legacy));
+    assert_eq!(report(&legacy), report(&new));
+}
+
+#[test]
+fn legacy_all_uses_the_given_message() {
+    // Arrange
+    let args = [LEGACY_ALL, &["-m", "docs: my own words"]].concat();
+
+    // Act
+    let (subject, _, o) = commit_fixture("legacy-msg", &args);
+
+    // Assert
+    assert!(o.status.success(), "{}{}", out(&o), err(&o));
+    assert_eq!(subject, "docs: my own words");
+}
+
+#[test]
+fn legacy_all_with_nothing_to_stage_says_so_and_exits_zero() {
+    // Arrange
+    let r = Repo::new("legacy-none");
+
+    // Act
+    let o = r.pb(LEGACY_ALL, "");
+
+    // Assert
+    assert!(o.status.success());
+    assert!(out(&o).contains("NO_STAGED_CHANGES"), "{}", out(&o));
+}
+
+#[test]
+fn legacy_inline_reports_like_run_inline_for_each_stdin_flag() {
+    // Arrange
+    let cases = [
+        ("none", "", "docs/staged.md"),
+        ("all", "-A", "docs/loose.md"),
+        ("tracked", "-u", "docs/tracked.md"),
+    ];
+    for (tag, stdin, file) in cases {
+        let build = |name: &str| {
+            let r = Repo::new(&format!("legacy-inline-{tag}-{name}"));
+            put(&r, "docs/tracked.md", "t\n");
+            git(&r.work, &["add", "docs/tracked.md"]);
+            git(&r.work, &["commit", "-q", "-m", "docs: track a file"]);
+            put(&r, "docs/tracked.md", "t2\n");
+            put(&r, file, "x\n");
+            git(&r.work, &["add", file]);
+            r
+        };
+        let (old, new) = (build("old"), build("new"));
+
+        // Act
+        let legacy = inline_with(LEGACY_INLINE, &old, &old.work, stdin);
+        let current = inline_with(RUN_INLINE, &new, &new.work, stdin);
+
+        // Assert
+        assert_eq!(legacy["verdict"], "PUSHED", "{tag}: {legacy}");
+        assert_eq!(legacy["ok"], true, "{tag}");
+        assert_eq!(legacy["code"], 0, "{tag}");
+        assert_eq!(legacy["message"], current["message"], "{tag}");
+        assert_eq!(legacy["commit"], current["commit"], "{tag}");
+        assert!(!legacy["commit"].as_str().unwrap().is_empty(), "{tag}");
+    }
 }

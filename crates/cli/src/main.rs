@@ -2138,42 +2138,44 @@ fn real_main() {
                     no_signoff,
                     json,
                     args_stdin,
-                } => {
-                    if json {
-                        let text = if args_stdin {
-                            read_stdin_to_string()
-                        } else {
-                            let mut words = String::new();
-                            if auto {
-                                words.push_str(" --auto");
-                            }
-                            if no_signoff {
-                                words.push_str(" --no-signoff");
-                            }
-                            words.push_str(" -A");
-                            words
-                        };
-                        println!(
-                            "{}",
-                            commit::all::run_inline(&text, message, commit_signoff_on())
-                        );
-                        return;
-                    }
-                    let opts = commit::all::Options {
+                } => commit_drafted(
+                    &dir,
+                    commit::all::Options {
                         message,
                         auto,
                         no_signoff,
                         stage_all: true,
                         ..Default::default()
-                    };
-                    match commit::all::run(&dir, opts, commit_signoff_on()) {
-                        Ok(text) => println!("{text}"),
-                        Err(err) => {
-                            eprintln!("{err}");
-                            std::process::exit(1);
-                        }
-                    }
-                }
+                    },
+                    json,
+                    args_stdin,
+                ),
+                CommitCommand::Run {
+                    message_file: _,
+                    all,
+                    message,
+                    json,
+                    args_stdin,
+                    amend,
+                    auto,
+                    no_signoff,
+                    no_type_check,
+                    no_prose_check,
+                } if all || message.is_some() || json => commit_drafted(
+                    &dir,
+                    commit::all::Options {
+                        message,
+                        auto,
+                        no_signoff,
+                        stage_all: all,
+                        amend,
+                        no_type_check,
+                        no_prose_check,
+                        ..Default::default()
+                    },
+                    json,
+                    args_stdin,
+                ),
                 CommitCommand::Run {
                     message_file,
                     amend,
@@ -2181,6 +2183,7 @@ fn real_main() {
                     no_signoff,
                     no_type_check,
                     no_prose_check,
+                    ..
                 } => {
                     let (path, temp) = match message_file {
                         Some(p) => (p, false),
@@ -3069,6 +3072,41 @@ fn effort_diff_shape(base: &str) -> Result<effort::auto::Shape, String> {
     }
     let text = String::from_utf8_lossy(&out.stdout);
     effort::auto::Shape::from_numstat(&text)
+}
+
+/// Runs the drafting commit shared by `commit run -A` and the legacy
+/// `commit all`. With `--json` the report always exits 0; otherwise a failure
+/// exits 1.
+fn commit_drafted(dir: &std::path::Path, opts: commit::all::Options, json: bool, args_stdin: bool) {
+    if json {
+        let text = if args_stdin {
+            read_stdin_to_string()
+        } else {
+            let flags = [
+                (opts.auto, "--auto"),
+                (opts.no_signoff, "--no-signoff"),
+                (opts.stage_all, "-A"),
+                (opts.amend, "-a"),
+            ];
+            flags
+                .iter()
+                .filter(|(on, _)| *on)
+                .map(|(_, word)| format!(" {word}"))
+                .collect()
+        };
+        println!(
+            "{}",
+            commit::all::run_inline(&text, opts, commit_signoff_on())
+        );
+        return;
+    }
+    match commit::all::run(dir, opts, commit_signoff_on()) {
+        Ok(text) => println!("{text}"),
+        Err(err) => {
+            eprintln!("{err}");
+            std::process::exit(1);
+        }
+    }
 }
 
 /// Whether `commit.signOff` is on (the default).

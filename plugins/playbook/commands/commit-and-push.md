@@ -1,7 +1,7 @@
 ---
 description: Deprecated, use /playbook:commit. Removed in 1.0.0.
 disable-model-invocation: true
-allowed-tools: Bash(playbook commit all --json --args-stdin:*), Bash(playbook:*), Bash(git:*), Read, Skill
+allowed-tools: Bash(playbook commit run --json --args-stdin:*), Bash(playbook:*), Bash(git:*), Read, Skill
 argument-hint: "[--all|-A] [--update|-u] [--amend|-a] [--no-signoff] [--auto] [--ask]"
 ---
 
