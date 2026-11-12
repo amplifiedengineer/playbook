@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Igor Santos
 // SPDX-License-Identifier: Apache-2.0
 
-//! `pr review-triage`: pick `quick` or `deep` for a PR's self-review by asking
+//! `pr review triage`: pick `quick` or `deep` for a PR's self-review by asking
 //! a small model three times. Only unanimous `quick` is quick; anything else
 //! (a `deep`, a disagreement, a failed or invalid call) is `deep`.
 

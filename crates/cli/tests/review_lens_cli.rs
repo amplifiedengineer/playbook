@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Igor Santos
 // SPDX-License-Identifier: Apache-2.0
 
-//! `playbook review triage-merge` and `review size`: the triage fail-open
+//! `playbook review triage merge` and `review size`: the triage fail-open
 //! merge and the reviewer-count rule the review commands call.
 
 #[path = "support/isolated.rs"]
@@ -45,7 +45,8 @@ fn triage_merge_reads_stdin_and_completes_the_map() {
     let (code, out, _) = playbook(
         &[
             "review",
-            "triage-merge",
+            "triage",
+            "merge",
             "--lenses",
             "security,logic,perf",
             "--tiers",
@@ -67,7 +68,7 @@ fn triage_merge_reads_stdin_and_completes_the_map() {
 
 #[test]
 fn triage_merge_with_no_reply_runs_everything_in_full() {
-    let (code, out, _) = playbook(&["review", "triage-merge", "--lenses", "a,b"], None);
+    let (code, out, _) = playbook(&["review", "triage", "merge", "--lenses", "a,b"], None);
     assert_eq!(code, 0);
     assert!(out.ends_with("Triage: a=full-lens, b=full-lens"), "{out}");
 }
@@ -81,7 +82,8 @@ fn triage_merge_reads_a_file_and_a_missing_file_is_a_silent_triage() {
     let (_, out, _) = playbook(
         &[
             "review",
-            "triage-merge",
+            "triage",
+            "merge",
             "--lenses",
             "a",
             "--tiers",
@@ -93,7 +95,8 @@ fn triage_merge_reads_a_file_and_a_missing_file_is_a_silent_triage() {
     let (code, out, _) = playbook(
         &[
             "review",
-            "triage-merge",
+            "triage",
+            "merge",
             "--lenses",
             "a",
             "--tiers",
@@ -111,7 +114,8 @@ fn triage_merge_force_overrides_one_lens_and_a_bad_spec_exits_2() {
     let (_, out, _) = playbook(
         &[
             "review",
-            "triage-merge",
+            "triage",
+            "merge",
             "--lenses",
             "tests,scope",
             "--tiers",
@@ -133,7 +137,8 @@ fn triage_merge_force_overrides_one_lens_and_a_bad_spec_exits_2() {
     let (code, _, err) = playbook(
         &[
             "review",
-            "triage-merge",
+            "triage",
+            "merge",
             "--lenses",
             "a",
             "--force",

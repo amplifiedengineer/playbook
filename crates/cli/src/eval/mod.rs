@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Igor Santos
 // SPDX-License-Identifier: Apache-2.0
 
-//! `playbook eval review-triage`: a live regression eval for the review
+//! `playbook eval triage`: a live regression eval for the review
 //! triage classifier. For each case it fetches the pull request's diff with
 //! `gh pr diff`, sends the classifier prompt plus that diff to
 //! `claude -p --model haiku` on stdin, and compares the returned tier per lens with
@@ -178,7 +178,7 @@ fn call_claude(prompt: &str) -> (String, String) {
 }
 
 fn fail(msg: &str) -> i32 {
-    eprintln!("eval review-triage: {msg}");
+    eprintln!("eval triage: {msg}");
     1
 }
 
@@ -225,7 +225,7 @@ pub fn review_triage(fixtures: Option<PathBuf>, prompt: Option<PathBuf>) -> i32 
 fn run_cases(fixtures: &Path, cases: &[Value], system_prompt: &str) -> i32 {
     let mut counts = Counts::default();
     println!(
-        "eval review-triage: {} case(s) from {}\n",
+        "eval triage: {} case(s) from {}\n",
         cases.len(),
         fixtures.display()
     );

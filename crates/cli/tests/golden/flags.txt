@@ -300,10 +300,10 @@ arg playbook watch log id=json long=json short=- value_names=JSON possible=true,
 command playbook watch install-service subcommands=- aliases=- groups=-
 command playbook watch uninstall-service subcommands=- aliases=- groups=UninstallService[delete_log]
 arg playbook watch uninstall-service id=delete_log long=delete-log short=- value_names=DELETE_LOG possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
-command playbook eval subcommands=review-triage,bench aliases=- groups=Eval[-]
-command playbook eval review-triage subcommands=- aliases=- groups=ReviewTriage[fixtures,prompt]
-arg playbook eval review-triage id=fixtures long=- short=- value_names=FIXTURES possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=std::path::PathBuf conflicts=-
-arg playbook eval review-triage id=prompt long=prompt short=- value_names=PROMPT possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=std::path::PathBuf conflicts=-
+command playbook eval subcommands=triage,bench aliases=- groups=Eval[-]
+command playbook eval triage subcommands=- aliases=- groups=Triage[fixtures,prompt]
+arg playbook eval triage id=fixtures long=- short=- value_names=FIXTURES possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=std::path::PathBuf conflicts=-
+arg playbook eval triage id=prompt long=prompt short=- value_names=PROMPT possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=std::path::PathBuf conflicts=-
 command playbook eval bench subcommands=- aliases=- groups=Bench[cases,role,id,model,effort,runs,max_cost_usd,jobs,json,list,strategy]
 arg playbook eval bench id=cases long=cases short=- value_names=CASES possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=std::path::PathBuf conflicts=-
 arg playbook eval bench id=role long=role short=- value_names=ROLE possible=- defaults=- aliases=- required=false hidden=false global=false action=Append num_args=- parser=alloc::string::String conflicts=-
@@ -316,7 +316,7 @@ arg playbook eval bench id=jobs long=jobs short=- value_names=JOBS possible=- de
 arg playbook eval bench id=json long=json short=- value_names=JSON possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
 arg playbook eval bench id=list long=list short=- value_names=LIST possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
 arg playbook eval bench id=strategy long=strategy short=- value_names=STRATEGY possible=- defaults=- aliases=- required=false hidden=false global=false action=Append num_args=- parser=alloc::string::String conflicts=-
-command playbook pr subcommands=prepare,create,status,review-triage,rules,comments,reply,stack,ci-wait,land-wait,land,merge,checks aliases=- groups=Pr[-]
+command playbook pr subcommands=prepare,create,status,review,rules,comments,reply,stack,ci-wait,land-wait,land,merge,checks aliases=- groups=Pr[-]
 command playbook pr prepare subcommands=- aliases=- groups=Prepare[base,ticket,dir,json,args_stdin]
 arg playbook pr prepare id=base long=base short=- value_names=BASE possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
 arg playbook pr prepare id=ticket long=ticket short=- value_names=TICKET possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
@@ -350,10 +350,11 @@ arg playbook pr status id=pr long=- short=- value_names=PR possible=- defaults=-
 arg playbook pr status id=json long=json short=- value_names=JSON possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
 arg playbook pr status id=flag long=flag short=- value_names=FLAG possible=ask,auto defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=playbook::ModeArg conflicts=-
 arg playbook pr status id=dir long=dir short=- value_names=DIR possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
-command playbook pr review-triage subcommands=- aliases=- groups=ReviewTriage[pr,base,dir]
-arg playbook pr review-triage id=pr long=pr short=- value_names=PR possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=u64 conflicts=-
-arg playbook pr review-triage id=base long=base short=- value_names=BASE possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
-arg playbook pr review-triage id=dir long=dir short=- value_names=DIR possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
+command playbook pr review subcommands=triage aliases=- groups=Review[-]
+command playbook pr review triage subcommands=- aliases=- groups=Triage[pr,base,dir]
+arg playbook pr review triage id=pr long=pr short=- value_names=PR possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=u64 conflicts=-
+arg playbook pr review triage id=base long=base short=- value_names=BASE possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
+arg playbook pr review triage id=dir long=dir short=- value_names=DIR possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
 command playbook pr rules subcommands=- aliases=- groups=Rules[plugin_root,commit]
 arg playbook pr rules id=plugin_root long=plugin-root short=- value_names=PLUGIN_ROOT possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=std::path::PathBuf conflicts=-
 arg playbook pr rules id=commit long=commit short=- value_names=COMMIT possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
@@ -584,7 +585,7 @@ arg playbook commit run id=auto long=auto short=- value_names=AUTO possible=true
 arg playbook commit run id=no_signoff long=no-signoff short=- value_names=NO_SIGNOFF possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
 arg playbook commit run id=no_type_check long=no-type-check short=- value_names=NO_TYPE_CHECK possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
 arg playbook commit run id=no_prose_check long=no-prose-check short=- value_names=NO_PROSE_CHECK possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
-command playbook review subcommands=prepare,suggest,checks,size,triage-merge aliases=- groups=Review[-]
+command playbook review subcommands=prepare,suggest,checks,size,triage aliases=- groups=Review[-]
 command playbook review prepare subcommands=- aliases=- groups=Prepare[kind,args,auto]
 arg playbook review prepare id=kind long=- short=- value_names=KIND possible=quick,deep defaults=- aliases=- required=true hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
 arg playbook review prepare id=args long=- short=- value_names=ARGS possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
@@ -602,10 +603,11 @@ arg playbook review size id=base long=base short=- value_names=BASE possible=- d
 arg playbook review size id=head long=head short=- value_names=HEAD possible=- defaults=HEAD aliases=- required=false hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
 arg playbook review size id=all_lenses long=all-lenses short=- value_names=ALL_LENSES possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
 arg playbook review size id=dir long=dir short=- value_names=DIR possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=std::path::PathBuf conflicts=-
-command playbook review triage-merge subcommands=- aliases=- groups=TriageMerge[lenses,tiers,forced]
-arg playbook review triage-merge id=lenses long=lenses short=- value_names=LENSES possible=- defaults=- aliases=- required=true hidden=false global=false action=Append num_args=- parser=alloc::string::String conflicts=-
-arg playbook review triage-merge id=tiers long=tiers short=- value_names=TIERS possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
-arg playbook review triage-merge id=forced long=force short=- value_names=FORCED possible=- defaults=- aliases=- required=false hidden=false global=false action=Append num_args=- parser=alloc::string::String conflicts=-
+command playbook review triage subcommands=merge aliases=- groups=Triage[-]
+command playbook review triage merge subcommands=- aliases=- groups=Merge[lenses,tiers,forced]
+arg playbook review triage merge id=lenses long=lenses short=- value_names=LENSES possible=- defaults=- aliases=- required=true hidden=false global=false action=Append num_args=- parser=alloc::string::String conflicts=-
+arg playbook review triage merge id=tiers long=tiers short=- value_names=TIERS possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
+arg playbook review triage merge id=forced long=force short=- value_names=FORCED possible=- defaults=- aliases=- required=false hidden=false global=false action=Append num_args=- parser=alloc::string::String conflicts=-
 command playbook segment subcommands=branch,size aliases=- groups=Segment[-]
 command playbook segment branch subcommands=- aliases=- groups=Branch[-],SegmentNaming[kind,plan_slug,n,title,default_branch,dir]
 arg playbook segment branch id=kind long=type short=- value_names=KIND possible=- defaults=- aliases=- required=true hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-

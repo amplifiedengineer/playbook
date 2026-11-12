@@ -622,9 +622,9 @@ Check how well the review triage classifier sorts real PRs
 
 Each case is a PR with a known answer per review lens. Costs one `gh pr diff` fetch and one live `claude` call per case, so run it by hand or on a schedule.
 
-Example: `playbook eval review-triage`
+Example: `playbook eval triage`
 
-Subcommands: `bench`, `review-triage`
+Subcommands: `bench`, `triage`
 
 ### `playbook eval bench`
 
@@ -648,13 +648,13 @@ Example: `playbook eval bench --role fact-checker --model haiku,sonnet --effort 
 - `--list`: List the cases and exit
 - `--strategy <STRATEGY>`: Run the `tdd_repo` implementer cases with tools in a scratch git repo. Use one dispatch per TDD step (`per-step`) or one per Work Unit (`per-wu`)
 
-### `playbook eval review-triage`
+### `playbook eval triage`
 
 Run the review triage classifier on each case
 
 Compares each result with the known answer. Needs network access, a logged-in `gh`, and a working `claude` with a live API key. Exits 0 when no lens was wrongly skipped and no case errored, and 1 otherwise. Re-run it whenever the triage prompt changes.
 
-Example: `playbook eval review-triage`
+Example: `playbook eval triage`
 
 - `<FIXTURES>`: Case file to run; defaults to the cases shipped in the playbook repo
 - `--prompt <PROMPT>`: Triage prompt to send; defaults to the one shipped in the playbook repo
@@ -1025,7 +1025,7 @@ These are the mechanical steps behind `/playbook:pr-create`.
 
 Example: `playbook pr prepare --base main`
 
-Subcommands: `checks`, `comments`, `create`, `merge`, `prepare`, `reply`, `review-triage`, `rules`, `stack`, `status`
+Subcommands: `checks`, `comments`, `create`, `merge`, `prepare`, `reply`, `review`, `rules`, `stack`, `status`
 
 ### `playbook pr checks`
 
@@ -1129,13 +1129,19 @@ Example: `playbook pr reply --pr 12 --thread 345 --body-file /tmp/reply.md`
 - `--body-file <BODY_FILE>`: File holding the reply text
 - `--repo <REPO>`: `owner/name`; defaults to the current repo
 
-### `playbook pr review-triage`
+### `playbook pr review`
+
+Review a PR
+
+Subcommands: `triage`
+
+### `playbook pr review triage`
 
 Choose a quick or deep self-review for a PR
 
 Asks a small model three times. Anything but a unanimous `quick` becomes `deep`.
 
-Example: `playbook pr review-triage --pr 12`
+Example: `playbook pr review triage --pr 12`
 
 - `--pr <PR>`: PR number (default: the current branch against its base)
 - `--base <BASE>`: Base branch when no PR number is given (default: the repo's default branch)
@@ -1192,7 +1198,7 @@ Example: `playbook prose check README.md`
 
 Run the mechanical steps behind the review commands
 
-Subcommands: `checks`, `prepare`, `size`, `suggest`, `triage-merge`
+Subcommands: `checks`, `prepare`, `size`, `suggest`, `triage`
 
 ### `playbook review checks`
 
@@ -1245,13 +1251,19 @@ Example: `playbook review suggest 4265 --json`
 - `--dir <DIR>`: Work in this directory instead of the current one
 - `--json`: Print JSON instead of text lines
 
-### `playbook review triage-merge`
+### `playbook review triage`
+
+Work with the lens tier map that review triage returns
+
+Subcommands: `merge`
+
+### `playbook review triage merge`
 
 Complete a review-triage tier map so no lens is left unclassified
 
 Reads the triage reply (a JSON object of `{lens: {tier, reason}}`) from `--tiers FILE`, or `-` for stdin, and prints the full map as JSON plus a `Triage: lens=tier, ...` line. A missing or unusable reply, a lens the reply left out, and a tier other than `skip`, `cheap-check` or `full-lens` all become `full-lens`.
 
-Example: `playbook review triage-merge --lenses security,logic --tiers triage.json`
+Example: `playbook review triage merge --lenses security,logic --tiers triage.json`
 
 - `--lenses <LENSES>`: Every lens that was sent to triage, comma separated
 - `--tiers <TIERS>`: File holding the triage reply, or `-` for stdin; omit when triage returned nothing

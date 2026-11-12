@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Igor Santos
 // SPDX-License-Identifier: Apache-2.0
 
-//! `playbook eval review-triage`, ported from the former shell test. `gh`
+//! `playbook eval triage`, ported from the former shell test. `gh`
 //! and `claude` are stub executables on PATH, so no test touches the network
 //! or spends an API call.
 
@@ -73,7 +73,7 @@ fn run_with(cases: &str, response: &str, gh_ok: bool, extra: &[(&str, &str)]) ->
     )
     .unwrap();
     let out = isolated::playbook()
-        .args(["eval", "review-triage"])
+        .args(["eval", "triage"])
         .arg(dir.join("cases.json"))
         .arg("--prompt")
         .arg(dir.join("triage.md"))
@@ -199,7 +199,7 @@ fn a_missing_case_file_is_a_setup_error() {
     let dir = scratch();
     shims(&dir, true);
     let out = isolated::playbook()
-        .args(["eval", "review-triage"])
+        .args(["eval", "triage"])
         .arg(dir.join("absent.json"))
         .env("PATH", format!("{}:/usr/bin:/bin", dir.display()))
         .output()
@@ -249,7 +249,7 @@ fn the_default_prompt_is_found_in_this_checkout() {
     fs::write(dir.join("response.json"), SEC_FULL).unwrap();
     fs::write(dir.join("cases.json"), one(true)).unwrap();
     let out = isolated::playbook()
-        .args(["eval", "review-triage"])
+        .args(["eval", "triage"])
         .arg(dir.join("cases.json"))
         .current_dir(env!("PLAYBOOK_REPO_ROOT"))
         .env("PATH", format!("{}:/usr/bin:/bin", dir.display()))

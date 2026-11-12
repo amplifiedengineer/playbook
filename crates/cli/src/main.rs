@@ -12,9 +12,9 @@ use playbook::{
     AtlassianCommand, CcCommand, Cli, Command, CommitCommand, ConfigCommand, DepsCommand,
     DocCommand, DoctorCommand, EvalCommand, GateCommand, GlossaryCommand, HandoffCommand,
     LearnCommand, ManifestCommand, MemoryCommand, ModeArg, ModeCommand, PlanCommand, PluginCommand,
-    PrCommand, ProseCommand, ReviewCommand, ReviewWorktreeCommand, SanitizeCommand, SegmentCommand,
-    SegmentTopology, SessionsCommand, SettingsCommand, SkillsCommand, ToolsCommand,
-    WorktreeCommand,
+    PrCommand, PrReviewCommand, ProseCommand, ReviewCommand, ReviewTriageCommand,
+    ReviewWorktreeCommand, SanitizeCommand, SegmentCommand, SegmentTopology, SessionsCommand,
+    SettingsCommand, SkillsCommand, ToolsCommand, WorktreeCommand,
 };
 use std::io::{IsTerminal, Read, Write};
 
@@ -1254,7 +1254,7 @@ fn real_main() {
             }
         }
         Command::Eval { sub } => match sub {
-            EvalCommand::ReviewTriage { fixtures, prompt } => {
+            EvalCommand::Triage { fixtures, prompt } => {
                 std::process::exit(eval::review_triage(fixtures, prompt));
             }
             EvalCommand::Bench {
@@ -1650,8 +1650,10 @@ fn real_main() {
                     flag,
                     dir,
                 } => std::process::exit(run_pr_status(pr, json, flag, dir.as_deref())),
-                PrCommand::ReviewTriage { pr, base, dir } => {
-                    enter_dir("pr review-triage", dir.as_deref());
+                PrCommand::Review {
+                    sub: PrReviewCommand::Triage { pr, base, dir },
+                } => {
+                    enter_dir("pr review triage", dir.as_deref());
                     let outcome = match pr::triage::collect(pr, base.as_deref()) {
                         Ok(facts) => pr::triage::triage(&pr::triage::ClaudeRunner, &facts),
                         Err(err) => pr::triage::failed(format!("could not collect the PR: {err}")),
@@ -2305,10 +2307,13 @@ fn real_main() {
                     }
                 }
             }
-            ReviewCommand::TriageMerge {
-                lenses,
-                tiers,
-                forced,
+            ReviewCommand::Triage {
+                sub:
+                    ReviewTriageCommand::Merge {
+                        lenses,
+                        tiers,
+                        forced,
+                    },
             } => {
                 let forced: Result<Vec<_>, _> = forced
                     .iter()

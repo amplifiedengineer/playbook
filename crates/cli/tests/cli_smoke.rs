@@ -577,12 +577,12 @@ fn table() -> Vec<Case> {
             .gh("exit 1")
             .writes(),
         // network or repo-bound tools, failing fast with a message
-        case("eval review-triage", &["eval", "review-triage"]).code(1).err("gh is required"),
+        case("eval triage", &["eval", "triage"]).code(1).err("gh is required"),
         case("eval bench", &["eval", "bench"]).code(1).err("No such file"),
         case("pr prepare", &["pr", "prepare"]).plain().code(1).err("not a git repository"),
         case( "pr create", &["pr", "create", "--title", "t", "--body-file", "{ROOT}/b.md"], ).file("b.md", "body").code(3).err("feature branch"),
         case("pr status", &["pr", "status", "1", "--json"]).out("\"ok\":false"),
-        case("pr review-triage", &["pr", "review-triage"]).out("review="),
+        case("pr review triage", &["pr", "review", "triage"]).out("review="),
         case("pr rules", &["pr", "rules"]).writes().grows().out("extracted and verified").err("embedded"),
         case("pr comments", &["pr", "comments"]).code(1).err("no PR"),
         case( "pr reply", &[ "pr", "reply", "--pr", "1", "--body-file", "{ROOT}/b.md", "--thread", "1", ], ).file("b.md", "body").code(1).err("gh repo view"),
@@ -662,7 +662,7 @@ fn table() -> Vec<Case> {
         case("review checks", &["review", "checks", "{ROOT}/none"]).out("checks skipped"),
         case("review size", &["review", "size", "--base", "main"]).commit(),
         case("review suggest", &["review", "suggest"]).commit().code(1).err("no changed files"),
-        case( "review triage-merge", &["review", "triage-merge", "--lenses", "logic"], ).out("Triage:"),
+        case( "review triage merge", &["review", "triage", "merge", "--lenses", "logic"], ).out("Triage:"),
         case( "segment branch", &[ "segment", "branch", "--type", "feat", "--plan-slug", "smoke", "--n", "1", "--title", "add a thing", "--topology", "independent", ], ).commit().writes().then(1, "already exists"),
         case("segment size", &["segment", "size", "--base", "main"]).commit(),
         case("plans", &["plans"]).out("NO_PLANS"),

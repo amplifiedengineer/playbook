@@ -815,7 +815,7 @@ pub enum Command {
     /// one `gh pr diff` fetch and one live `claude` call per case, so run it
     /// by hand or on a schedule.
     ///
-    /// Example: `playbook eval review-triage`
+    /// Example: `playbook eval triage`
     Eval {
         #[command(subcommand)]
         sub: EvalCommand,
@@ -1077,8 +1077,8 @@ pub enum EvalCommand {
     /// no lens was wrongly skipped and no case errored, and 1 otherwise. Re-run
     /// it whenever the triage prompt changes.
     ///
-    /// Example: `playbook eval review-triage`
-    ReviewTriage {
+    /// Example: `playbook eval triage`
+    Triage {
         /// Case file to run; defaults to the cases shipped in the playbook repo
         fixtures: Option<PathBuf>,
         /// Triage prompt to send; defaults to the one shipped in the playbook repo
@@ -1558,22 +1558,10 @@ pub enum PrCommand {
         #[arg(long)]
         dir: Option<String>,
     },
-    /// Choose a quick or deep self-review for a PR
-    ///
-    /// Asks a small model three times. Anything but a unanimous `quick`
-    /// becomes `deep`.
-    ///
-    /// Example: `playbook pr review-triage --pr 12`
-    ReviewTriage {
-        /// PR number (default: the current branch against its base)
-        #[arg(long)]
-        pr: Option<u64>,
-        /// Base branch when no PR number is given (default: the repo's default branch)
-        #[arg(long)]
-        base: Option<String>,
-        /// Work in this directory instead of the current one
-        #[arg(long)]
-        dir: Option<String>,
+    /// Review a PR
+    Review {
+        #[command(subcommand)]
+        sub: PrReviewCommand,
     },
     /// Cut the skill rules a PR title and body need
     ///
@@ -2149,6 +2137,16 @@ pub enum ReviewCommand {
         #[arg(long)]
         dir: Option<PathBuf>,
     },
+    /// Work with the lens tier map that review triage returns
+    Triage {
+        #[command(subcommand)]
+        sub: ReviewTriageCommand,
+    },
+}
+
+/// `playbook review triage` subcommands.
+#[derive(Subcommand, Debug)]
+pub enum ReviewTriageCommand {
     /// Complete a review-triage tier map so no lens is left unclassified
     ///
     /// Reads the triage reply (a JSON object of `{lens: {tier, reason}}`) from
@@ -2157,8 +2155,8 @@ pub enum ReviewCommand {
     /// reply left out, and a tier other than `skip`, `cheap-check` or
     /// `full-lens` all become `full-lens`.
     ///
-    /// Example: `playbook review triage-merge --lenses security,logic --tiers triage.json`
-    TriageMerge {
+    /// Example: `playbook review triage merge --lenses security,logic --tiers triage.json`
+    Merge {
         /// Every lens that was sent to triage, comma separated
         #[arg(long, value_delimiter = ',', required = true)]
         lenses: Vec<String>,
@@ -2168,6 +2166,28 @@ pub enum ReviewCommand {
         /// Fix a lens's tier whatever triage said, as `lens=tier:reason` (repeatable)
         #[arg(long = "force")]
         forced: Vec<String>,
+    },
+}
+
+/// `playbook pr review` subcommands.
+#[derive(Subcommand, Debug)]
+pub enum PrReviewCommand {
+    /// Choose a quick or deep self-review for a PR
+    ///
+    /// Asks a small model three times. Anything but a unanimous `quick`
+    /// becomes `deep`.
+    ///
+    /// Example: `playbook pr review triage --pr 12`
+    Triage {
+        /// PR number (default: the current branch against its base)
+        #[arg(long)]
+        pr: Option<u64>,
+        /// Base branch when no PR number is given (default: the repo's default branch)
+        #[arg(long)]
+        base: Option<String>,
+        /// Work in this directory instead of the current one
+        #[arg(long)]
+        dir: Option<String>,
     },
 }
 

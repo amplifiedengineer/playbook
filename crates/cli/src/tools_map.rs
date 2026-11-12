@@ -129,10 +129,10 @@ pub const TOOLS: &[Tool] = &[
     t("pr-status", "pr", "status", "", "pr status 1 --json"),
     t(
         "pr-review-triage",
-        "pr",
-        "review-triage",
+        "pr review",
+        "triage",
         "",
-        "pr review-triage",
+        "pr review triage",
     ),
     t(
         "review-prepare",
@@ -158,10 +158,10 @@ pub const TOOLS: &[Tool] = &[
     ),
     t(
         "review-triage-merge",
-        "review",
-        "triage-merge",
+        "review triage",
+        "merge",
         "",
-        "review triage-merge --lenses a",
+        "review triage merge --lenses a",
     ),
     t(
         "review-worktree-setup",

@@ -239,7 +239,7 @@ pub(crate) const META: &[Meta] = &[
     ro("effort suggest"),
     user("eval").for_agents(),
     user("eval bench"),
-    user("eval review-triage").purpose("Run the review triage classifier on known cases"),
+    user("eval triage").purpose("Run the review triage classifier on known cases"),
     free("gate").for_agents(),
     ro("gate check"),
     free("gate record"),
@@ -298,7 +298,8 @@ pub(crate) const META: &[Meta] = &[
     free("pr merge"),
     free("pr prepare"),
     free("pr reply"),
-    free("pr review-triage"),
+    free("pr review"),
+    free("pr review triage"),
     ro("pr rules"),
     ro("pr stack"),
     ro("pr status"),
@@ -311,7 +312,8 @@ pub(crate) const META: &[Meta] = &[
     free("review prepare"),
     ro("review size"),
     ro("review suggest"),
-    ro("review triage-merge"),
+    free("review triage"),
+    ro("review triage merge"),
     ro("route").for_agents(),
     ro("run-context")
         .purpose("Read the run mode and effort ceiling for a command's Step 0")

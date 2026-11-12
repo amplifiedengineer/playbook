@@ -15,11 +15,28 @@ pub struct Rename {
 }
 
 /// Every renamed command path.
-pub const COMMAND_RENAMES: &[Rename] = &[Rename {
-    old: "deliver",
-    new: "pr create",
-    extra: &[],
-}];
+pub const COMMAND_RENAMES: &[Rename] = &[
+    Rename {
+        old: "deliver",
+        new: "pr create",
+        extra: &[],
+    },
+    Rename {
+        old: "pr review-triage",
+        new: "pr review triage",
+        extra: &[],
+    },
+    Rename {
+        old: "review triage-merge",
+        new: "review triage merge",
+        extra: &[],
+    },
+    Rename {
+        old: "eval review-triage",
+        new: "eval triage",
+        extra: &[],
+    },
+];
 
 /// Hidden legacy commands that keep their own code and output but print the
 /// deprecation line: the argv is not rewritten.
