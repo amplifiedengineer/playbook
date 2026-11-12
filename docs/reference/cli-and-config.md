@@ -21,11 +21,7 @@ Set a key with `playbook config set <key> <value>` and read it with `playbook co
 | `commit.signOff` | `true` | `true`, `false` |
 | `handoff.onClear` | `false` | `true`, `false` |
 | `pr.draft` | `true` | `true`, `false` |
-| `pr.rules.template` | `block` | `off`, `warn`, `block` |
-| `pr.rules.length` | `warn` | `off`, `warn`, `block` |
-| `pr.rules.issue` | `warn` | `off`, `warn`, `block` |
-| `pr.rules.ticketLine` | `block` | `off`, `warn`, `block` |
-| `pr.rules.scope` | `warn` | `off`, `warn`, `block` |
+| `pr.rules` | `default` | `default`, `warn`, `off` |
 | `pr.ticketPatterns` | `["[A-Z][A-Z0-9]+-[0-9]+"]` | see the config keys page |
 | `worktreeCleanup.enabled` | `true` | `true`, `false` |
 | `mode` | `ask` | `ask`, `auto` |

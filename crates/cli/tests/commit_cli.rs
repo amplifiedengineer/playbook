@@ -536,7 +536,7 @@ fn an_amend_is_judged_without_the_commit_it_replaces() {
 fn turning_the_scope_rule_off_lets_a_stacked_commit_through() {
     let r = Repo::new("stack-off");
     assert!(r
-        .pb(&["config", "set", "--global", "pr.rules.scope", "off"], "")
+        .pb(&["config", "set", "--global", "pr.rules", "off"], "")
         .status
         .success());
     git(&r.work, &["checkout", "-q", "-b", "stack-parent"]);
@@ -552,25 +552,6 @@ fn turning_the_scope_rule_off_lets_a_stacked_commit_through() {
 
     assert!(o.status.success(), "{}{}", out(&o), err(&o));
     assert!(!out(&o).contains("WARN"), "{}", out(&o));
-}
-
-#[test]
-fn the_scope_rule_set_to_block_refuses_a_branch_that_is_not_stacked() {
-    let r = Repo::new("scope-block");
-    assert!(r
-        .pb(
-            &["config", "set", "--global", "pr.rules.scope", "block"],
-            ""
-        )
-        .status
-        .success());
-    git(&r.work, &["checkout", "-q", "-b", "PROJ-9-solo"]);
-    r.stage("c.txt", "c\n");
-
-    let o = r.pb(&["commit", "run"], "feat(sync): add c\n");
-
-    assert!(!o.status.success());
-    assert!(err(&o).contains("`feat(PROJ-9): add c`"), "{}", err(&o));
 }
 
 // commit all

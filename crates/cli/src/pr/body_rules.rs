@@ -6,7 +6,7 @@
 //! line and the ticket in the conventional-commit scope.
 //!
 //! Every rule has a level (`off`, `warn`, `block`) read from the
-//! `pr.rules.*` config keys. A ticket rule applies only when a ticket key is
+//! `pr.rules` config key. A ticket rule applies only when a ticket key is
 //! known for the branch. A key is never invented.
 
 use crate::common::re::static_regex;
@@ -19,6 +19,11 @@ pub const DEFAULT_TICKET_PATTERN: &str = r"[A-Z][A-Z0-9]+-[0-9]+";
 
 /// Body length cap in characters.
 pub const DEFAULT_MAX_CHARS: usize = 1200;
+
+/// The `pr.rules` value that makes every structure rule warn.
+const MODE_WARN: &str = "warn";
+/// The `pr.rules` value that turns every structure rule off.
+const MODE_OFF: &str = "off";
 
 /// What a failed rule does.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -71,35 +76,44 @@ impl Rules {
     /// Every rule off: only the plain text checks of `pr create` run.
     pub fn off() -> Rules {
         Rules {
-            template: Level::Off,
-            length: Level::Off,
-            issue: Level::Off,
-            ticket_line: Level::Off,
-            scope: Level::Off,
             prose: Level::Off,
-            ..Rules::default()
+            ..Rules::with_mode(MODE_OFF)
         }
     }
 
-    /// Reads the `pr.rules.*` keys through the config tiers. An unreadable
+    /// The five structure rules at the level the `pr.rules` value names. An
+    /// unknown value keeps each rule at its default.
+    pub fn with_mode(mode: &str) -> Rules {
+        let all = |level: Level| Rules {
+            template: level,
+            length: level,
+            issue: level,
+            ticket_line: level,
+            scope: level,
+            ..Rules::default()
+        };
+        match mode {
+            MODE_WARN => all(Level::Warn),
+            MODE_OFF => all(Level::Off),
+            _ => Rules::default(),
+        }
+    }
+
+    /// Reads the `pr.rules` key through the config tiers. An unreadable
     /// or invalid value keeps the default.
     pub fn load(home: &Path, repo_slug: Option<&str>) -> Rules {
-        let mut rules = Rules::default();
         let get = |key: &str| {
             crate::config::resolve_valid(key, home, repo_slug)
                 .ok()
                 .map(|(value, _, _)| value)
         };
-        let level = |key: &str, fallback: Level| match get(key) {
-            Some(Value::String(s)) => Level::parse(&s, fallback),
-            _ => fallback,
+        let mut rules = match get("pr.rules") {
+            Some(Value::String(mode)) => Rules::with_mode(&mode),
+            _ => Rules::default(),
         };
-        rules.template = level("pr.rules.template", rules.template);
-        rules.length = level("pr.rules.length", rules.length);
-        rules.issue = level("pr.rules.issue", rules.issue);
-        rules.ticket_line = level("pr.rules.ticketLine", rules.ticket_line);
-        rules.scope = level("pr.rules.scope", rules.scope);
-        rules.prose = level("hooks.proseLint.mode", rules.prose);
+        if let Some(Value::String(s)) = get("hooks.proseLint.mode") {
+            rules.prose = Level::parse(&s, rules.prose);
+        }
         if let Some(Value::Array(items)) = get("pr.ticketPatterns") {
             let list: Vec<String> = items
                 .iter()
@@ -651,6 +665,40 @@ mod tests {
         let found = check_body(body, &Rules::default(), &ctx(None, None, false));
 
         assert!(found.blocks.iter().any(|b| b.contains("before ## Summary")));
+    }
+
+    #[test]
+    fn the_pr_rules_mode_sets_the_level_of_each_rule() {
+        use Level::{Block, Off, Warn};
+        // Arrange
+        // (mode, template, length, issue, ticketLine, scope)
+        let table = [
+            ("default", [Block, Warn, Warn, Block, Warn]),
+            ("warn", [Warn, Warn, Warn, Warn, Warn]),
+            ("off", [Off, Off, Off, Off, Off]),
+        ];
+        for (mode, want) in table {
+            // Act
+            let rules = Rules::with_mode(mode);
+            // Assert
+            let got = [
+                rules.template,
+                rules.length,
+                rules.issue,
+                rules.ticket_line,
+                rules.scope,
+            ];
+            assert_eq!(got, want, "pr.rules = {mode}");
+        }
+    }
+
+    #[test]
+    fn an_unknown_pr_rules_mode_keeps_the_defaults() {
+        // Arrange
+        // Act
+        let rules = Rules::with_mode("strict");
+        // Assert
+        assert_eq!(format!("{rules:?}"), format!("{:?}", Rules::default()));
     }
 
     #[test]

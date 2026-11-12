@@ -15,7 +15,7 @@
 //!   (`~/.claude/projects/*/memory/`) or the retired `~/.claude/memory/`.
 //!
 //! - changing protected settings: `playbook config set` on a
-//!   `hooks.proseLint.*`, `pr.rules.*`, `pr.ticketPatterns` key, `config import`,
+//!   `hooks.proseLint.*`, `pr.rules`, `pr.rules.*`, `pr.ticketPatterns` key, `config import`,
 //!   `config unset` or `config edit`,
 //!   a write to the config database or a config file (a redirect into it, a
 //!   writer program, an interpreter, `sed -i`, or `sqlite3` with anything but
@@ -252,9 +252,12 @@ const PROTECTED_KEY_PREFIXES: [&str; 4] = [
     "pr.ticketpatterns",
 ];
 
+/// The `pr.rules` key itself, which the `pr.rules.` prefix does not cover.
+const PROTECTED_PR_RULES_KEY: &str = "pr.rules";
+
 fn is_protected_config_key(word: &str) -> bool {
     let key = word.to_lowercase();
-    PROTECTED_KEY_PREFIXES.iter().any(|p| key.starts_with(p))
+    key == PROTECTED_PR_RULES_KEY || PROTECTED_KEY_PREFIXES.iter().any(|p| key.starts_with(p))
 }
 
 /// The reason to deny this simple command because it changes a protected
@@ -754,6 +757,8 @@ mod tests {
             "playbook config set --global pr.rules.prose off",
             "playbook config set --org acme pr.ticketPatterns '[\"X-1\"]'",
             "playbook config unset pr.rules.length",
+            "playbook config set pr.rules off",
+            "playbook config set --global PR.Rules warn",
             "/usr/local/bin/playbook config import cfg.json",
             "playbook config edit",
             "cargo run -q -- config set pr.rules.prose off",

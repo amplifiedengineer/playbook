@@ -52,11 +52,7 @@ pub const KNOWN_KEYS: &[&str] = &[
     "commit.signOff",
     "handoff.onClear",
     "pr.draft",
-    "pr.rules.template",
-    "pr.rules.length",
-    "pr.rules.issue",
-    "pr.rules.ticketLine",
-    "pr.rules.scope",
+    "pr.rules",
     "pr.ticketPatterns",
     "worktreeCleanup.enabled",
     "mode",
@@ -159,6 +155,11 @@ pub static FIXED_KEYS: LazyLock<Vec<(&'static str, Value)>> = LazyLock::new(|| {
         ("review.stackMaxLines", json!(3000)),
         ("pr.bodyMaxChars", json!(1200)),
         ("code.briefFactsTokens", json!(0)),
+        ("pr.rules.template", json!("block")),
+        ("pr.rules.length", json!("warn")),
+        ("pr.rules.issue", json!("warn")),
+        ("pr.rules.ticketLine", json!("block")),
+        ("pr.rules.scope", json!("warn")),
     ]
 });
 
@@ -222,11 +223,7 @@ pub const LOCAL_ONLY_KEYS: &[&str] = &[
     "autoReview.fix",
     "autoMerge.enabled",
     "handoff.onClear",
-    "pr.rules.template",
-    "pr.rules.length",
-    "pr.rules.issue",
-    "pr.rules.ticketLine",
-    "pr.rules.scope",
+    "pr.rules",
     "pr.ticketPatterns",
     "worktreeCleanup.enabled",
     "mode",
@@ -316,10 +313,7 @@ pub fn default_value(key: &str) -> Option<Value> {
         "commit.signOff" => Some(Value::Bool(true)),
         "handoff.onClear" => Some(Value::Bool(false)),
         "pr.draft" => Some(Value::Bool(true)),
-        "pr.rules.template" | "pr.rules.ticketLine" => Some(Value::String("block".to_string())),
-        "pr.rules.length" | "pr.rules.issue" | "pr.rules.scope" => {
-            Some(Value::String("warn".to_string()))
-        }
+        "pr.rules" => Some(Value::String("default".to_string())),
         "pr.ticketPatterns" => Some(Value::Array(vec![Value::String(
             "[A-Z][A-Z0-9]+-[0-9]+".to_string(),
         )])),
@@ -389,11 +383,7 @@ pub fn allowed_enum_values(key: &str) -> Option<&'static [&'static str]> {
         "update.mode" => Some(&["notify", "auto", "off"]),
         "update.plugin" => Some(&["auto", "ask", "off"]),
         "watch.autonomy" => Some(&["off", "propose", "auto"]),
-        "pr.rules.template"
-        | "pr.rules.length"
-        | "pr.rules.issue"
-        | "pr.rules.ticketLine"
-        | "pr.rules.scope" => Some(&["off", "warn", "block"]),
+        "pr.rules" => Some(&["default", "warn", "off"]),
         _ => None,
     }
 }
@@ -444,7 +434,7 @@ const COMPOUND_GROUPS: &[&str] = &["proseLint", "policyGuard"];
 
 /// The exact size of `KNOWN_KEYS`; each Segment that cuts keys lowers it.
 #[cfg(test)]
-const KEY_CEILING: usize = 58;
+const KEY_CEILING: usize = 54;
 
 #[cfg(test)]
 mod tests {
@@ -661,6 +651,43 @@ mod tests {
             assert!(!KNOWN_KEYS.contains(&key), "{key} is still known");
             assert!(default_value(key).is_none(), "{key} still has a default");
         }
+    }
+
+    #[test]
+    fn every_cut_pr_rule_key_is_fixed_to_its_old_default_and_pr_rules_is_known() {
+        // Arrange
+        let cut = [
+            ("pr.rules.template", json!("block")),
+            ("pr.rules.length", json!("warn")),
+            ("pr.rules.issue", json!("warn")),
+            ("pr.rules.ticketLine", json!("block")),
+            ("pr.rules.scope", json!("warn")),
+        ];
+
+        // Act
+        let fixed = FIXED_KEYS.clone();
+
+        // Assert
+        for (key, value) in cut {
+            assert!(
+                fixed.contains(&(key, value)),
+                "{key} is not fixed to its old default"
+            );
+            assert!(!KNOWN_KEYS.contains(&key), "{key} is still known");
+            assert!(default_value(key).is_none(), "{key} still has a default");
+        }
+        assert!(KNOWN_KEYS.contains(&"pr.rules"));
+    }
+
+    #[test]
+    fn pr_rules_defaults_to_default_and_takes_default_warn_or_off() {
+        // Arrange
+        // Act
+        let default = default_value("pr.rules");
+        let allowed = allowed_enum_values("pr.rules");
+        // Assert
+        assert_eq!(default, Some(json!("default")));
+        assert_eq!(allowed, Some(&["default", "warn", "off"][..]));
     }
 
     #[test]
