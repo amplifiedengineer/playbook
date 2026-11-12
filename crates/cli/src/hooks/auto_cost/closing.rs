@@ -572,6 +572,7 @@ mod tests {
             "playbook segment unit resume WU-1 --base abc",
             "playbook plan graph check docs/plan.md",
             "playbook plan wave next docs/plan.md --done WU-1,WU-2",
+            "playbook plan ledger set docs/plan.md WU-1 status=DONE",
             "playbook pr review submit 12 99 --event comment --json",
             "playbook pr create --ready",
             "cargo build",

@@ -140,6 +140,10 @@
     "required": false
   },
   {
+    "intent": "plan-ledger",
+    "required": false
+  },
+  {
     "intent": "plan-wave-next",
     "required": false
   },

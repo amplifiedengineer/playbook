@@ -684,6 +684,8 @@ fn table() -> Vec<Case> {
         case("plan list", &["plan", "list"]).out("NO_PLANS"),
         case("plan graph check", &["plan", "graph", "check", "{ROOT}/missing.md"]).code(1).err("missing.md"),
         case("plan wave next", &["plan", "wave", "next", "{ROOT}/missing.md"]).code(1).err("missing.md"),
+        case("plan ledger show", &["plan", "ledger", "show", "{ROOT}/missing.md"]).code(1).err("missing.md"),
+        case("plan ledger set", &["plan", "ledger", "set", "{ROOT}/missing.md", "WU-1", "status=DONE"]).code(1).err("missing.md"),
         case("trust", &["trust", "{ROOT}/repo"]).writes(),
         case("trust", &["trust"]).code(2).err("required arguments").err("Usage: playbook trust"),
         case("route", &["route"]).code(2).err("required arguments").err("Usage: playbook route"),

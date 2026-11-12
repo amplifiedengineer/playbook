@@ -556,7 +556,7 @@ arg playbook ci id=dir long=dir short=- value_names=DIR possible=- defaults=- al
 command playbook path subcommands=- aliases=- groups=Path[kind,create]
 arg playbook path id=kind long=- short=- value_names=KIND possible=plans,implement,worktrees,handoff,data,plugin-root defaults=- aliases=- required=true hidden=false global=false action=Set num_args=- parser=playbook::PathKind conflicts=-
 arg playbook path id=create long=create short=- value_names=CREATE possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
-command playbook plan subcommands=list,checkpoint,cleanup,graph,wave,brief aliases=- groups=Plan[-]
+command playbook plan subcommands=list,checkpoint,cleanup,graph,ledger,wave,brief aliases=- groups=Plan[-]
 command playbook plan list subcommands=- aliases=- groups=List[json]
 arg playbook plan list id=json long=json short=- value_names=JSON possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
 command playbook plan checkpoint subcommands=- aliases=- groups=Checkpoint[slug,write]
@@ -573,6 +573,14 @@ command playbook plan graph subcommands=check aliases=- groups=Graph[-]
 command playbook plan graph check subcommands=- aliases=- groups=Check[plan,json]
 arg playbook plan graph check id=plan long=- short=- value_names=PLAN possible=- defaults=- aliases=- required=true hidden=false global=false action=Set num_args=- parser=std::path::PathBuf conflicts=-
 arg playbook plan graph check id=json long=json short=- value_names=JSON possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
+command playbook plan ledger subcommands=show,set aliases=- groups=Ledger[-]
+command playbook plan ledger show subcommands=- aliases=- groups=Show[plan,json]
+arg playbook plan ledger show id=plan long=- short=- value_names=PLAN possible=- defaults=- aliases=- required=true hidden=false global=false action=Set num_args=- parser=std::path::PathBuf conflicts=-
+arg playbook plan ledger show id=json long=json short=- value_names=JSON possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
+command playbook plan ledger set subcommands=- aliases=- groups=Set[plan,id,pairs]
+arg playbook plan ledger set id=plan long=- short=- value_names=PLAN possible=- defaults=- aliases=- required=true hidden=false global=false action=Set num_args=- parser=std::path::PathBuf conflicts=-
+arg playbook plan ledger set id=id long=- short=- value_names=ID possible=- defaults=- aliases=- required=true hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
+arg playbook plan ledger set id=pairs long=- short=- value_names=PAIRS possible=- defaults=- aliases=- required=true hidden=false global=false action=Append num_args=1.. parser=alloc::string::String conflicts=-
 command playbook plan wave subcommands=next aliases=- groups=Wave[-]
 command playbook plan wave next subcommands=- aliases=- groups=Next[plan,done,json]
 arg playbook plan wave next id=plan long=- short=- value_names=PLAN possible=- defaults=- aliases=- required=true hidden=false global=false action=Set num_args=- parser=std::path::PathBuf conflicts=-
