@@ -724,7 +724,7 @@ mod tests {
             &["update"],
             &["uninstall", "--yes"],
             &["doctor", "--fix"],
-            &["doctor", "pending-migrations"],
+            &["doctor", "migrations"],
             &["state", "list"],
         ] {
             assert!(!runs_on_start(&parse(args)), "{args:?}");

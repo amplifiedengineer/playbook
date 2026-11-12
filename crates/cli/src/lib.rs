@@ -541,7 +541,7 @@ pub enum Command {
     ///
     /// Example: `playbook doctor`
     ///
-    /// Example: `playbook doctor pending-migrations`
+    /// Example: `playbook doctor migrations`
     #[command(args_conflicts_with_subcommands = true, subcommand_required = false)]
     Doctor {
         /// Run the safe migrations for playbook's own files, then list what needs you
@@ -1317,6 +1317,29 @@ pub enum SettingsCommand {
     },
 }
 
+/// `playbook memory claude` subcommands.
+#[derive(Subcommand, Debug)]
+pub enum MemoryClaudeCommand {
+    /// Copy notes from Claude Code's auto memory into playbook memory
+    ///
+    /// One way and opt in. It only reads Claude Code's memory for this
+    /// project (`~/.claude/projects/<project>/memory/*.md`) and never changes,
+    /// moves or deletes anything there. Each note becomes a playbook fact in
+    /// this repo's project memory. A note already imported (tracked by content
+    /// hash on the playbook side) and a fact that already exists are skipped,
+    /// so running it again copies nothing.
+    ///
+    /// Example: `playbook memory claude import --dry-run`
+    Import {
+        /// Show what would be copied and write nothing
+        #[arg(long)]
+        dry_run: bool,
+        /// Read this directory instead of the project's Claude Code memory
+        #[arg(long)]
+        from: Option<PathBuf>,
+    },
+}
+
 /// `playbook memory` subcommands.
 #[derive(Subcommand, Debug)]
 pub enum MemoryCommand {
@@ -1360,23 +1383,10 @@ pub enum MemoryCommand {
         #[arg(long)]
         json: bool,
     },
-    /// Copy notes from Claude Code's auto memory into playbook memory
-    ///
-    /// One way and opt in. It only reads Claude Code's memory for this
-    /// project (`~/.claude/projects/<project>/memory/*.md`) and never changes,
-    /// moves or deletes anything there. Each note becomes a playbook fact in
-    /// this repo's project memory. A note already imported (tracked by content
-    /// hash on the playbook side) and a fact that already exists are skipped,
-    /// so running it again copies nothing.
-    ///
-    /// Example: `playbook memory import-claude --dry-run`
-    ImportClaude {
-        /// Show what would be copied and write nothing
-        #[arg(long)]
-        dry_run: bool,
-        /// Read this directory instead of the project's Claude Code memory
-        #[arg(long)]
-        from: Option<PathBuf>,
+    /// Work with Claude Code's auto memory
+    Claude {
+        #[command(subcommand)]
+        sub: MemoryClaudeCommand,
     },
     /// Print the repo's slice of the memory graph as markdown
     ///
@@ -2512,7 +2522,7 @@ pub enum DoctorCommand {
     /// List the manual migration findings that need you
     ///
     /// Prints one line per finding, or nothing when none is pending.
-    PendingMigrations,
+    Migrations,
 }
 
 /// `playbook doc` subcommands.
@@ -2812,6 +2822,13 @@ pub enum HooksCommand {
     List,
 }
 
+/// `playbook cc cache` subcommands.
+#[derive(Subcommand, Debug)]
+pub enum CcCacheCommand {
+    /// Clear caches that would freeze old settings into a session
+    Clear,
+}
+
 /// `playbook cc` subcommands.
 #[derive(Subcommand, Debug)]
 pub enum CcCommand {
@@ -2850,9 +2867,11 @@ pub enum CcCommand {
     List,
     /// Remove stale runtime state
     Prune,
-    /// Clear caches that would freeze old settings into a session
-    #[command(name = "bust-cache")]
-    BustCache,
+    /// Work with the caches that would freeze old settings into a session
+    Cache {
+        #[command(subcommand)]
+        sub: CcCacheCommand,
+    },
     /// Run the launcher (`playbook cc` and `playbook ccd` call it)
     Launch {
         /// Pass `--dangerously-skip-permissions` to claude (the `playbook ccd` form)

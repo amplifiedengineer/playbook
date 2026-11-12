@@ -129,9 +129,15 @@ Example: `playbook cc --model sonnet`
 
 - `<ARGS>`: Arguments passed through to claude
 
-Subcommands: `bust-cache`, `clean`, `fresh`, `launch`, `list`, `prune`, `raw`, `worktree`
+Subcommands: `cache`, `clean`, `fresh`, `launch`, `list`, `prune`, `raw`, `worktree`
 
-### `playbook cc bust-cache`
+### `playbook cc cache`
+
+Work with the caches that would freeze old settings into a session
+
+Subcommands: `clear`
+
+### `playbook cc cache clear`
 
 Clear caches that would freeze old settings into a session
 
@@ -479,11 +485,11 @@ Check the playbook setup, or read one fact the check uses
 
 Example: `playbook doctor`
 
-Example: `playbook doctor pending-migrations`
+Example: `playbook doctor migrations`
 
 - `--fix`: Run the safe migrations for playbook's own files, then list what needs you
 
-Subcommands: `check`, `models`, `pending-migrations`
+Subcommands: `check`, `migrations`, `models`
 
 ### `playbook doctor check`
 
@@ -493,6 +499,12 @@ Reads your settings, shell files and PATH, and lists a PASS, INFO, WARN or FAIL 
 
 - `--json`: Print the rows as JSON
 
+### `playbook doctor migrations`
+
+List the manual migration findings that need you
+
+Prints one line per finding, or nothing when none is pending.
+
 ### `playbook doctor models`
 
 Show the model tiers, any overrides and the fallback chain in use
@@ -500,12 +512,6 @@ Show the model tiers, any overrides and the fallback chain in use
 Also says whether your own fallback replaces playbook's, and when the effort in force makes the chain start at Haiku.
 
 - `--json`: Print the report as JSON
-
-### `playbook doctor pending-migrations`
-
-List the manual migration findings that need you
-
-Prints one line per finding, or nothing when none is pending.
 
 ### `playbook effort`
 
@@ -812,7 +818,24 @@ Exits 0 when all pass and 1 otherwise.
 
 Manage the memory graph that sessions read from
 
-Subcommands: `context`, `export`, `import-claude`, `rebuild`, `stats`
+Subcommands: `claude`, `context`, `export`, `rebuild`, `stats`
+
+### `playbook memory claude`
+
+Work with Claude Code's auto memory
+
+Subcommands: `import`
+
+### `playbook memory claude import`
+
+Copy notes from Claude Code's auto memory into playbook memory
+
+One way and opt in. It only reads Claude Code's memory for this project (`~/.claude/projects/<project>/memory/*.md`) and never changes, moves or deletes anything there. Each note becomes a playbook fact in this repo's project memory. A note already imported (tracked by content hash on the playbook side) and a fact that already exists are skipped, so running it again copies nothing.
+
+Example: `playbook memory claude import --dry-run`
+
+- `--dry-run`: Show what would be copied and write nothing
+- `--from <FROM>`: Read this directory instead of the project's Claude Code memory
 
 ### `playbook memory context`
 
@@ -832,17 +855,6 @@ The graph lives in `~/.config/playbook/data/memory.db`, rebuilt from the fact fi
 Example: `playbook memory export --json`
 
 - `--json`: Print JSON (the only format)
-
-### `playbook memory import-claude`
-
-Copy notes from Claude Code's auto memory into playbook memory
-
-One way and opt in. It only reads Claude Code's memory for this project (`~/.claude/projects/<project>/memory/*.md`) and never changes, moves or deletes anything there. Each note becomes a playbook fact in this repo's project memory. A note already imported (tracked by content hash on the playbook side) and a fact that already exists are skipped, so running it again copies nothing.
-
-Example: `playbook memory import-claude --dry-run`
-
-- `--dry-run`: Show what would be copied and write nothing
-- `--from <FROM>`: Read this directory instead of the project's Claude Code memory
 
 ### `playbook memory rebuild`
 

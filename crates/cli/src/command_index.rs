@@ -180,7 +180,8 @@ pub(crate) const META: &[Meta] = &[
         .for_agents(),
     ro("atlassian check").purpose("Check the `acli` version and whether `twg` is installed"),
     user("cc").for_users(),
-    user("cc bust-cache"),
+    free("cc cache"),
+    user("cc cache clear"),
     user("cc clean").purpose("Launcher mode: clean up and resume a session"),
     user("cc fresh").purpose("Launcher mode: start a fresh session"),
     user("cc launch"),
@@ -226,8 +227,8 @@ pub(crate) const META: &[Meta] = &[
         .purpose("Check the playbook setup, or read one fact the check uses")
         .for_users(),
     ro("doctor check"),
+    ro("doctor migrations"),
     ro("doctor models"),
-    ro("doctor pending-migrations"),
     user("effort").for_users(),
     user("effort apply"),
     free("effort choose"),
@@ -267,9 +268,10 @@ pub(crate) const META: &[Meta] = &[
     ro("manifest").for_agents(),
     ro("manifest check"),
     free("memory").for_users(),
+    free("memory claude"),
+    user("memory claude import"),
     ro("memory context").purpose("Print the memory facts, edges and anchors in scope for a repo"),
     ro("memory export"),
-    user("memory import-claude"),
     free("memory rebuild"),
     ro("memory stats"),
     user("migrate").for_users(),
@@ -825,7 +827,7 @@ mod tests {
             "effort apply",
             "mode auto",
             "doctor",
-            "cc bust-cache",
+            "cc cache clear",
         ] {
             assert_eq!(access(path), Access::UserOnly, "{path}");
         }

@@ -119,13 +119,13 @@ arg playbook doc read id=offset long=offset short=- value_names=OFFSET possible=
 arg playbook doc read id=limit long=limit short=- value_names=LIMIT possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=usize conflicts=-
 arg playbook doc read id=section long=section short=- value_names=SECTION possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=usize conflicts=-
 command playbook doc status subcommands=- aliases=- groups=-
-command playbook doctor subcommands=check,models,pending-migrations aliases=- groups=Doctor[fix]
+command playbook doctor subcommands=check,models,migrations aliases=- groups=Doctor[fix]
 arg playbook doctor id=fix long=fix short=- value_names=FIX possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
 command playbook doctor check subcommands=- aliases=- groups=Check[json]
 arg playbook doctor check id=json long=json short=- value_names=JSON possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
 command playbook doctor models subcommands=- aliases=- groups=Models[json]
 arg playbook doctor models id=json long=json short=- value_names=JSON possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
-command playbook doctor pending-migrations subcommands=- aliases=- groups=-
+command playbook doctor migrations subcommands=- aliases=- groups=-
 command playbook migrate subcommands=- aliases=- groups=Migrate[status,dry_run,json,no_plugin]
 arg playbook migrate id=status long=status short=- value_names=STATUS possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=dry_run
 arg playbook migrate id=dry_run long=dry-run short=- value_names=DRY_RUN possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
@@ -223,7 +223,7 @@ arg playbook route id=kind long=- short=- value_names=KIND possible=- defaults=-
 arg playbook route id=tier long=tier short=- value_names=TIER possible=- defaults=low aliases=- required=false hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
 arg playbook route id=failures long=failures short=- value_names=FAILURES possible=- defaults=0 aliases=- required=false hidden=false global=false action=Set num_args=- parser=u32 conflicts=-
 arg playbook route id=json long=json short=- value_names=JSON possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
-command playbook cc subcommands=clean,fresh,raw,list,prune,bust-cache,launch,housekeep,worktree aliases=- groups=Cc[args]
+command playbook cc subcommands=clean,fresh,raw,list,prune,cache,launch,housekeep,worktree aliases=- groups=Cc[args]
 arg playbook cc id=args long=- short=- value_names=ARGS possible=- defaults=- aliases=- required=false hidden=false global=false action=Append num_args=1.. parser=alloc::string::String conflicts=-
 command playbook cc clean subcommands=- aliases=- groups=Clean[args]
 arg playbook cc clean id=args long=- short=- value_names=ARGS possible=- defaults=- aliases=- required=false hidden=false global=false action=Append num_args=1.. parser=alloc::string::String conflicts=-
@@ -233,7 +233,8 @@ command playbook cc raw subcommands=- aliases=- groups=Raw[args]
 arg playbook cc raw id=args long=- short=- value_names=ARGS possible=- defaults=- aliases=- required=false hidden=false global=false action=Append num_args=1.. parser=alloc::string::String conflicts=-
 command playbook cc list subcommands=- aliases=ls groups=-
 command playbook cc prune subcommands=- aliases=- groups=-
-command playbook cc bust-cache subcommands=- aliases=- groups=-
+command playbook cc cache subcommands=clear aliases=- groups=Cache[-]
+command playbook cc cache clear subcommands=- aliases=- groups=-
 command playbook cc launch subcommands=- aliases=- groups=Launch[skip_permissions,args]
 arg playbook cc launch id=skip_permissions long=skip-permissions short=- value_names=SKIP_PERMISSIONS possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
 arg playbook cc launch id=args long=- short=- value_names=ARGS possible=- defaults=- aliases=- required=false hidden=false global=false action=Append num_args=1.. parser=alloc::string::String conflicts=-
@@ -437,16 +438,17 @@ arg playbook worktree review setup id=pr long=- short=- value_names=PR possible=
 arg playbook worktree review setup id=head_sha long=- short=- value_names=HEAD_SHA possible=- defaults=- aliases=- required=true hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
 command playbook worktree review teardown subcommands=- aliases=- groups=Teardown[path]
 arg playbook worktree review teardown id=path long=- short=- value_names=PATH possible=- defaults=- aliases=- required=true hidden=false global=false action=Set num_args=- parser=std::path::PathBuf conflicts=-
-command playbook memory subcommands=rebuild,stats,export,import-claude,context aliases=- groups=Memory[-]
+command playbook memory subcommands=rebuild,stats,export,claude,context aliases=- groups=Memory[-]
 command playbook memory rebuild subcommands=- aliases=- groups=Rebuild[json]
 arg playbook memory rebuild id=json long=json short=- value_names=JSON possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
 command playbook memory stats subcommands=- aliases=- groups=Stats[json]
 arg playbook memory stats id=json long=json short=- value_names=JSON possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
 command playbook memory export subcommands=- aliases=- groups=Export[json]
 arg playbook memory export id=json long=json short=- value_names=JSON possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
-command playbook memory import-claude subcommands=- aliases=- groups=ImportClaude[dry_run,from]
-arg playbook memory import-claude id=dry_run long=dry-run short=- value_names=DRY_RUN possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
-arg playbook memory import-claude id=from long=from short=- value_names=FROM possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=std::path::PathBuf conflicts=-
+command playbook memory claude subcommands=import aliases=- groups=Claude[-]
+command playbook memory claude import subcommands=- aliases=- groups=Import[dry_run,from]
+arg playbook memory claude import id=dry_run long=dry-run short=- value_names=DRY_RUN possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
+arg playbook memory claude import id=from long=from short=- value_names=FROM possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=std::path::PathBuf conflicts=-
 command playbook memory context subcommands=- aliases=- groups=Context[repo,graph]
 arg playbook memory context id=repo long=repo short=- value_names=REPO possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
 arg playbook memory context id=graph long=graph short=- value_names=GRAPH possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=std::path::PathBuf conflicts=-

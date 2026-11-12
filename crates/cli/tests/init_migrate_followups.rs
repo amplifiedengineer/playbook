@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! Follow-ups to ADR 0016: edited files are kept, the gate move runs from
-//! init inside a repo, and `playbook doctor pending-migrations` reports edits.
+//! init inside a repo, and `playbook doctor migrations` reports edits.
 
 use playbook::init::run::{run, InitPaths, StepStatus};
 use std::fs;
@@ -181,7 +181,7 @@ fn the_gate_move_runs_from_init_inside_a_repo_and_not_outside() {
 
 fn pending(home: &Path, root: &Path) -> String {
     let out = Command::new(env!("CARGO_BIN_EXE_playbook"))
-        .args(["doctor", "pending-migrations"])
+        .args(["doctor", "migrations"])
         .env("HOME", home)
         .env("CLAUDE_PLUGIN_ROOT", root)
         .output()

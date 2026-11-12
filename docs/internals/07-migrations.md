@@ -63,7 +63,7 @@ Each migration has an id, a slug such as `statusline-rust-command`, and a `since
 |---|---|---|---|
 | Auto | Once, until it succeeds | Yes, as `applied <id>` (`migrations/applied/<id>`) | Moves or rewrites state, then never runs again. A failure is not recorded and stops the later Auto migrations, so order holds. |
 | Idempotent | On every `setup`, `migrate` and heal | No | Repairs state and does nothing when there is nothing to repair. It takes no lock, and a failure in one does not block the others. |
-| Manual | On every `setup` and in `playbook doctor pending-migrations` | No | Never changes anything. It prints a warning that tells you what to do. |
+| Manual | On every `setup` and in `playbook doctor migrations` | No | Never changes anything. It prints a warning that tells you what to do. |
 
 `auto-budget-defaults` is the first Auto migration. The current entries include:
 

@@ -51,6 +51,21 @@ pub const COMMAND_RENAMES: &[Rename] = &[
         new: "eval triage",
         extra: &[],
     },
+    Rename {
+        old: "memory import-claude",
+        new: "memory claude import",
+        extra: &[],
+    },
+    Rename {
+        old: "cc bust-cache",
+        new: "cc cache clear",
+        extra: &[],
+    },
+    Rename {
+        old: "doctor pending-migrations",
+        new: "doctor migrations",
+        extra: &[],
+    },
 ];
 
 /// Hidden legacy commands that keep their own code and output but print the

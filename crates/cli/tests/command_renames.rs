@@ -188,6 +188,28 @@ fn the_config_sync_commands_are_alias_rows() {
     }
 }
 
+/// The memory, cc and doctor rows this table must carry, as (old, new).
+const NESTED_ROWS: [(&str, &str); 3] = [
+    ("memory import-claude", "memory claude import"),
+    ("cc bust-cache", "cc cache clear"),
+    ("doctor pending-migrations", "doctor migrations"),
+];
+
+#[test]
+fn the_memory_cc_and_doctor_commands_are_alias_rows() {
+    // Arrange
+    let table = playbook::renames::COMMAND_RENAMES;
+
+    for (old, new) in NESTED_ROWS {
+        // Act
+        let row = table.iter().find(|row| row.old == old);
+
+        // Assert
+        let row = row.unwrap_or_else(|| panic!("`{old}` has no alias row"));
+        assert_eq!(row.new, new);
+    }
+}
+
 /// Arguments a row needs to run offline. Most rows need none.
 fn sample_tail(old: &str) -> &'static [&'static str] {
     match old {

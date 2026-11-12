@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Igor Santos
 // SPDX-License-Identifier: Apache-2.0
 
-//! `playbook memory import-claude`: copy notes from Claude Code's auto memory
+//! `playbook memory claude import`: copy notes from Claude Code's auto memory
 //! into playbook memory, one way. Claude Code's directory is only read (see
 //! `claude_read`). Everything written lives on the playbook side: the new fact
 //! files and the record of what was already imported.
@@ -167,7 +167,7 @@ pub fn run(p: &Params) -> io::Result<Report> {
 pub fn render(report: &Report, dry_run: bool) -> String {
     let verb = if dry_run { "would copy" } else { "copied" };
     let mut lines = vec![format!(
-        "memory import-claude: {verb} {}, already imported {}, name taken {}",
+        "memory claude import: {verb} {}, already imported {}, name taken {}",
         report.copied.len(),
         report.already_imported.len(),
         report.name_taken.len()

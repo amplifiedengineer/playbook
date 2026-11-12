@@ -14,11 +14,8 @@ const MAX_DEPTH: usize = 4;
 const LEGACY_HYPHENATED: &[&str] = &[
     "pr ci-wait",
     "pr land-wait",
-    "memory import-claude",
-    "cc bust-cache",
     "sanitize commit-msg",
     "sanitize pr-text",
-    "doctor pending-migrations",
     "watch dry-run",
     "watch install-service",
     "watch uninstall-service",
@@ -145,7 +142,7 @@ fn legacy_list_has_no_stale_entries() {
 
     // Assert
     assert!(found.is_empty(), "stale legacy entries: {found:?}");
-    assert_eq!(LEGACY_HYPHENATED.len(), 10);
+    assert_eq!(LEGACY_HYPHENATED.len(), 7);
 }
 
 /// Helpers users never run.

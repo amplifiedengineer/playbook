@@ -520,7 +520,7 @@ fn table() -> Vec<Case> {
         case("migrate", &["migrate", "--status"]).out("running: playbook").plain(),
         case("migrate", &["migrate", "--dry-run"]).out("dry run: nothing was written").plain(),
         case("migrate", &["migrate", "--status", "--dry-run"]).code(2).err("cannot be used with").plain(),
-        case( "doctor pending-migrations", &["doctor", "pending-migrations"], ).writes(),
+        case( "doctor migrations", &["doctor", "migrations"], ).writes(),
         // mode and settings
         case("mode status", &["mode", "status"]).out("mode: ask"),
         case("mode auto", &["mode", "auto"]).out("auto").grows(),
@@ -550,7 +550,7 @@ fn table() -> Vec<Case> {
         case("cc raw", &["cc", "raw"]),
         case("cc list", &["cc", "list"]).out("no sessions"),
         case("cc prune", &["cc", "prune"]),
-        case("cc bust-cache", &["cc", "bust-cache"]),
+        case("cc cache clear", &["cc", "cache", "clear"]),
         case("cc launch", &["cc", "launch"]).writes(),
         case("cc worktree", &["cc", "worktree", "smoke-branch"]).local_origin().grows().err("Ready:"),
         case( "cc housekeep", &[ "cc", "housekeep", "--repo-root", "{CWD}", "--worktree", "{ROOT}/none", "--branch", "smoke", "--no-push", ], ).grows(),
@@ -614,7 +614,7 @@ fn table() -> Vec<Case> {
         case("memory rebuild", &["memory", "rebuild"]).out("rebuilt").grows(),
         case("memory stats", &["memory", "stats"]).out("database:"),
         case("memory export", &["memory", "export"]).out("\"nodes\"").writes(),
-        case("memory import-claude", &["memory", "import-claude"]).out("copied 0").writes(),
+        case("memory claude import", &["memory", "claude", "import"]).out("copied 0").writes(),
         case("memory context", &["memory", "context"]).out("Memory context").writes(),
         // handoff and statusline
         case("handoff save", &["handoff", "save"]).stdin("# Handoff\n").out("handoff saved").grows(),

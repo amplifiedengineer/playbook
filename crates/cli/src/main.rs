@@ -9,12 +9,13 @@ use playbook::{
     effort, eval, gate, handoff, hooks, init, json, learn, manifest, memory_import, mode,
     plan_cleanup, planning, pr, prose, review, sanitize, settings, skills_sync, statusline,
     storage, tools_map, trust, update, usage, worktree, AdrCommand, AgentsCommand,
-    AtlassianCommand, CcCommand, Cli, Command, CommitCommand, ConfigCommand, DepsCommand,
-    DocCommand, DoctorCommand, EvalCommand, GateCommand, GlossaryCommand, HandoffCommand,
-    LearnCommand, ManifestCommand, MemoryCommand, ModeArg, ModeCommand, PlanCommand, PluginCommand,
-    PrCommand, PrReviewCommand, ProseCommand, ReviewCommand, ReviewTriageCommand,
-    ReviewWorktreeCommand, SanitizeCommand, SegmentCommand, SegmentTopology, SessionsCommand,
-    SettingsCommand, SkillsCommand, ToolsCommand, WorktreeCommand,
+    AtlassianCommand, CcCacheCommand, CcCommand, Cli, Command, CommitCommand, ConfigCommand,
+    DepsCommand, DocCommand, DoctorCommand, EvalCommand, GateCommand, GlossaryCommand,
+    HandoffCommand, LearnCommand, ManifestCommand, MemoryClaudeCommand, MemoryCommand, ModeArg,
+    ModeCommand, PlanCommand, PluginCommand, PrCommand, PrReviewCommand, ProseCommand,
+    ReviewCommand, ReviewTriageCommand, ReviewWorktreeCommand, SanitizeCommand, SegmentCommand,
+    SegmentTopology, SessionsCommand, SettingsCommand, SkillsCommand, ToolsCommand,
+    WorktreeCommand,
 };
 use std::io::{IsTerminal, Read, Write};
 
@@ -231,7 +232,9 @@ fn real_main() {
             Some(CcCommand::Prune) => {
                 cc::retention::prune(&cc::logical_cwd(), playbook::common::time::now_secs())
             }
-            Some(CcCommand::BustCache) => cc::bust_cache::bust(),
+            Some(CcCommand::Cache {
+                sub: CcCacheCommand::Clear,
+            }) => cc::bust_cache::bust(),
             Some(CcCommand::List) => {
                 let cwd = cc::logical_cwd();
                 let dir = cc::sessions::project_dir(&cc::claude_dir(), &cwd);
@@ -906,7 +909,9 @@ fn real_main() {
                     }
                 }
             }
-            MemoryCommand::ImportClaude { dry_run, from } => {
+            MemoryCommand::Claude {
+                sub: MemoryClaudeCommand::Import { dry_run, from },
+            } => {
                 let root = manifest::check::toplevel()
                     .unwrap_or_else(|| std::path::PathBuf::from(cc::logical_cwd()));
                 let claude_memory_dir = from.unwrap_or_else(|| {
@@ -931,12 +936,12 @@ fn real_main() {
                         println!("{}", memory_import::render(&report, dry_run));
                         if !dry_run && !report.copied.is_empty() {
                             if let Err(err) = hooks::rebuild_memory_graph::rebuild_now() {
-                                eprintln!("memory import-claude: graph rebuild failed: {err}");
+                                eprintln!("memory claude import: graph rebuild failed: {err}");
                             }
                         }
                     }
                     Err(err) => {
-                        eprintln!("memory import-claude: {err}");
+                        eprintln!("memory claude import: {err}");
                         std::process::exit(1);
                     }
                 }
@@ -2549,7 +2554,7 @@ fn real_main() {
                     playbook::models::report(&home, &home.join(".claude"), &cwd, json)
                 );
             }
-            DoctorCommand::PendingMigrations => {
+            DoctorCommand::Migrations => {
                 let home = common::home_dir();
                 let claude_home = home.join(".claude");
                 let self_root = playbook::plugin_root::find_here();

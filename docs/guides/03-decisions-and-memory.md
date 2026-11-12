@@ -59,7 +59,7 @@ One store, three scopes. For the design, see [the memory system](../internals/13
 
 **Project**: files under `~/.config/playbook/memory/<owner>/<repo>/`, where `<owner>/<repo>` is derived from `git remote get-url origin`. Facts true only inside that repo. The project index gets injected at session start, making those facts available without manual loading.
 
-The tree lives outside any checkout, so facts are never committed. Playbook never writes Claude Code's own memory. `memory.source` picks whether Claude's auto memory runs next to it, and `playbook memory import-claude` copies Claude's notes in, read-only on their side.
+The tree lives outside any checkout, so facts are never committed. Playbook never writes Claude Code's own memory. `memory.source` picks whether Claude's auto memory runs next to it, and `playbook memory claude import` copies Claude's notes in, read-only on their side.
 
 All three scopes use the same format: one fact per file, kebab-case filename, with frontmatter and a structured body.
 

@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Igor Santos
 // SPDX-License-Identifier: Apache-2.0
 
-//! `playbook memory import-claude` end to end: copies Claude Code's auto
+//! `playbook memory claude import` end to end: copies Claude Code's auto
 //! memory into playbook memory and leaves Claude Code's directory untouched.
 
 use std::fs;
@@ -37,7 +37,7 @@ impl Box_ {
 
     fn run(&self, extra: &[&str]) -> Output {
         Command::new(env!("CARGO_BIN_EXE_playbook"))
-            .args(["memory", "import-claude", "--from"])
+            .args(["memory", "claude", "import", "--from"])
             .arg(&self.from)
             .args(extra)
             .current_dir(&self.home)

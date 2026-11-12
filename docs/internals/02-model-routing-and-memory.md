@@ -203,7 +203,7 @@ The `<owner>/<repo>` project index is injected at session start. The global inde
 
 ### Claude Code's memory
 
-Playbook memory and Claude Code's auto memory stay separate, and playbook never writes Claude Code's memory or settings. `memory.source` is `both` (default) or `playbook`. With `playbook`, `playbook cc` and `playbook ccd` set `CLAUDE_CODE_DISABLE_AUTO_MEMORY=1` for that session only. `playbook memory import-claude` copies Claude Code's notes for a project into playbook memory, read-only on the Claude side.
+Playbook memory and Claude Code's auto memory stay separate, and playbook never writes Claude Code's memory or settings. `memory.source` is `both` (default) or `playbook`. With `playbook`, `playbook cc` and `playbook ccd` set `CLAUDE_CODE_DISABLE_AUTO_MEMORY=1` for that session only. `playbook memory claude import` copies Claude Code's notes for a project into playbook memory, read-only on the Claude side.
 
 ### File format
 
