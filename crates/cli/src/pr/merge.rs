@@ -19,6 +19,10 @@ pub mod verdict {
     pub const NOT_QUEUED: &str = "NOT_QUEUED";
 }
 
+/// The usage error for `--admin` on a stack.
+pub const ADMIN_ON_STACK: &str = "error: --admin cannot merge a stacked PR: the merge-async \
+endpoint it needs has no admin override. Run `playbook pr merge` without --admin to queue the stack.";
+
 /// What the caller does next.
 pub mod next {
     pub const DONE: &str = "done";
@@ -31,6 +35,7 @@ pub mod next {
 pub mod reason {
     pub const MERGED: &str = "merged";
     pub const ARMED: &str = "auto-merge is armed";
+    pub const QUEUED: &str = "the stack is in the merge queue";
     pub const DRAFT: &str = "the PR is a draft";
     pub const WAITING_ON_BASE: &str = "the base branch is another open PR";
     pub const HEAD_MOVED: &str = "the head moved after the checks";
@@ -100,6 +105,7 @@ fn from_land_report(r: &land::Report) -> Outcome {
         land_verdict::CLOSED => {
             outcome(v::CLOSED, reason::CLOSED, next::ASK, code::CLOSED_OR_CHECK)
         }
+        land_verdict::QUEUED => outcome(v::ARMED, reason::QUEUED, next::WAIT, code::OK),
         land_verdict::STILL_WAITING => {
             outcome(v::TIMEOUT, reason::TIMEOUT, next::WAIT, code::TIMEOUT)
         }
@@ -176,8 +182,12 @@ impl Merged {
 
     /// The `MERGE=` line, then the report.
     pub fn render(&self) -> String {
+        let blocked = match self.detail.get("blocked_by").and_then(Value::as_str) {
+            Some(pr) if !pr.is_empty() => format!(" blocked_by=#{pr}"),
+            _ => String::new(),
+        };
         format!(
-            "MERGE={} reason={}\n{}",
+            "MERGE={} reason={}{blocked}\n{}",
             self.outcome.verdict,
             self.outcome.reason,
             serde_json::to_string_pretty(&Value::Object(self.detail.clone())).unwrap_or_default()

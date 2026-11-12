@@ -22,19 +22,74 @@ const LOG_FILE: &str = "log";
 const FAKE_GH: &str = r#"#!/bin/bash
 d="$FAKE_DIR"
 echo "$*" >> "$d/log"
+nums=($FAKE_STACK)
+# A per-PR override (FAKE_<NAME>_<pr>) wins over the global one.
+var() {
+  local v="$1_$2"
+  if [ -n "${!v}" ]; then printf '%s' "${!v}"; else printf '%s' "$3"; fi
+}
+state_of() {
+  local s
+  s="$(var FAKE_STATE "$1" "${FAKE_STATE:-OPEN}")"
+  if [ -n "$FAKE_STACK" ] && [ -f "$d/enqueued" ] && [ "$FAKE_STUCK" != "$1" ]; then s=MERGED; fi
+  printf '%s' "$s"
+}
+base_of() {
+  local b=main prev= x
+  for x in "${nums[@]}"; do
+    if [ "$x" = "$1" ] && [ -n "$prev" ]; then b="b$prev"; fi
+    prev=$x
+  done
+  printf '%s' "$b"
+}
 case "$1 $2" in
   "pr view")
     [ -n "$FAKE_VIEW_FAIL" ] && exit 1
-    state="${FAKE_STATE:-OPEN}"
+    n="$3"
+    state="$(state_of "$n")"
     [ -n "$FAKE_MERGES_ON_ARM" ] && [ -f "$d/armed" ] && state=MERGED
-    printf '{"state":"%s","isDraft":%s,"headRefOid":"abc","baseRefName":"main","mergeStateStatus":"%s","reviewDecision":"%s","autoMergeRequest":null}' \
-      "$state" "${FAKE_DRAFT:-false}" "${FAKE_MERGE_STATE:-CLEAN}" "${FAKE_REVIEW:-}";;
+    auto=null
+    if [ "$FAKE_STALE_AUTO" = "$n" ] && [ ! -f "$d/disabled" ]; then auto='{"enabledBy":{"login":"x"}}'; fi
+    printf '{"number":%s,"headRefName":"b%s","state":"%s","isDraft":%s,"headRefOid":"abc","baseRefName":"%s","mergeStateStatus":"%s","reviewDecision":"%s","autoMergeRequest":%s}' \
+      "$n" "$n" "$state" "$(var FAKE_DRAFT "$n" "${FAKE_DRAFT:-false}")" "$(base_of "$n")" \
+      "$(var FAKE_MERGE_STATE "$n" "${FAKE_MERGE_STATE:-CLEAN}")" "${FAKE_REVIEW:-}" "$auto";;
   "pr checks")
     if [ -n "$FAKE_CHECKS" ]; then printf '%s' "$FAKE_CHECKS"
-    else printf '[{"name":"t","workflow":"ci","bucket":"%s","startedAt":"2026-01-01T00:00:01Z"}]' "${FAKE_BUCKET:-pass}"; fi;;
-  "pr list") printf '[]';;
-  "repo view") printf '{"squashMergeAllowed":%s,"mergeCommitAllowed":true,"rebaseMergeAllowed":false}' "${FAKE_SQUASH:-true}";;
+    else printf '[{"name":"t","workflow":"ci","bucket":"%s","startedAt":"2026-01-01T00:00:01Z"}]' "$(var FAKE_BUCKET "$3" "${FAKE_BUCKET:-pass}")"; fi;;
+  "pr list")
+    case "$*" in
+      *--base*) printf '[]';;
+      *) out=""
+         for x in "${nums[@]}"; do
+           [ "$(state_of "$x")" = OPEN ] && out="$out${out:+,}{\"headRefName\":\"b$x\",\"isCrossRepository\":false}"
+         done
+         printf '[%s]' "$out";;
+    esac;;
+  "repo view")
+    case "$*" in
+      *nameWithOwner*) printf '{"nameWithOwner":"o/r","defaultBranchRef":{"name":"main"}}';;
+      *) printf '{"squashMergeAllowed":%s,"mergeCommitAllowed":true,"rebaseMergeAllowed":false}' "${FAKE_SQUASH:-true}";;
+    esac;;
+  "api graphql")
+    if [ -z "$FAKE_STACK" ]; then
+      printf '{"data":{"repository":{"pullRequest":{"stack":null}}}}'
+    else
+      nodes=""; i=1
+      for x in "${nums[@]}"; do
+        nodes="$nodes${nodes:+,}{\"position\":$i,\"pullRequest\":{\"number\":$x,\"state\":\"$(state_of "$x")\",\"isDraft\":false,\"baseRefName\":\"$(base_of "$x")\",\"headRefName\":\"b$x\",\"headRefOid\":\"abc\"}}"
+        i=$((i+1))
+      done
+      printf '{"data":{"repository":{"pullRequest":{"stack":{"entries":{"nodes":[%s]}}}}}}' "$nodes"
+    fi;;
+  "api -X")
+    case "$*" in *merge_action=merge_queue*sha=abc*) ;; *) echo "bad merge-async body" >&2; exit 1;; esac
+    if [ -n "$FAKE_STALE_AUTO" ] && [ ! -f "$d/disabled" ]; then
+      echo "422 auto-merge is enabled" >&2; exit 1
+    fi
+    [ -n "$FAKE_ENQUEUE_FAIL" ] && { echo "merge queue is not enabled" >&2; exit 1; }
+    touch "$d/enqueued"; echo '{"job_id":"j"}';;
   "pr merge")
+    case "$*" in *--disable-auto*) touch "$d/disabled"; echo disabled; exit 0;; esac
     if [ -n "$FAKE_NEEDS_METHOD" ]; then
       case "$*" in *--squash*|*--merge*|*--rebase*) ;; *) echo "merge method is required" >&2; exit 1;; esac
     fi
@@ -43,7 +98,6 @@ case "$1 $2" in
   *) echo "unexpected gh $*" >&2; exit 1;;
 esac
 "#;
-
 struct Rig {
     root: PathBuf,
     env: Vec<(&'static str, String)>,
@@ -362,4 +416,172 @@ fn pr_land_keeps_its_land_lines_and_codes() {
         assert!(stdout(&out).starts_with(line), "{line}: {}", stdout(&out));
         assert_eq!(out.status.code(), Some(code), "{line}");
     }
+}
+
+const STACK: &str = "5 6 7";
+const MERGE_ASYNC: &str = "pulls/7/merge-async";
+
+/// One stacked fixture: the env that shapes it and what the merge reports.
+struct StackRow {
+    name: &'static str,
+    env: &'static [(&'static str, &'static str)],
+    line: &'static str,
+    code: i32,
+}
+
+const STACK_STOPS: &[StackRow] = &[
+    StackRow {
+        name: "a red middle PR",
+        env: &[("FAKE_BUCKET_6", "fail")],
+        line: "MERGE=FAILED reason=a required check failed blocked_by=#6",
+        code: 6,
+    },
+    StackRow {
+        name: "a draft bottom PR",
+        env: &[("FAKE_DRAFT_5", "true")],
+        line: "MERGE=GATE reason=the PR is a draft blocked_by=#5",
+        code: 3,
+    },
+    StackRow {
+        name: "a middle PR that needs a rebase",
+        env: &[("FAKE_MERGE_STATE_6", "DIRTY")],
+        line: "MERGE=GATE reason=the branch needs a rebase blocked_by=#6",
+        code: 3,
+    },
+];
+
+fn stacked_env<'a>(extra: &[(&'static str, &'a str)]) -> Vec<(&'static str, &'a str)> {
+    let mut env = vec![("FAKE_STACK", STACK)];
+    env.extend_from_slice(extra);
+    env
+}
+
+#[test]
+fn a_green_three_pr_stack_enqueues_the_top_once_and_waits_for_all() {
+    // Arrange
+    let rig = Rig::new(&stacked_env(&[]));
+
+    // Act
+    let out = rig.run(&args_for("merge", &[]));
+
+    // Assert
+    assert!(stdout(&out).starts_with("MERGE=MERGED"), "{}", stdout(&out));
+    assert_eq!(out.status.code(), Some(0));
+    let log = rig.log();
+    assert_eq!(log.matches("merge-async").count(), 1, "{log}");
+    let call = log.lines().find(|l| l.contains("merge-async")).unwrap();
+    assert!(call.contains(MERGE_ASYNC), "{call}");
+    assert!(call.contains("merge_action=merge_queue"), "{call}");
+    assert!(call.contains(&format!("sha={HEAD}")), "{call}");
+    assert!(!log.contains("--auto"), "{log}");
+    let after = log.split("merge-async").nth(1).unwrap();
+    for pr in ["5", "6", "7"] {
+        assert!(after.contains(&format!("pr view {pr} ")), "{pr}: {log}");
+    }
+}
+
+#[test]
+fn a_stack_that_fails_a_gate_stops_naming_the_pr_and_never_enqueues() {
+    for row in STACK_STOPS {
+        // Arrange
+        let rig = Rig::new(&stacked_env(row.env));
+
+        // Act
+        let out = rig.run(&args_for("merge", &[]));
+
+        // Assert
+        let text = stdout(&out);
+        assert_eq!(text.lines().next(), Some(row.line), "{}: {text}", row.name);
+        assert_eq!(out.status.code(), Some(row.code), "{}", row.name);
+        assert!(!rig.log().contains("merge-async"), "{}", row.name);
+    }
+}
+
+#[test]
+fn a_stale_auto_merge_is_disabled_before_the_enqueue() {
+    // Arrange
+    let rig = Rig::new(&stacked_env(&[("FAKE_STALE_AUTO", "7")]));
+
+    // Act
+    let out = rig.run(&args_for("merge", &[]));
+
+    // Assert
+    assert!(stdout(&out).starts_with("MERGE=MERGED"), "{}", stdout(&out));
+    let log = rig.log();
+    let disable = log.find(&format!("pr merge {PR} --disable-auto")).unwrap();
+    let enqueue = log.find("merge-async").unwrap();
+    assert!(disable < enqueue, "{log}");
+}
+
+#[test]
+fn admin_on_a_stack_is_a_usage_error() {
+    // Arrange
+    let rig = Rig::new(&stacked_env(&[]));
+
+    // Act
+    let out = rig.run(&["pr", "merge", PR, "--admin"]);
+
+    // Assert
+    assert_eq!(out.status.code(), Some(2));
+    let err = String::from_utf8_lossy(&out.stderr).into_owned();
+    assert!(err.contains("--admin") && err.contains("stack"), "{err}");
+    let log = rig.log();
+    assert!(
+        !log.contains("--admin") && !log.contains("merge-async"),
+        "{log}"
+    );
+}
+
+#[test]
+fn no_wait_on_a_stack_enqueues_and_reports_armed() {
+    for (extra, json) in [(&[][..], false), (&["--json"][..], true)] {
+        // Arrange
+        let rig = Rig::new(&stacked_env(&[]));
+        let mut args = vec!["pr", "merge", PR, "--no-wait"];
+        args.extend_from_slice(extra);
+
+        // Act
+        let out = rig.run(&args);
+
+        // Assert
+        assert_eq!(out.status.code(), Some(0));
+        let log = rig.log();
+        assert_eq!(log.matches("merge-async").count(), 1, "{log}");
+        assert!(!log.contains("--auto"), "{log}");
+        if json {
+            let v: Value = serde_json::from_str(&stdout(&out)).unwrap();
+            assert_eq!(v["verdict"], "ARMED");
+        } else {
+            assert!(stdout(&out).starts_with("MERGE=ARMED"), "{}", stdout(&out));
+        }
+    }
+}
+
+#[test]
+fn a_pr_that_is_not_stacked_never_calls_merge_async() {
+    // Arrange
+    let rig = Rig::new(&[("FAKE_MERGES_ON_ARM", "1")]);
+
+    // Act
+    let out = rig.run(&args_for("merge", &[]));
+
+    // Assert
+    assert!(stdout(&out).starts_with("MERGE=MERGED"), "{}", stdout(&out));
+    assert!(!rig.log().contains("merge-async"), "{}", rig.log());
+}
+
+#[test]
+fn a_stack_that_never_finishes_merging_times_out_naming_the_stuck_pr() {
+    // Arrange
+    let rig = Rig::new(&stacked_env(&[("FAKE_STUCK", "6")]));
+
+    // Act
+    let out = rig.run(&args_for("merge", &[]));
+
+    // Assert
+    assert_eq!(
+        stdout(&out).lines().next(),
+        Some("MERGE=TIMEOUT reason=still waiting after the timeout blocked_by=#6")
+    );
+    assert_eq!(out.status.code(), Some(7));
 }

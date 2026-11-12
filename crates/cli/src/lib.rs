@@ -1726,6 +1726,12 @@ pub enum PrCommand {
     /// wait: they print `merge_rc=<code>` (or `admin_rc=`) and what `gh` said,
     /// and exit 0. Never deletes the branch.
     ///
+    /// A PR stacked on another PR is gated bottom up (each unmerged PR must
+    /// pass the same gate, and a stop names it as `blocked_by=#<n>`), then the
+    /// whole stack is queued with the merge-async call pinned to the checked
+    /// head, and the call waits until every PR has merged. `--no-wait` returns
+    /// ARMED after the queue call. `--admin` is a usage error on a stack.
+    ///
     /// Example: `playbook pr merge 12`
     #[command(group(ArgGroup::new("direct").args(["no_wait", "admin"]).multiple(true)))]
     Merge {

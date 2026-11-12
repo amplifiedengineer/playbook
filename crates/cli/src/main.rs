@@ -1330,6 +1330,7 @@ fn real_main() {
                         max_polls: std::env::var("PB_LAND_MAX_POLLS")
                             .ok()
                             .and_then(|v| v.parse().ok()),
+                        ..pr::land::Opts::default()
                     };
                     let report = pr::land::land_real(dir.map(std::path::PathBuf::from), &pr, &opts);
                     println!("{}", pr::land::render(&report));
@@ -1585,7 +1586,13 @@ fn real_main() {
                     dir,
                     json,
                 } => {
-                    let direct = no_wait || admin;
+                    let stack_dir = dir.as_deref().map(std::path::PathBuf::from);
+                    let stacked = (no_wait || admin) && pr::land::is_stacked_real(stack_dir, &pr);
+                    if admin && stacked {
+                        eprintln!("{}", pr::merge::ADMIN_ON_STACK);
+                        std::process::exit(2);
+                    }
+                    let direct = (no_wait || admin) && !stacked;
                     let merged = if direct {
                         enter_dir("pr merge", dir.as_deref());
                         let (rc, output) = pr::wait::merge(&pr, admin, match_head.as_deref());
@@ -1600,6 +1607,8 @@ fn real_main() {
                             interval: std::time::Duration::from_secs(interval),
                             settle: std::time::Duration::from_secs(settle),
                             max_polls: None,
+                            no_wait,
+                            match_head,
                         };
                         let dir = dir.map(std::path::PathBuf::from);
                         pr::merge::from_land(&pr::land::land_real(dir, &pr, &opts))
