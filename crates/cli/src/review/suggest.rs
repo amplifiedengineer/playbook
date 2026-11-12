@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Igor Santos
 // SPDX-License-Identifier: Apache-2.0
 
-//! `playbook review suggest`: recommend a quick or a deep review from facts
-//! git and `gh` already hold. The rules are const data, each with a plain
+//! The diff rules behind `pr review triage` and the hidden `review suggest`:
+//! recommend a quick or a deep review from facts git and `gh` already hold. The rules are const data, each with a plain
 //! reason, so the same list can be applied by hand without the binary. No
 //! model runs here. When no rule is decisive the confidence is `low` and the
 //! caller may ask a small model for a second opinion.
@@ -580,8 +580,7 @@ fn facts_of((files, labels, author): PrPart, me: Option<&str>) -> Facts {
     }
 }
 
-/// Which change `review suggest` measures. The `--scope` flag that picks it
-/// arrives in the next change of this stack.
+/// Which change the rules measure, picked by `--scope`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, clap::ValueEnum)]
 #[serde(rename_all = "kebab-case")]
 #[value(rename_all = "kebab-case")]

@@ -2088,7 +2088,10 @@ pub enum ReviewCommand {
     /// stack is measured alone. A stack with more than 6 open PRs
     /// is answered deep without reading their files.
     ///
+    /// Hidden from the command list and removed in 1.0.0: use `pr review triage`.
+    ///
     /// Example: `playbook review suggest 4265 --json`
+    #[command(hide = true)]
     Suggest {
         /// PR number (default: the current branch against the default branch)
         pr: Option<String>,
@@ -2174,10 +2177,15 @@ pub enum ReviewTriageCommand {
 pub enum PrReviewCommand {
     /// Choose a quick or deep self-review for a PR
     ///
-    /// Asks a small model three times. Anything but a unanimous `quick`
-    /// becomes `deep`.
+    /// An empty diff or one over 60000 bytes is `deep`. Then the diff rules
+    /// run (size, risky paths, docs-only and similar, no model): at `high`
+    /// confidence their answer is final and prints `source=rules` with a
+    /// `signal:` line per reason. Otherwise a small model is asked three
+    /// times, and anything but a unanimous `quick` becomes `deep`
+    /// (`source=model`). `--model` skips the rules. A rules error prints a
+    /// `note:` line and falls through to the model.
     ///
-    /// Example: `playbook pr review triage --pr 12`
+    /// Example: `playbook pr review triage --pr 12 --scope stack`
     Triage {
         /// PR number (default: the current branch against its base)
         #[arg(long)]
@@ -2188,6 +2196,12 @@ pub enum PrReviewCommand {
         /// Work in this directory instead of the current one
         #[arg(long)]
         dir: Option<String>,
+        /// What the rules measure: this PR alone, or every open PR in its stack
+        #[arg(long, value_enum, default_value = "this-pr")]
+        scope: review::suggest::Scope,
+        /// Skip the diff rules and ask the model only
+        #[arg(long)]
+        model: bool,
     },
 }
 

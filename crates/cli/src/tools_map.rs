@@ -150,13 +150,6 @@ pub const TOOLS: &[Tool] = &[
         "review size --base main",
     ),
     t(
-        "review-suggest",
-        "review",
-        "suggest",
-        "",
-        "review suggest --json",
-    ),
-    t(
         "review-triage-merge",
         "review triage",
         "merge",

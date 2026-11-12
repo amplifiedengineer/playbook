@@ -4,7 +4,7 @@ Read this file only when the session's tool map lacks an intent. A recipe names 
 
 ## Contents
 
-`run-mode`, `config-get`, `route-model`, `pr-stack`, `review-suggest`, `effort-resolve`, `effort-choose`, `atlassian-check`, `pr-comments`, `pr-reply`, `handoff-template`, `Where we are now`, `Decisions made`, `Next steps`, `Open questions`, `handoff-facts`, `handoff-check`, `handoff-save`, `handoff-show`
+`run-mode`, `config-get`, `route-model`, `pr-stack`, `pr-review-triage`, `effort-resolve`, `effort-choose`, `atlassian-check`, `pr-comments`, `pr-reply`, `handoff-template`, `Where we are now`, `Decisions made`, `Next steps`, `Open questions`, `handoff-facts`, `handoff-check`, `handoff-save`, `handoff-show`
 
 ## run-mode
 
@@ -22,7 +22,7 @@ Spawn the agent the recipe names, with the model its agent file pins.
 
 Detect the stack by hand as `skills/grounding-review/references/stack-review.md` section 1 describes.
 
-## review-suggest
+## pr-review-triage
 
 Read `skills/grounding-review/references/review-routing.md` in this plugin and apply Part 1 by hand with plain `git` and `gh`. For the whole stack, Part 1 runs on the union of the open PRs' files. The same applies when the command fails, for example an older binary without `--scope` that exits 2.
 

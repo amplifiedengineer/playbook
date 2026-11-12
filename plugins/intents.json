@@ -200,10 +200,6 @@
     "required": false
   },
   {
-    "intent": "review-suggest",
-    "required": false
-  },
-  {
     "intent": "review-triage-merge",
     "required": false
   },

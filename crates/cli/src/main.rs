@@ -1651,11 +1651,27 @@ fn real_main() {
                     dir,
                 } => std::process::exit(run_pr_status(pr, json, flag, dir.as_deref())),
                 PrCommand::Review {
-                    sub: PrReviewCommand::Triage { pr, base, dir },
+                    sub:
+                        PrReviewCommand::Triage {
+                            pr,
+                            base,
+                            dir,
+                            scope,
+                            model,
+                        },
                 } => {
                     enter_dir("pr review triage", dir.as_deref());
+                    let pr_arg = pr.map(|n| n.to_string());
+                    let rules =
+                        |scope| review::suggest::run(pr_arg.as_deref(), base.as_deref(), scope);
                     let outcome = match pr::triage::collect(pr, base.as_deref()) {
-                        Ok(facts) => pr::triage::triage(&pr::triage::ClaudeRunner, &facts),
+                        Ok(facts) => pr::triage::triage(
+                            &pr::triage::ClaudeRunner,
+                            &rules,
+                            &facts,
+                            scope,
+                            model,
+                        ),
                         Err(err) => pr::triage::failed(format!("could not collect the PR: {err}")),
                     };
                     println!("{}", pr::triage::render(&outcome));

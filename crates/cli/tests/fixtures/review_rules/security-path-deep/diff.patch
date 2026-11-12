@@ -1,0 +1,6 @@
+diff --git a/src/auth/token.rs b/src/auth/token.rs
+--- a/src/auth/token.rs
++++ b/src/auth/token.rs
+@@ -1 +1 @@
+-old line
++new line

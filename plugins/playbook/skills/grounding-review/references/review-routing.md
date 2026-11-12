@@ -1,10 +1,10 @@
 # Review routing
 
-How `/playbook:review` picks a quick or a deep review. Load this file when the `review-suggest` tool is not in the session's tool map (Part 1), and when the answer comes back with low confidence (Part 2). With the tool and a high confidence answer, you do not need it. A test keeps the lists and cuts below in step with the tool.
+How `/playbook:review` picks a quick or a deep review. Load this file when the `pr-review-triage` tool is not in the session's tool map (Part 1), and when the answer comes back with low confidence (Part 2). With the tool and a high confidence answer, you do not need it. A test keeps the lists and cuts below in step with the tool.
 
 ## Part 1: the rules by hand
 
-These are the same rules `playbook review suggest` applies. Use them in order and stop at the first class that has a hit.
+These are the same rules `playbook pr review triage` applies. Use them in order and stop at the first class that has a hit.
 
 Gather the facts first. For the whole-stack scope, gather them for each open PR and apply every rule below to the union of the open PRs' files, adding the lines of a path that appears in more than one PR. Merged PRs are left out and closed PRs skipped. The answer is deep, high confidence, with the reason `<n> open PRs in the stack, over the limit of <max>.`, when the open PR count is over 6; fetch nothing more in that case. This `stack-over-budget` answer is the one outside the rule list. For a PR: `gh api --paginate repos/{owner}/{repo}/pulls/<n>/files` (each file has `filename`, `additions`, `deletions` and `status`, which is `renamed` for a move), `gh pr view <n> --json labels,author`, and `gh api /user -q .login` to see whether the PR is yours. For a local branch: `git diff -M --numstat origin/<default>...HEAD`, and the change counts as yours. Add the added and deleted lines of each file.
 

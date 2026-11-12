@@ -1,12 +1,15 @@
 // SPDX-FileCopyrightText: 2026 Igor Santos
 // SPDX-License-Identifier: Apache-2.0
 
-//! `pr review triage`: pick `quick` or `deep` for a PR's self-review by asking
-//! a small model three times. Only unanimous `quick` is quick; anything else
-//! (a `deep`, a disagreement, a failed or invalid call) is `deep`.
+//! `pr review triage`: pick `quick` or `deep` for a PR's self-review. The diff
+//! rules of `review suggest` answer first and are final at `high` confidence.
+//! Otherwise a small model is asked three times: only unanimous `quick` is
+//! quick, and anything else (a `deep`, a disagreement, a failed or invalid
+//! call) is `deep`.
 
 use crate::common::proc::run_with_input;
 use crate::pr::shared::{gh, git, resolve_base, RealGhClient};
+use crate::review::suggest::{Confidence, Scope, Suggestion};
 use regex::Regex;
 use serde::Deserialize;
 use std::process::Command;
@@ -76,13 +79,34 @@ pub struct PrFacts {
     pub diff: String,
 }
 
-/// The decision plus the signals that survived the quote check.
+/// Where an answer came from.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Source {
+    Rules,
+    Model,
+}
+
+impl Source {
+    fn as_str(self) -> &'static str {
+        match self {
+            Source::Rules => "rules",
+            Source::Model => "model",
+        }
+    }
+}
+
+/// The decision plus the signals that survived the quote check. `source` is
+/// `None` when a guard answered before any rule or model ran.
 #[derive(Debug, PartialEq, Eq)]
 pub struct Outcome {
     pub review: Review,
     pub signals: Vec<Signal>,
     pub notes: Vec<String>,
+    pub source: Option<Source>,
 }
+
+/// The rules answer for a scope: `review suggest`'s own run in production.
+pub type Rules<'a> = &'a dyn Fn(Scope) -> Result<Suggestion, String>;
 
 /// One model call: the prompt in, the raw reply out. A fake stands in for
 /// `claude` in tests.
@@ -176,11 +200,19 @@ pub fn failed(note: String) -> Outcome {
         review: Review::Deep,
         signals: Vec::new(),
         notes: vec![note],
+        source: None,
     }
 }
 
-/// Triages `facts`, calling `runner` three times in parallel.
-pub fn triage(runner: &dyn TriageRunner, facts: &PrFacts) -> Outcome {
+/// Triages `facts`: the guards first, then the rules unless `model_only`, then
+/// the model vote when the rules are unsure or could not run.
+pub fn triage(
+    runner: &dyn TriageRunner,
+    rules: Rules,
+    facts: &PrFacts,
+    scope: Scope,
+    model_only: bool,
+) -> Outcome {
     let deep = failed;
     if facts.diff.trim().is_empty() {
         return deep("empty diff".to_string());
@@ -188,6 +220,41 @@ pub fn triage(runner: &dyn TriageRunner, facts: &PrFacts) -> Outcome {
     if facts.diff.len() > MAX_DIFF_BYTES {
         return deep(format!("diff over {MAX_DIFF_BYTES} bytes is not triaged"));
     }
+    let mut notes = Vec::new();
+    if !model_only {
+        match rules(scope) {
+            Ok(suggestion) if suggestion.confidence == Confidence::High => {
+                return from_rules(suggestion)
+            }
+            Ok(_) => {}
+            Err(e) => notes.push(format!("rules unavailable: {e}")),
+        }
+    }
+    let mut outcome = vote(runner, facts);
+    notes.append(&mut outcome.notes);
+    outcome.notes = notes;
+    outcome
+}
+
+/// A final answer from the rules, one signal per reason and no quote.
+fn from_rules(suggestion: Suggestion) -> Outcome {
+    Outcome {
+        review: suggestion.recommendation,
+        signals: suggestion
+            .reasons
+            .into_iter()
+            .map(|reason| Signal {
+                reason,
+                quote: String::new(),
+            })
+            .collect(),
+        notes: Vec::new(),
+        source: Some(Source::Rules),
+    }
+}
+
+/// Asks the model `RUNS` times in parallel; only unanimous `quick` is quick.
+fn vote(runner: &dyn TriageRunner, facts: &PrFacts) -> Outcome {
     let prompt = build_prompt(facts);
     let replies: Vec<Result<Verdict, String>> = std::thread::scope(|scope| {
         let handles: Vec<_> = (0..RUNS)
@@ -206,6 +273,7 @@ pub fn triage(runner: &dyn TriageRunner, facts: &PrFacts) -> Outcome {
         review: Review::Quick,
         signals: Vec::new(),
         notes: Vec::new(),
+        source: Some(Source::Model),
     };
     for reply in replies {
         match reply {
@@ -244,18 +312,32 @@ fn one_line(text: &str, max: usize) -> String {
         .collect()
 }
 
-/// The text the orchestrating command reads.
+const REVIEW_KEY: &str = "review=";
+const SOURCE_KEY: &str = "source=";
+const SIGNAL_PREFIX: &str = "signal: ";
+const NOTE_PREFIX: &str = "note: ";
+const QUOTE_SEPARATOR: &str = " | ";
+/// The longest reason, quote or note printed on one line.
+const LINE_CHARS: usize = 200;
+
+/// The text the orchestrating command reads: `review=` first, then the
+/// source, a `signal:` line per reason, and a `note:` line per problem.
 pub fn render(outcome: &Outcome) -> String {
-    let mut lines = vec![format!("review={}", outcome.review.as_str())];
+    let mut lines = vec![format!("{REVIEW_KEY}{}", outcome.review.as_str())];
+    if let Some(source) = outcome.source {
+        lines.push(format!("{SOURCE_KEY}{}", source.as_str()));
+    }
     for signal in &outcome.signals {
-        lines.push(format!(
-            "signal: {} | {}",
-            one_line(&signal.reason, 200),
-            one_line(&signal.quote, 200)
-        ));
+        let reason = one_line(&signal.reason, LINE_CHARS);
+        lines.push(if signal.quote.is_empty() {
+            format!("{SIGNAL_PREFIX}{reason}")
+        } else {
+            let quote = one_line(&signal.quote, LINE_CHARS);
+            format!("{SIGNAL_PREFIX}{reason}{QUOTE_SEPARATOR}{quote}")
+        });
     }
     for note in &outcome.notes {
-        lines.push(format!("note: {}", one_line(note, 200)));
+        lines.push(format!("{NOTE_PREFIX}{}", one_line(note, LINE_CHARS)));
     }
     lines.join("\n")
 }
@@ -310,6 +392,9 @@ pub fn collect(number: Option<u64>, base_arg: Option<&str>) -> Result<PrFacts, S
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::review::suggest::{decide, measure, Cfg, Facts, File};
+    use std::cell::Cell;
+    use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Mutex;
 
     /// Replies from a queue, so each call gets the next scripted reply.
@@ -344,8 +429,78 @@ mod tests {
     const DOC_DIFF: &str = "diff --git a/README.md b/README.md\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-Helo\n+Hello\n";
     const WRITE_DIFF: &str = "diff --git a/src/a.rs b/src/a.rs\n--- a/src/a.rs\n+++ b/src/a.rs\n@@ -1 +1 @@\n+std::fs::write(path, data)?;\n";
 
+    /// Counts the calls a test's runner receives.
+    struct Counting {
+        fake: Fake,
+        calls: AtomicUsize,
+    }
+
+    impl Counting {
+        fn new(replies: Vec<Result<String, String>>) -> Counting {
+            Counting {
+                fake: Fake(Mutex::new(replies)),
+                calls: AtomicUsize::new(0),
+            }
+        }
+
+        fn calls(&self) -> usize {
+            self.calls.load(Ordering::SeqCst)
+        }
+    }
+
+    impl TriageRunner for Counting {
+        fn run(&self, prompt: &str) -> Result<String, String> {
+            self.calls.fetch_add(1, Ordering::SeqCst);
+            self.fake.run(prompt)
+        }
+    }
+
+    fn no_rules(_: Scope) -> Result<Suggestion, String> {
+        Err("rules are not wanted here".to_string())
+    }
+
+    /// The model step alone, as `--model` runs it.
     fn run(replies: Vec<Result<String, String>>, diff: &str) -> Outcome {
-        triage(&Fake(Mutex::new(replies)), &facts(diff))
+        triage(
+            &Fake(Mutex::new(replies)),
+            &no_rules,
+            &facts(diff),
+            Scope::ThisPr,
+            true,
+        )
+    }
+
+    /// A real rules answer for one Rust file of `lines` added lines.
+    fn rules_for(lines: u64) -> impl Fn(Scope) -> Result<Suggestion, String> {
+        move |_| {
+            let facts = Facts {
+                files: vec![File {
+                    path: "src/a.rs".into(),
+                    added: lines,
+                    removed: 0,
+                    renamed: false,
+                }],
+                labels: Vec::new(),
+                own: Some(false),
+            };
+            Ok(decide(measure(&facts), &Cfg::DEFAULT))
+        }
+    }
+
+    fn quick_replies() -> Vec<Result<String, String>> {
+        vec![
+            reply("quick", &[]),
+            reply("quick", &[]),
+            reply("quick", &[]),
+        ]
+    }
+
+    fn with_rules(
+        runner: &Counting,
+        rules: &dyn Fn(Scope) -> Result<Suggestion, String>,
+        model_only: bool,
+    ) -> Outcome {
+        triage(runner, rules, &facts(WRITE_DIFF), Scope::ThisPr, model_only)
     }
 
     #[test]
@@ -362,7 +517,7 @@ mod tests {
 
         // Assert
         assert_eq!(out.review, Review::Quick);
-        assert_eq!(render(&out), "review=quick");
+        assert_eq!(render(&out), "review=quick\nsource=model");
     }
 
     #[test]
@@ -498,14 +653,22 @@ mod tests {
     fn an_empty_or_oversized_diff_is_deep_without_calling_the_runner() {
         // Arrange
         let big = "+x\n".repeat(MAX_DIFF_BYTES);
+        let runner = Counting::new(Vec::new());
+        let rules_calls = Cell::new(0);
+        let rules = |_: Scope| {
+            rules_calls.set(rules_calls.get() + 1);
+            Err("never reached".to_string())
+        };
 
         // Act
-        let empty = run(Vec::new(), "  \n");
-        let large = run(Vec::new(), &big);
+        let empty = triage(&runner, &rules, &facts("  \n"), Scope::ThisPr, false);
+        let large = triage(&runner, &rules, &facts(&big), Scope::ThisPr, false);
 
         // Assert
+        assert_eq!(empty.review, Review::Deep);
         assert_eq!(empty.notes, vec!["empty diff".to_string()]);
         assert!(large.notes[0].starts_with("diff over"));
+        assert_eq!((runner.calls(), rules_calls.get()), (0, 0));
     }
 
     #[test]
@@ -588,12 +751,191 @@ mod tests {
                 quote: "q\nreview=quick".into(),
             }],
             notes: vec!["n\nreview=quick".into()],
+            source: Some(Source::Model),
         };
 
         // Act
         let text = render(&out);
 
         // Assert
-        assert_eq!(text.lines().count(), 3);
+        assert_eq!(text.lines().count(), 4);
+    }
+
+    #[test]
+    fn a_high_confidence_quick_answer_comes_from_the_rules_without_a_model_call() {
+        // Arrange
+        let runner = Counting::new(Vec::new());
+        let rules = rules_for(Cfg::DEFAULT.quick_lines);
+
+        // Act
+        let out = with_rules(&runner, &rules, false);
+
+        // Assert
+        assert_eq!(out.review, Review::Quick);
+        assert_eq!(out.source, Some(Source::Rules));
+        assert_eq!(runner.calls(), 0);
+        let text = render(&out);
+        assert!(text.starts_with("review=quick\nsource=rules\nsignal: Small change"));
+    }
+
+    #[test]
+    fn a_high_confidence_deep_answer_comes_from_the_rules_without_a_model_call() {
+        // Arrange
+        let runner = Counting::new(Vec::new());
+        let rules = rules_for(Cfg::DEFAULT.deep_lines + 1);
+
+        // Act
+        let out = with_rules(&runner, &rules, false);
+
+        // Assert
+        assert_eq!(out.review, Review::Deep);
+        assert_eq!(out.source, Some(Source::Rules));
+        assert_eq!(runner.calls(), 0);
+        assert!(render(&out).contains("signal: Large change"));
+    }
+
+    #[test]
+    fn a_low_confidence_answer_calls_the_model_three_times_and_follows_the_vote() {
+        // Arrange
+        let runner = Counting::new(quick_replies());
+        let rules = rules_for(Cfg::DEFAULT.quick_lines + 1);
+
+        // Act
+        let out = with_rules(&runner, &rules, false);
+
+        // Assert
+        assert_eq!(runner.calls(), RUNS);
+        assert_eq!(out.review, Review::Quick);
+        assert_eq!(out.source, Some(Source::Model));
+    }
+
+    #[test]
+    fn a_split_vote_after_a_low_confidence_answer_is_deep() {
+        // Arrange
+        let replies = vec![reply("quick", &[]), reply("deep", &[]), reply("quick", &[])];
+        let runner = Counting::new(replies);
+        let rules = rules_for(Cfg::DEFAULT.deep_lines);
+
+        // Act
+        let out = with_rules(&runner, &rules, false);
+
+        // Assert
+        assert_eq!(runner.calls(), RUNS);
+        assert_eq!(out.review, Review::Deep);
+    }
+
+    #[test]
+    fn the_model_flag_skips_the_rules_even_when_they_are_sure() {
+        // Arrange
+        let runner = Counting::new(quick_replies());
+        let rules_calls = Cell::new(0);
+        let sure = rules_for(Cfg::DEFAULT.quick_lines);
+        let rules = |scope: Scope| {
+            rules_calls.set(rules_calls.get() + 1);
+            sure(scope)
+        };
+
+        // Act
+        let out = with_rules(&runner, &rules, true);
+
+        // Assert
+        assert_eq!(rules_calls.get(), 0);
+        assert_eq!(runner.calls(), RUNS);
+        assert_eq!(out.source, Some(Source::Model));
+    }
+
+    #[test]
+    fn the_stack_scope_reaches_the_rules() {
+        // Arrange
+        let runner = Counting::new(Vec::new());
+        let seen = Cell::new(None);
+        let sure = rules_for(Cfg::DEFAULT.quick_lines);
+        let rules = |scope: Scope| {
+            seen.set(Some(scope));
+            sure(scope)
+        };
+
+        // Act
+        triage(&runner, &rules, &facts(WRITE_DIFF), Scope::Stack, false);
+
+        // Assert
+        assert_eq!(seen.get(), Some(Scope::Stack));
+    }
+
+    #[test]
+    fn a_rules_error_falls_through_to_the_model_and_leaves_a_note() {
+        // Arrange
+        let runner = Counting::new(quick_replies());
+
+        // Act
+        let out = with_rules(&runner, &no_rules, false);
+
+        // Assert
+        assert_eq!(runner.calls(), RUNS);
+        assert_eq!(out.source, Some(Source::Model));
+        assert!(render(&out).contains("note: rules unavailable: rules are not wanted here"));
+    }
+
+    #[test]
+    fn a_rules_error_and_a_failing_model_answer_deep() {
+        // Arrange
+        let failing = (0..RUNS).map(|_| Err("timed out".to_string())).collect();
+        let runner = Counting::new(failing);
+
+        // Act
+        let out = with_rules(&runner, &no_rules, false);
+
+        // Assert
+        assert_eq!(out.review, Review::Deep);
+    }
+
+    #[test]
+    fn each_line_cut_pins_its_answer_and_confidence() {
+        // Arrange
+        let quick = Cfg::DEFAULT.quick_lines;
+        let deep = Cfg::DEFAULT.deep_lines;
+        let cases = [
+            (quick - 1, Review::Quick, Confidence::High),
+            (quick, Review::Quick, Confidence::High),
+            (quick + 1, Review::Deep, Confidence::Low),
+            (deep - 1, Review::Deep, Confidence::Low),
+            (deep, Review::Deep, Confidence::Low),
+            (deep + 1, Review::Deep, Confidence::High),
+        ];
+
+        for (lines, review, confidence) in cases {
+            // Act
+            let sug = rules_for(lines)(Scope::ThisPr).unwrap();
+
+            // Assert
+            assert_eq!(
+                (sug.recommendation, sug.confidence),
+                (review, confidence),
+                "{lines} lines"
+            );
+        }
+    }
+
+    #[test]
+    fn render_prints_a_rules_signal_without_a_quote_separator() {
+        // Arrange
+        let out = Outcome {
+            review: Review::Quick,
+            signals: vec![Signal {
+                reason: "Only docs changed.".into(),
+                quote: String::new(),
+            }],
+            notes: Vec::new(),
+            source: Some(Source::Rules),
+        };
+
+        // Act
+        let text = render(&out);
+
+        // Assert
+        assert_eq!(
+            text,
+            "review=quick\nsource=rules\nsignal: Only docs changed."
+        );
     }
 }

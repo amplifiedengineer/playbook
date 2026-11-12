@@ -311,7 +311,6 @@ pub(crate) const META: &[Meta] = &[
     free("review checks"),
     free("review prepare"),
     ro("review size"),
-    ro("review suggest"),
     free("review triage"),
     ro("review triage merge"),
     ro("route").for_agents(),

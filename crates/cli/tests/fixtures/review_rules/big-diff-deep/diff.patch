@@ -1,0 +1,6 @@
+diff --git a/src/engine.rs b/src/engine.rs
+--- a/src/engine.rs
++++ b/src/engine.rs
+@@ -1 +1 @@
+-old line
++new line

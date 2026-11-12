@@ -1139,13 +1139,15 @@ Subcommands: `triage`
 
 Choose a quick or deep self-review for a PR
 
-Asks a small model three times. Anything but a unanimous `quick` becomes `deep`.
+An empty diff or one over 60000 bytes is `deep`. Then the diff rules run (size, risky paths, docs-only and similar, no model): at `high` confidence their answer is final and prints `source=rules` with a `signal:` line per reason. Otherwise a small model is asked three times, and anything but a unanimous `quick` becomes `deep` (`source=model`). `--model` skips the rules. A rules error prints a `note:` line and falls through to the model.
 
-Example: `playbook pr review triage --pr 12`
+Example: `playbook pr review triage --pr 12 --scope stack`
 
 - `--pr <PR>`: PR number (default: the current branch against its base)
 - `--base <BASE>`: Base branch when no PR number is given (default: the repo's default branch)
 - `--dir <DIR>`: Work in this directory instead of the current one
+- `--scope <SCOPE>`: What the rules measure: this PR alone, or every open PR in its stack (one of `this-pr`, `stack`)
+- `--model`: Skip the diff rules and ask the model only
 
 ### `playbook pr rules`
 
@@ -1198,7 +1200,7 @@ Example: `playbook prose check README.md`
 
 Run the mechanical steps behind the review commands
 
-Subcommands: `checks`, `prepare`, `size`, `suggest`, `triage`
+Subcommands: `checks`, `prepare`, `size`, `triage`
 
 ### `playbook review checks`
 
@@ -1234,22 +1236,6 @@ Example: `playbook review size --base main`
 - `--head <HEAD>`: Ref the diff ends at
 - `--all-lenses`: Always take the swarm path
 - `--dir <DIR>`: Repo directory to measure in. Defaults to the current directory
-
-### `playbook review suggest`
-
-Recommend a quick or a deep review from the diff
-
-Reads the changed files from git (the branch against the default branch, no network) or from `gh` when a PR number is given, and applies a fixed rule list: size, files, packages touched, risky paths (auth, crypto, secrets, CI, release, hooks, guards, migrations, dependencies, the command surface, plugin commands, skills and agents over the small cut), a security label, the test ratio, and changes that cannot alter behavior (docs, lock files, renames, tests). Prints `recommendation=quick|deep`, `confidence=high|low`, up to four `reason:` lines, a `signals:` line, a `scope=` line and, with `--scope stack`, a `stack:` line. Low confidence means no rule was decisive; the answer then leans quick for your own change (a local branch always is) and deep otherwise. Docs and lock file lines do not count toward size, and files outside crates, packages, apps, services, libs and plugins count together as one `root` package.
-
-`--scope stack` measures every open PR in the PR's stack together: merged PRs are left out, closed PRs are skipped, and a PR outside a stack is measured alone. A stack with more than 6 open PRs is answered deep without reading their files.
-
-Example: `playbook review suggest 4265 --json`
-
-- `<PR>`: PR number (default: the current branch against the default branch)
-- `--scope <SCOPE>`: What to measure: this PR alone, or every open PR in its stack (one of `this-pr`, `stack`)
-- `--base <BASE>`: Base branch when no PR number is given. Defaults to the repo's default branch; pass the parent branch for a stacked change
-- `--dir <DIR>`: Work in this directory instead of the current one
-- `--json`: Print JSON instead of text lines
 
 ### `playbook review triage`
 

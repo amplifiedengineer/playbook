@@ -39,11 +39,11 @@ Flags combine (`-Au`). After a rebase or amend it pushes with `--force-with-leas
 /playbook:review 4265           # PR #4265
 /playbook:review 4265 --deep    # no question, deep review
 /playbook:review --quick --self # no question, local quick review
-playbook review suggest 4265    # the recommendation alone, with its reasons
-playbook review suggest 4265 --scope stack   # measure every open PR in the stack together
+playbook pr review triage --pr 4265    # the depth alone, with its reasons
+playbook pr review triage --pr 4265 --scope stack   # measure every open PR in the stack together
 ```
 
-The triage is `playbook pr review triage`. It says quick only when three small model reads agree the change cannot break behavior, and deep otherwise, so a failed triage never lightens a review. The rule list that `playbook review suggest` uses is in the [review routing reference](../../plugins/playbook/skills/grounding-review/references/review-routing.md), and `review.suggest.*` config keys move its cuts, see [config keys](../reference/config-keys.md). In auto mode the command never waits.
+The triage is `playbook pr review triage`. An empty diff or one over 60000 bytes is deep. Then the diff rules run, with no model. When they are sure (high confidence) their answer is final and the output says `source=rules` with a `signal:` line per reason. Otherwise three small model reads decide (`source=model`). Quick comes from the rules at high confidence, or from three model reads that agree the change cannot break behavior. Anything else is deep, so a failed triage never lightens a review. Pass `--model` to skip the rules. The rule list is in the [review routing reference](../../plugins/playbook/skills/grounding-review/references/review-routing.md), and its cuts are fixed numbers. In auto mode the command never waits.
 
 With `--scope stack` the files of every open PR in the stack are measured together, so a stack of small PRs can be recommended deep when the whole is large. Merged PRs never count and are never reviewed or commented on, and closed PRs are skipped. A stack with more than 6 open PRs is answered deep without reading their files.
 
@@ -140,7 +140,7 @@ Six keys shape the PR flow and the commit trailer. Read one with `playbook confi
 | Key | Default | What it does |
 |---|---|---|
 | `pr.review.enabled` | `true` | `playbook:finish-pull-request` reviews the PR before it goes ready. |
-| `pr.review.type` | `auto` | Which review it runs: `deep`, `quick`, or `auto`. `auto` runs `playbook pr review triage`, which asks a small model three times and picks `quick` only when all three agree; any disagreement or failure runs `deep`. |
+| `pr.review.type` | `auto` | Which review it runs: `deep`, `quick`, or `auto`. `auto` runs `playbook pr review triage`, which runs the diff rules first and keeps their answer at high confidence. Otherwise it asks a small model three times and picks `quick` only when all three agree; any disagreement or failure runs `deep`. |
 | `pr.review.fix` | `false` | After the self-review, fixes every finding that survived the review's verification, pushes the fixes to the PR branch, and re-runs the scoped checks. |
 | `pr.merge.enabled` | `false` | After the review and fixes, marks the PR ready, waits until every check on the PR head is green, runs `gh pr merge <n> --auto`, then re-reads the PR and reports whether it merged, is queued, was rejected, or was closed. |
 | `commit.signOff` | `true` | Commits made through `/playbook:commit` carry a `Signed-off-by` trailer. |

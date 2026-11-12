@@ -44,8 +44,8 @@ const RULES: &[Rule] = &[
         ],
     },
     Rule {
-        label: "a whole stack without a flag gives deep",
-        phrases: &["A whole-stack scope without a flag is `deep`"],
+        label: "a whole stack is triaged with the stack scope",
+        phrases: &["add `--scope stack`"],
     },
     Rule {
         label: "the one Depth line",

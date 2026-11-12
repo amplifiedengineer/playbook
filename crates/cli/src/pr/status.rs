@@ -12,6 +12,8 @@
 use crate::config;
 use crate::json::envelope;
 use crate::pr::triage;
+use crate::review;
+use crate::review::suggest::Scope;
 use serde_json::{json, Value};
 
 pub const AUTO_REVIEW_ENABLED: &str = "pr.review.enabled";
@@ -329,14 +331,18 @@ impl StatusGh for RealGh {
     }
 }
 
-/// The real triage: collects the PR facts and asks `claude`.
+/// The real triage: collects the PR facts, applies the diff rules, and asks
+/// `claude` when they are unsure.
 pub struct RealTriager;
 
 impl Triager for RealTriager {
     fn review(&self, pr: u64) -> Result<triage::Review, String> {
         let facts = triage::collect(Some(pr), None)?;
         // A triage that cannot run already comes back as `deep`.
-        Ok(triage::triage(&triage::ClaudeRunner, &facts).review)
+        let pr_arg = pr.to_string();
+        let rules = |scope| review::suggest::run(Some(&pr_arg), None, scope);
+        let outcome = triage::triage(&triage::ClaudeRunner, &rules, &facts, Scope::ThisPr, false);
+        Ok(outcome.review)
     }
 }
 

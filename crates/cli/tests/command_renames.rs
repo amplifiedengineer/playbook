@@ -11,7 +11,13 @@ use playbook::Cli;
 
 /// Hidden legacy commands, each removed in 1.0.0. Add a row only when a
 /// command with a changed contract moves to a new name.
-const LEGACY_COMMANDS: &[&str] = &["commit all", "pr land", "pr ci-wait", "pr land-wait"];
+const LEGACY_COMMANDS: &[&str] = &[
+    "commit all",
+    "pr land",
+    "pr ci-wait",
+    "pr land-wait",
+    "review suggest",
+];
 
 fn find<'a>(root: &'a Command, path: &str) -> Option<&'a Command> {
     path.split(' ')
