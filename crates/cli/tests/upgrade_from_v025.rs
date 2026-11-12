@@ -509,12 +509,12 @@ fn the_first_run_step_skips_homeless_commands_and_does_nothing_after_a_downgrade
 
     // Act: commands that run without a home never heal.
     let version = h.playbook(&["version"], "");
-    let json = h.playbook(&["json", "valid-json"], "{}");
+    let completions = h.playbook(&["completions", "bash"], "");
 
     // Assert
     assert_eq!(version.status.code(), Some(0));
-    assert_eq!(json.status.code(), Some(0));
-    assert_eq!(String::from_utf8_lossy(&json.stderr), "");
+    assert_eq!(completions.status.code(), Some(0));
+    assert_eq!(String::from_utf8_lossy(&completions.stderr), "");
     assert_eq!(tree(&h.home), before);
 
     // Arrange: a home with a playbook folder and no record yet, as an

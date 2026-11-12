@@ -1092,15 +1092,6 @@ pub enum Command {
         #[arg(long)]
         json: bool,
     },
-    /// Small JSON helpers for shell scripts
-    ///
-    /// Reads JSON on stdin. Hidden from the command list, still works, and is
-    /// slated for removal.
-    #[command(hide = true)]
-    Json {
-        #[command(subcommand)]
-        sub: JsonCommand,
-    },
     /// Mark a directory as trusted in Claude Code
     ///
     /// Writes to `~/.claude.json` so Claude Code's first-launch trust prompt
@@ -1128,7 +1119,6 @@ impl Command {
                 | Command::Statusline
                 | Command::Version
                 | Command::Completions { .. }
-                | Command::Json { .. }
                 | Command::Commands { .. }
         )
     }
@@ -2576,108 +2566,6 @@ pub enum ReviewWorktreeCommand {
     },
 }
 
-/// `playbook json` subcommands. Each reads its JSON from stdin, as in
-/// `gh pr checks --json bucket | playbook json bucket-counts pass fail`.
-#[derive(Subcommand, Debug)]
-pub enum JsonCommand {
-    /// Count array items per `bucket` value, one `bucket=count` line each
-    BucketCounts {
-        /// Bucket names to count, such as `pass fail pending`
-        buckets: Vec<String>,
-    },
-    /// Print the length of a JSON array (0 for anything else)
-    ArrayLength,
-    /// Print one field of a flat JSON object (empty if missing)
-    Field {
-        /// Object key to read, such as `number`
-        key: String,
-    },
-    /// Print the session fields the status line needs, as `key=value` lines
-    SessionFields {
-        /// Directory to use when the input names none
-        pwd: String,
-    },
-    /// Reshape a raw GraphQL CI response into a `statusCheckRollup` object
-    GraphqlCiChecks {},
-    /// Print one line summarizing a `statusCheckRollup` array
-    ///
-    /// The line reads `state failed running total`.
-    CiRollup {},
-    /// Print the PR fields the status line needs, as `key=value` lines
-    PrFields {},
-    /// Drop system lines whose content matches a pattern
-    ///
-    /// Every other line passes through unchanged.
-    FilterSystemLines {
-        /// Regex tested against each system line's content
-        pattern: String,
-    },
-    /// Set every line's `sessionId` to a new value
-    ///
-    /// Lines with no string `sessionId` pass through unchanged.
-    RewriteSessionId {
-        /// New session id
-        new_sid: String,
-    },
-    /// Exit 0 if stdin is valid JSON, 1 otherwise
-    ValidJson,
-    /// Exit 0 if the value at a path is the expected string, 1 otherwise
-    FieldEquals {
-        /// Dot-separated path; a number indexes into an array
-        path: String,
-        /// Expected string value
-        expected: String,
-    },
-    /// Print the length of a field (item count or key count)
-    FieldLength {
-        /// Top-level field to measure
-        field: String,
-    },
-    /// Print a field's string value with no trailing newline
-    RawStringField {
-        /// Top-level field to read
-        key: String,
-    },
-    /// Print `.projects[project_path].field`
-    ProjectField {
-        /// Project path, used as the object key
-        project_path: String,
-        /// Field to read from that project's entry
-        field: String,
-    },
-    /// Check two JSON files hold the same data, ignoring key order
-    Equal {
-        /// First file
-        a: PathBuf,
-        /// Second file
-        b: PathBuf,
-        /// Top-level keys to ignore in both files, comma separated
-        #[arg(long, value_delimiter = ',')]
-        ignore_keys: Vec<String>,
-    },
-    /// Remove top-level keys from the input and print the result
-    RemoveKeys {
-        /// Top-level keys to remove
-        keys: Vec<String>,
-    },
-    /// Print the input's top-level keys, sorted, one per line
-    KeysSorted,
-    /// Add one key set to `true` and print the result
-    AddMarkerKey {
-        /// Key to set to `true`
-        key: String,
-    },
-    /// Print the repo's slice of a memory graph as markdown
-    ///
-    /// Prints nothing when the slice is empty.
-    MemoryContext {
-        /// Memory graph JSON file
-        graph_file: PathBuf,
-        /// Repo slug (`owner/name`) to scope facts to
-        repo: String,
-    },
-}
-
 // Kebab-case on the CLI, so a typo in the hook settings fails loudly.
 /// Every hook Claude Code can run.
 #[derive(ValueEnum, Debug, Clone, Copy)]
@@ -3048,7 +2936,7 @@ mod tests {
     }
 
     #[test]
-    fn json_and_hook_are_hidden_but_still_parse() {
+    fn hook_and_init_are_hidden_but_hook_still_parses() {
         // Arrange
         let cmd = Cli::command();
 
@@ -3062,10 +2950,7 @@ mod tests {
         // Assert
         let mut hidden = hidden;
         hidden.sort();
-        assert_eq!(hidden, ["hook", "init", "json"]);
-        assert!(Cli::command()
-            .try_get_matches_from(["playbook", "json", "array-length"])
-            .is_ok());
+        assert_eq!(hidden, ["hook", "init"]);
         assert!(Cli::command()
             .try_get_matches_from(["playbook", "hook", "session-init"])
             .is_ok());

@@ -717,7 +717,6 @@ mod tests {
             &["hook", "session-init"][..],
             &["statusline"],
             &["version"],
-            &["json", "valid-json"],
             &["usage", "warm"],
             &["migrate"],
             &["init", "--yes"],

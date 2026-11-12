@@ -11,9 +11,9 @@ use playbook::{
     storage, tools_map, trust, update, usage, worktree, AdrCommand, AgentsCommand,
     AtlassianCommand, CcCommand, Cli, Command, CommitCommand, ConfigCommand, DepsCommand,
     DocCommand, DoctorCommand, EvalCommand, GateCommand, GlossaryCommand, HandoffCommand,
-    JsonCommand, LearnCommand, ManifestCommand, MemoryCommand, ModeArg, ModeCommand, PlanCommand,
-    PluginCommand, PrCommand, ProseCommand, ReviewCommand, ReviewWorktreeCommand, SanitizeCommand,
-    SegmentCommand, SegmentTopology, SessionsCommand, SettingsCommand, SkillsCommand, ToolsCommand,
+    LearnCommand, ManifestCommand, MemoryCommand, ModeArg, ModeCommand, PlanCommand, PluginCommand,
+    PrCommand, ProseCommand, ReviewCommand, ReviewWorktreeCommand, SanitizeCommand, SegmentCommand,
+    SegmentTopology, SessionsCommand, SettingsCommand, SkillsCommand, ToolsCommand,
     WorktreeCommand,
 };
 use std::io::{IsTerminal, Read, Write};
@@ -191,7 +191,6 @@ fn real_main() {
         Command::Hook { .. }
             | Command::Version
             | Command::Completions { .. }
-            | Command::Json { .. }
             | Command::Commands { .. }
     ) {
         if let Some(message) = common::home_error(&common::home_dir()) {
@@ -2591,93 +2590,6 @@ fn real_main() {
                 println!("{count}");
             }
         },
-        Command::Json { sub } => {
-            let input = read_stdin_to_string();
-            match sub {
-                JsonCommand::BucketCounts { buckets } => {
-                    let names: Vec<&str> = buckets.iter().map(String::as_str).collect();
-                    for (bucket, count) in json::ghjson::bucket_counts(&input, &names) {
-                        println!("{bucket}={count}");
-                    }
-                }
-                JsonCommand::ArrayLength => {
-                    println!("{}", json::ghjson::array_length(&input));
-                }
-                JsonCommand::Field { key } => {
-                    println!("{}", json::ghjson::field(&input, &key));
-                }
-                JsonCommand::Equal { a, b, ignore_keys } => {
-                    let ignore_keys: Vec<&str> = ignore_keys.iter().map(String::as_str).collect();
-                    if let Err(message) = json::jsoncmp::json_equal(&a, &b, &ignore_keys) {
-                        eprintln!("{message}");
-                        std::process::exit(1);
-                    }
-                }
-                JsonCommand::RemoveKeys { keys } => {
-                    let keys: Vec<&str> = keys.iter().map(String::as_str).collect();
-                    println!("{}", json::settingsjson::remove_keys_print(&input, &keys));
-                }
-                JsonCommand::KeysSorted => {
-                    for key in json::keylist::top_level_keys_sorted(&input) {
-                        println!("{key}");
-                    }
-                }
-                JsonCommand::AddMarkerKey { key } => {
-                    println!("{}", json::settingsjson::add_marker_key_print(&input, &key));
-                }
-                JsonCommand::MemoryContext { graph_file, repo } => {
-                    let graph_json = std::fs::read_to_string(&graph_file).unwrap_or_default();
-                    let output = json::memorycontext::render_memory_context(&graph_json, &repo);
-                    if !output.is_empty() {
-                        println!("{output}");
-                    }
-                }
-                JsonCommand::SessionFields { pwd } => {
-                    print!("{}", json::statusline::session_fields(&input, &pwd));
-                }
-                JsonCommand::GraphqlCiChecks {} => {
-                    print!("{}", json::statusline::graphql_ci_checks(&input));
-                }
-                JsonCommand::CiRollup {} => {
-                    let (state, failed, running, total) = json::statusline::ci_rollup(&input);
-                    println!("{state} {failed} {running} {total}");
-                }
-                JsonCommand::PrFields {} => {
-                    print!("{}", json::statusline::pr_fields(&input));
-                }
-                JsonCommand::FilterSystemLines { pattern } => {
-                    print!("{}", json::jsonl::filter_system_lines(&input, &pattern));
-                }
-                JsonCommand::RewriteSessionId { new_sid } => {
-                    print!("{}", json::jsonl::rewrite_session_id(&input, &new_sid));
-                }
-                JsonCommand::ValidJson => {
-                    if !json::validate::is_valid_json(&input) {
-                        std::process::exit(1);
-                    }
-                }
-                JsonCommand::FieldEquals { path, expected } => {
-                    if !json::fieldeq::field_equals(&input, &path, &expected) {
-                        std::process::exit(1);
-                    }
-                }
-                JsonCommand::FieldLength { field } => {
-                    println!("{}", json::count::field_length(&input, &field));
-                }
-                JsonCommand::RawStringField { key } => {
-                    print!("{}", json::fields::string_field(&input, &key));
-                }
-                JsonCommand::ProjectField {
-                    project_path,
-                    field,
-                } => {
-                    println!(
-                        "{}",
-                        json::claudejson::project_field(&input, &project_path, &field)
-                    );
-                }
-            }
-        }
         Command::Trust { path } => {
             let _ = trust::run(&path);
         }

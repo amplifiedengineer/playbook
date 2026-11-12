@@ -771,7 +771,7 @@ mod tests {
         let root = tree();
         let text = overview();
         let json = render_json(&root, &[]).unwrap();
-        for name in ["init", "hook", "json"] {
+        for name in ["init", "hook"] {
             let listed = text.lines().any(|l| {
                 [" ", ":", "!"]
                     .iter()

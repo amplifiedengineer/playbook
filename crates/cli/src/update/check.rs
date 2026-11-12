@@ -958,11 +958,10 @@ mod tests {
     }
 
     #[test]
-    fn hooks_statusline_json_and_update_never_run_the_check() {
+    fn hooks_statusline_and_update_never_run_the_check() {
         for parts in [
             &["playbook", "hook", "session-init"][..],
             &["playbook", "statusline"],
-            &["playbook", "json", "memory-context", "g.json", "o/r"],
             &["playbook", "mode", "status", "--json"],
             &["playbook", "update", "--check"],
             &["playbook", "upgrade"],

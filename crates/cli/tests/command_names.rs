@@ -33,23 +33,6 @@ const LEGACY_HYPHENATED: &[&str] = &[
     "watch uninstall-service",
     "config apply-proposal",
     "config sync-files",
-    "json bucket-counts",
-    "json array-length",
-    "json session-fields",
-    "json graphql-ci-checks",
-    "json ci-rollup",
-    "json pr-fields",
-    "json filter-system-lines",
-    "json rewrite-session-id",
-    "json valid-json",
-    "json field-equals",
-    "json field-length",
-    "json raw-string-field",
-    "json project-field",
-    "json remove-keys",
-    "json keys-sorted",
-    "json add-marker-key",
-    "json memory-context",
 ];
 
 /// Paths under `cmd` (root excluded) that end in a hyphenated segment outside
@@ -173,5 +156,5 @@ fn legacy_list_has_no_stale_entries() {
 
     // Assert
     assert!(found.is_empty(), "stale legacy entries: {found:?}");
-    assert_eq!(LEGACY_HYPHENATED.len(), 39);
+    assert_eq!(LEGACY_HYPHENATED.len(), 22);
 }

@@ -454,38 +454,6 @@ fn hook_cases() -> Vec<Case> {
         }).collect()
 }
 
-/// The hidden `json` helpers, each fed the JSON a shell script would pipe in.
-#[rustfmt::skip]
-fn json_cases() -> Vec<Case> {
-    let j = |name: &str, extra: &[&str], stdin: &str| {
-        let mut args = vec!["json", name];
-        args.extend_from_slice(extra);
-        case(&format!("json {name}"), &args).stdin(stdin) }; vec![ j("bucket-counts", &["pass", "fail"], r#"[{"bucket":"pass"}]"#).out("pass=1"),
-        j("array-length", &[], "[1,2]").out("2"),
-        j("field", &["number"], r#"{"number":5}"#).out("5"),
-        j("session-fields", &["{CWD}"], "[]"),
-        j("graphql-ci-checks", &[], "{}"),
-        j("ci-rollup", &[], "{}"),
-        j("pr-fields", &[], "{}"),
-        j("filter-system-lines", &["x"], "{}"),
-        j("rewrite-session-id", &["abc"], "{}"),
-        j("valid-json", &[], "{}"),
-        j("field-equals", &["a", "1"], r#"{"a":"1"}"#),
-        j("field-length", &["a"], r#"{"a":[1]}"#),
-        j("raw-string-field", &["a"], r#"{"a":"x"}"#).out("x"),
-        j("project-field", &["{CWD}", "a"], "{}"),
-        j("equal", &["{ROOT}/a.json", "{ROOT}/a.json"], "").file("a.json", "{}"),
-        j("remove-keys", &["a"], r#"{"a":1,"b":2}"#),
-        j("keys-sorted", &[], r#"{"b":1,"a":2}"#),
-        j("add-marker-key", &["m"], "{}"),
-        j(
-            "memory-context",
-            &["{ROOT}/g.json", "test-owner/test-repo"],
-            "",
-        ).file("g.json", r#"{"nodes":[],"edges":[],"version":1}"#),
-    ]
-}
-
 #[allow(clippy::too_many_lines)]
 #[rustfmt::skip]
 fn table() -> Vec<Case> {
@@ -708,7 +676,6 @@ fn table() -> Vec<Case> {
         case("trust", &["trust"]).code(2).err("required arguments").err("Usage: playbook trust"),
         case("route", &["route"]).code(2).err("required arguments").err("Usage: playbook route"),
     ];
-    t.extend(json_cases());
     for kind in ["plans", "implement", "worktrees", "handoff", "data"] {
         t.push(case(&format!("path {kind}"), &["path", kind]).out("/.config/playbook/"));
     }
@@ -1063,4 +1030,18 @@ fn commands_also_run_outside_any_git_repository() {
         assert_eq!(r.code, 0, "{args:?}: {r:?}");
         assert!(r.stderr.is_empty(), "{args:?}: {r:?}");
     }
+}
+
+#[test]
+fn the_json_group_is_gone() {
+    // Arrange
+    let env = Env::new(false);
+    let args = ["json".to_string(), "field".to_string()];
+
+    // Act
+    let r = env.run(&args, "");
+
+    // Assert
+    assert_eq!(r.code, 2, "{r:?}");
+    assert!(r.stderr.contains("unrecognized subcommand 'json'"), "{r:?}");
 }
