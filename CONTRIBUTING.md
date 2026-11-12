@@ -103,6 +103,16 @@ A migration is named by a slug and the release that ships it ([ADR-0046](docs/ad
 
 ### Adding a command
 
+Name a command by these rules; tests in `crates/cli/tests/command_names.rs` check most of them:
+
+- Name it noun then verb, as in `playbook pr create`. Each segment is one lowercase word, and a path is at most four segments deep.
+- Use a hyphen only in a flag or a hook name, not in a command name.
+- Give each job one visible entry point, `playbook <noun>`. A `pb*` binary is a helper that users do not run, or a short alias of a `playbook` command. Do not add another one.
+- Do not add a new bare default for a noun. Name the verb.
+- A command an agent calls takes `--json`, prints the shared envelope, and exits 0 in that mode. Without `--json` it uses the shared codes table for its exit codes.
+- Move a command through `COMMAND_RENAMES` in `crates/cli/src/renames.rs`. When the contract changes too, keep the old name as a hidden legacy command with its own code and output, and remove it in 1.0.0.
+- In the user docs, name only primary names. Put a legacy name after a `<!-- names: legacy -->` line, or the docs test fails.
+
 `playbook commands` lists every visible command at run time, from the clap tree. It needs one line per command in `META` in `crates/cli/src/command_index.rs`:
 
 - `ro("path")` for a command that only reads, `free("path")` for one that changes the repo or playbook's own state, and `user("path")` for one only the user may run: it writes their home or Claude Code settings, asks for consent, runs a paid benchmark or starts a session.
@@ -114,6 +124,16 @@ A test walks the whole tree and fails when a visible command has no line, a line
 Write help text as the [CLI help text style guide](docs/reference/cli-help-style.md) says; a lint checks most of it. A PR that fixes an allowlisted item deletes its line in `crates/cli/tests/help_lint_allowlist/`.
 
 Renaming a command is a deprecation. Keep the old name as a hidden alias that runs the same code, prints one line on stderr in a terminal that names the new command, and keeps its exit codes. Since the old name keeps working, the commit is not marked breaking. Remove the alias no earlier than the next major release, and mark that removal as breaking. The rename to `playbook setup` is the example ([ADR-0040](docs/adr/0040-rename-init-to-setup.md)).
+
+### Adding a config key
+
+Think twice before you add one. A setting that no one changes is a constant, so put it in the code.
+
+- Add the key to `KNOWN_KEYS` in `crates/cli/src/config/keys.rs`, and raise `KEY_CEILING` in the same file by one. The count test fails until you do.
+- Give it a row in `docs/reference/config-keys.md` that says why a user would change it.
+- Keep the leaf short: one word, or one word and one capital hump, such as `maxLines`. Do not chain words like `stackMaxLines`. Put a group word in the path instead: `review.stack.maxLines`.
+- Use lowercase single-word groups, and at most four segments. A few existing groups use camelCase, and `COMPOUND_GROUPS` in the same file names them. Do not add to it.
+- Rename a key through `KEY_RENAMES`, so a stored value moves with it.
 
 ## Changing the plugin
 

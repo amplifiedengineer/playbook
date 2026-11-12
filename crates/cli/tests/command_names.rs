@@ -2,16 +2,25 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! New command names are one lowercase word per segment and at most four
-//! segments deep. Hyphenated paths that predate the rule are pinned in
-//! `LEGACY_HYPHENATED`; an entry whose command is gone must be removed.
+//! segments deep. The two hidden legacy commands that keep a hyphen are pinned
+//! in `LEGACY_HYPHENATED` until 1.0.0; an entry whose command is gone before
+//! then must be removed.
 
 use clap::Command;
 use std::path::Path;
 
 const MAX_DEPTH: usize = 4;
 
-/// Hyphenated command paths that exist today. Do not add to this list.
-const LEGACY_HYPHENATED: &[&str] = &["pr ci-wait", "pr land-wait"];
+/// Release that removes the legacy commands below.
+const REMOVAL: &str = "1.0.0";
+
+/// Hidden legacy commands that keep a hyphen, each with its removal release.
+/// Do not add to this list.
+const LEGACY_HYPHENATED: &[(&str, &str)] = &[("pr ci-wait", REMOVAL), ("pr land-wait", REMOVAL)];
+
+fn legacy_paths() -> Vec<&'static str> {
+    LEGACY_HYPHENATED.iter().map(|(path, _)| *path).collect()
+}
 
 /// Paths under `cmd` (root excluded) that end in a hyphenated segment outside
 /// `legacy`, or sit deeper than `MAX_DEPTH`.
@@ -115,7 +124,7 @@ fn real_tree_has_no_violations() {
     let cmd = playbook::parse::command();
 
     // Act
-    let found = violations(&cmd, LEGACY_HYPHENATED);
+    let found = violations(&cmd, &legacy_paths());
 
     // Assert
     assert!(
@@ -130,11 +139,14 @@ fn legacy_list_has_no_stale_entries() {
     let cmd = playbook::parse::command();
 
     // Act
-    let found = stale_entries(&cmd, LEGACY_HYPHENATED);
+    let found = stale_entries(&cmd, &legacy_paths());
 
     // Assert
     assert!(found.is_empty(), "stale legacy entries: {found:?}");
     assert_eq!(LEGACY_HYPHENATED.len(), 2);
+    assert!(LEGACY_HYPHENATED
+        .iter()
+        .all(|(_, removal)| *removal == "1.0.0"));
 }
 
 /// Helpers users never run.

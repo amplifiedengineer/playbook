@@ -4,6 +4,7 @@
 
 To see every change `playbook setup` makes before you agree to it, read [What setup installs](05-what-setup-installs.md) and the [hook reference](../reference/hooks.md).
 
+<!-- names: legacy -->
 Releases up to v0.34.0 have only the old name (older versions: `playbook init`). It takes the same flags, and it still works on newer releases ([ADR-0040](../adr/0040-rename-init-to-setup.md)).
 
 The first route to try is Homebrew. Use the install script when you have no Homebrew. This page covers every route (Homebrew, Nix, the install script and the raw release assets), requirements, how the binary reaches `PATH`, upgrades, the settings merge and uninstall.
@@ -235,8 +236,11 @@ The binary has no Authenticode signature. The attestation and `SHA256SUMS` are t
 | Install | Command |
 |---|---|
 | Homebrew | `brew upgrade playbook` |
-| Install script | `playbook upgrade`, or run the installer again (`--check` to look, `--list` for releases, `--pre` for pre-releases, `--yes` to skip the question, and to confirm in auto mode, `--json` for a report; `playbook update` is a hidden alias of the same command) |
+| Install script | `playbook upgrade`, or run the installer again (`--check` to look, `--list` for releases, `--pre` for pre-releases, `--yes` to skip the question, and to confirm in auto mode, `--json` for a report) |
 | Nix | `nix profile upgrade playbook` for a profile install, or `nix flake update` where the flake is an input |
+
+<!-- names: legacy -->
+`playbook update` is an older name for `playbook upgrade`, and still works.
 
 To update only the Claude Code plugin and its marketplace, run `playbook plugin upgrade`, then restart Claude Code or run /reload-plugins.
 

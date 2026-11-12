@@ -178,6 +178,7 @@ A stacked PR whose base is another open PR is not merged before its base. In aut
 
 `playbook pr create` commits, rebases, pushes and opens or updates the PR in one deterministic step, from any worktree, so a subagent can deliver its own work.
 
+<!-- names: legacy -->
 `playbook deliver` is the old name and still works until 1.0.0. With nothing staged, `pr create` commits nothing and opens the PR as before.
 
 ```bash

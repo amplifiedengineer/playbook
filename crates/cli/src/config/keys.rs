@@ -524,10 +524,6 @@ pub fn model_override_error(key: &str, value: &str) -> Option<String> {
     ))
 }
 
-/// Keys that predate the shape rule and keep their name until renamed.
-#[cfg(test)]
-const LEGACY_KEY_NAMES: &[&str] = &[];
-
 /// Non-leaf segments that are allowed to be camelCase.
 #[cfg(test)]
 const COMPOUND_GROUPS: &[&str] = &["proseLint", "policyGuard", "systemPrompt"];
@@ -642,20 +638,31 @@ mod tests {
         }
     }
 
+    fn shape_violators<'a>(keys: &[&'a str]) -> Vec<&'a str> {
+        keys.iter()
+            .copied()
+            .filter(|key| !follows_shape_rule(key))
+            .collect()
+    }
+
     #[test]
     fn key_names_follow_the_shape_rule() {
         // Arrange
-        let mut legacy: Vec<&str> = LEGACY_KEY_NAMES.to_vec();
         // Act
-        let mut violators: Vec<&str> = KNOWN_KEYS
-            .iter()
-            .copied()
-            .filter(|key| !follows_shape_rule(key))
-            .collect();
+        let violators = shape_violators(KNOWN_KEYS);
         // Assert
-        violators.sort_unstable();
-        legacy.sort_unstable();
-        assert_eq!(violators, legacy);
+        assert!(violators.is_empty(), "{violators:?}");
+    }
+
+    #[test]
+    fn a_chained_key_added_to_the_known_keys_is_reported() {
+        // Arrange
+        let mut keys = KNOWN_KEYS.to_vec();
+        keys.push("review.stackMaxLines");
+        // Act
+        let violators = shape_violators(&keys);
+        // Assert
+        assert_eq!(violators, vec!["review.stackMaxLines"]);
     }
 
     #[test]

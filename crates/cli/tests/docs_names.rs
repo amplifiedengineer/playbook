@@ -28,9 +28,9 @@ use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-/// Whether a legacy name fails. `false` until the rename chains land, then
-/// `true`.
-const ALIAS_IS_ERROR: bool = false;
+/// Whether a legacy name fails: a doc that names one outside a
+/// `<!-- names: legacy -->` block is an error.
+const ALIAS_IS_ERROR: bool = true;
 
 /// Old names that clap no longer knows, as a space joined command path after
 /// the program name (`"pr finish-context"`). The command rename table adds
@@ -613,6 +613,59 @@ mod synthetic {
         assert_eq!(strict.errors.len(), 1, "{strict:?}");
         let marked = run("<!-- names: legacy -->\n`tool gone`\n", true, &extra);
         assert_eq!(marked, Report::default());
+    }
+
+    #[test]
+    fn a_hidden_legacy_command_is_an_error_outside_the_marker_and_passes_after_it() {
+        // Arrange
+        let cli = Cli::command();
+        let slash = |_: &str| true;
+        let rules = |alias_is_error| Rules {
+            root: &cli,
+            alias_is_error,
+            legacy_extra: &[],
+            slash_exists: &slash,
+        };
+        let bare = "Run `playbook pr land` to merge.\n";
+        let marked = "<!-- names: legacy -->\nRun `playbook pr land` to merge.\n";
+
+        // Act
+        let lax = check_page("p.md", bare, &rules(false));
+        let strict = check_page("p.md", bare, &rules(true));
+        let after_marker = check_page("p.md", marked, &rules(true));
+
+        // Assert
+        assert!(lax.errors.is_empty() && lax.warnings.len() == 1, "{lax:?}");
+        assert_eq!(strict.errors.len(), 1, "{strict:?}");
+        assert_eq!(after_marker, Report::default());
+    }
+
+    #[test]
+    fn every_hidden_legacy_command_is_a_legacy_name_in_the_real_tree() {
+        // Arrange
+        let cli = Cli::command();
+        let slash = |_: &str| true;
+        let rules = Rules {
+            root: &cli,
+            alias_is_error: true,
+            legacy_extra: &[],
+            slash_exists: &slash,
+        };
+        let names = [
+            "pr land",
+            "pr ci-wait",
+            "pr land-wait",
+            "commit all",
+            "review suggest",
+        ];
+
+        for name in names {
+            // Act
+            let report = check_page("p.md", &format!("`playbook {name}`"), &rules);
+
+            // Assert
+            assert_eq!(report.errors.len(), 1, "{name}: {report:?}");
+        }
     }
 
     #[test]
