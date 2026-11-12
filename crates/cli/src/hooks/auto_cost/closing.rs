@@ -570,6 +570,8 @@ mod tests {
             "playbook segment unit start WU-1 --base abc --path /tmp/wt",
             "playbook segment unit integrate WU-1 --base abc --path /tmp/wt --branch feat/x --files a.rs",
             "playbook segment unit resume WU-1 --base abc",
+            "playbook plan graph check docs/plan.md",
+            "playbook plan wave next docs/plan.md --done WU-1,WU-2",
             "playbook pr review submit 12 99 --event comment --json",
             "playbook pr create --ready",
             "cargo build",
