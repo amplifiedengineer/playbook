@@ -340,7 +340,7 @@ fn a_budget_under_one_cent_is_rejected_with_a_clear_message() {
         json!(0.004),
         json!(0.009),
     ] {
-        assert_rejected("auto.budgetUsd", &value, "at least 0.01");
+        assert_rejected("auto.budget.mainUsd", &value, "at least 0.01");
     }
 }
 
@@ -359,7 +359,7 @@ fn a_usage_budget_takes_zero_or_more_dollars_and_nothing_else() {
 #[test]
 fn a_budget_of_a_cent_or_more_including_a_fractional_one_is_written() {
     for value in [json!(5), json!(1000), json!(0.5), json!(2.5), json!(0.01)] {
-        assert_written("auto.budgetUsd", &value);
+        assert_written("auto.budget.mainUsd", &value);
     }
 }
 
@@ -393,7 +393,7 @@ fn a_positive_integer_fix_threshold_is_written() {
 
 #[test]
 fn a_non_number_for_a_numeric_auto_or_fix_key_is_rejected_and_writes_nothing() {
-    for key in ["auto.budgetUsd", "fix.maxFiles", "fix.maxLines"] {
+    for key in ["auto.budget.mainUsd", "fix.maxFiles", "fix.maxLines"] {
         // Arrange
         let home = scratch_home("non-number");
 

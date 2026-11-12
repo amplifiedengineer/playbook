@@ -458,10 +458,14 @@ pub fn registry() -> Vec<Migration> {
 /// Moves every stored row of a renamed config key to its new name, in every
 /// tier. Where a scope already holds the new name, that row stays.
 fn rename_config_keys(ctx: &Ctx) -> Outcome {
+    move_renamed_rows(ctx, crate::config::keys::renames())
+}
+
+fn move_renamed_rows(ctx: &Ctx, renames: &[crate::config::keys::KeyRename]) -> Outcome {
     const STEP: &str = "config key names";
     let root = playbook_root_from(&ctx.home);
     let mut moved = 0;
-    for rename in crate::config::keys::renames() {
+    for rename in renames {
         match crate::config::store::rename_key(&root, rename.old, rename.new) {
             Ok(n) => moved += n,
             Err(err) => return Outcome::Failed(StepReport::failed(STEP, err.to_string())),
@@ -1921,21 +1925,26 @@ mod tests {
         rows
     }
 
+    /// The budget is stored and read under its old name, the way an older
+    /// binary left it: the value migration runs before the key rename.
+    const OLD_BUDGET_KEY: &str = "auto.budgetUsd";
+
     fn set_budget(home: &Path, usd: f64) {
-        crate::config::write::set(
+        crate::config::store::put(
+            &playbook_root_from(home),
             crate::config::write::Tier::Global,
-            "auto.budgetUsd",
-            &serde_json::Value::from(usd),
-            home,
             None,
+            OLD_BUDGET_KEY,
+            &serde_json::Value::from(usd),
         )
         .unwrap();
     }
 
     fn budget(home: &Path) -> String {
-        crate::config::resolve("auto.budgetUsd", home, None)
+        crate::config::store::lookup(&playbook_root_from(home), OLD_BUDGET_KEY, None)
             .unwrap()
-            .0
+            .global
+            .unwrap()
             .to_string()
     }
 
@@ -3556,5 +3565,59 @@ mod tests {
         assert!(matches!(entry.kind, Kind::Auto));
         assert!(matches!(entry.scope, Scope::Owned));
         assert_eq!(since, Since::Next);
+    }
+
+    #[test]
+    fn the_real_budget_and_effort_renames_move_global_and_repo_rows_once() {
+        use crate::config::keys::KEY_RENAMES;
+        use crate::config::{store, write};
+        let rows = [
+            ("auto.budgetUsd", "auto.budget.mainUsd", 12),
+            ("auto.agentBudgetUsd", "auto.budget.agentUsd", 6),
+            ("auto.sessionCeilingUsd", "auto.budget.ceilingUsd", 900),
+        ];
+        for (old, new, usd) in rows {
+            // Arrange
+            let h = home("rename-real-budget");
+            let root = playbook_root_from(&h);
+            let global = serde_json::json!(usd);
+            let repo = serde_json::json!(usd + 1);
+            store::put(&root, write::Tier::Global, None, old, &global).unwrap();
+            store::put(&root, write::Tier::Repo, Some("o/r"), old, &repo).unwrap();
+
+            // Act
+            let first = move_renamed_rows(&ctx(&h), KEY_RENAMES);
+            let second = move_renamed_rows(&ctx(&h), KEY_RENAMES);
+
+            // Assert
+            let found = store::lookup(&root, new, Some("o/r")).unwrap();
+            assert_eq!(found.global, Some(global), "{new}");
+            assert_eq!(found.repo, Some(repo), "{new}");
+            assert!(store::stored_values(&root, old).unwrap().is_empty());
+            assert!(matches!(first, Outcome::Done(ref r) if r.detail.contains('2')));
+            assert!(matches!(second, Outcome::Done(ref r) if r.detail.contains("no stored")));
+        }
+    }
+
+    #[test]
+    fn a_stored_old_default_budget_is_raised_first_and_then_lands_under_the_new_name() {
+        use crate::config::keys::KEY_RENAMES;
+        use crate::config::store;
+        // Arrange: the budget move runs before the rename, so it sees the old name
+        let h = home("rename-after-budget");
+        set_budget(&h, 5.0);
+
+        // Act
+        let raised = auto_budget_defaults(&ctx(&h));
+        let renamed = move_renamed_rows(&ctx(&h), KEY_RENAMES);
+
+        // Assert
+        assert!(matches!(raised, Outcome::Done(_)));
+        assert!(matches!(renamed, Outcome::Done(_)));
+        let found = store::lookup(&playbook_root_from(&h), "auto.budget.mainUsd", None).unwrap();
+        assert_eq!(
+            found.global,
+            Some(serde_json::json!(crate::config::keys::AUTO_BUDGET_USD))
+        );
     }
 }

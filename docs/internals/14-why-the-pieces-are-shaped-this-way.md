@@ -56,7 +56,7 @@ The rule behind the current values: **lower effort where the work is mechanical 
 
 ### Why an agent's effort is a parameter and not a separate agent
 
-The `Agent` tool takes an `effort` per call when a skill asks for it, and the `delegating-subagents` skill does. A role that needs two efforts (a small diff and a risky one) keeps one definition. Earlier releases rendered a variant of every agent per tier into a throwaway plugin, and a spawn by variant name skipped the ceiling check. One parameter on the base agent is the single place that sets the effort, so `maxEffortLevel` and `effort.agents.<name>` cap it before the spawn (see [ADR 0017](../adr/0017-per-component-effort-ceilings.md)).
+The `Agent` tool takes an `effort` per call when a skill asks for it, and the `delegating-subagents` skill does. A role that needs two efforts (a small diff and a risky one) keeps one definition. Earlier releases rendered a variant of every agent per tier into a throwaway plugin, and a spawn by variant name skipped the ceiling check. One parameter on the base agent is the single place that sets the effort, so `effort.max` and `effort.agents.<name>` cap it before the spawn (see [ADR 0017](../adr/0017-per-component-effort-ceilings.md)).
 
 | Command or key | What it does |
 |---|---|
@@ -67,7 +67,7 @@ The orchestrator then picks by diff size and risk, following the `delegating-sub
 
 ### Who decides the effort
 
-Playbook sets the defaults, in each file. You set the ceiling. Playbook has its own, the config key `maxEffortLevel` (same name and values as Claude Code's), set with `playbook effort <level>`. Claude Code has one too, `maxEffortLevel`, and Claude Code always has the last word. The lower of the two applies:
+Playbook sets the defaults, in each file. You set the ceiling. Playbook has its own, the config key `effort.max` (same values as Claude Code's `maxEffortLevel`), set with `playbook effort <level>`. Claude Code has one too, `maxEffortLevel`, and Claude Code always has the last word. The lower of the two applies:
 
 | Playbook | Claude Code | Result |
 |---|---|---|

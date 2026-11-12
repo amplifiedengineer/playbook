@@ -8,16 +8,16 @@
 use serde_json::{json, Value};
 use std::sync::LazyLock;
 
-/// The default `auto.budgetUsd`, the main session's spend cap in US dollars.
+/// The default `auto.budget.mainUsd`, the main session's spend cap in US dollars.
 /// Measured on 30 days of real sessions (ADR 0028, 2026-10-17 amendment): the
 /// main transcript of a session that spent $1 or more cost $199 at the 95th
 /// percentile.
 pub const AUTO_BUDGET_USD: u32 = 200;
-/// The default `auto.agentBudgetUsd`, each subagent's spend cap in US dollars.
+/// The default `auto.budget.agentUsd`, each subagent's spend cap in US dollars.
 /// 3 of 3,083 measured subagents cost more than this.
 pub const AUTO_AGENT_BUDGET_USD: u32 = 50;
-/// With `auto.sessionCeilingUsd` at 0, the whole tree's ceiling is this many
-/// times `auto.budgetUsd`.
+/// With `auto.budget.ceilingUsd` at 0, the whole tree's ceiling is this many
+/// times `auto.budget.mainUsd`.
 pub const AUTO_CEILING_FACTOR: u32 = 10;
 
 // The default ceiling stays above both default budgets, so neither budget
@@ -56,16 +56,16 @@ pub const KNOWN_KEYS: &[&str] = &[
     "pr.ticketPatterns",
     "worktreeCleanup.enabled",
     "mode",
-    "maxEffortLevel",
+    "effort.max",
     "effort.auto",
     "memory.source",
     "models.haiku",
     "models.sonnet",
     "models.opus",
     "routing.escalate",
-    "auto.budgetUsd",
-    "auto.agentBudgetUsd",
-    "auto.sessionCeilingUsd",
+    "auto.budget.mainUsd",
+    "auto.budget.agentUsd",
+    "auto.budget.ceilingUsd",
     "gate.maxRounds",
     "fix.maxFiles",
     "fix.maxLines",
@@ -191,6 +191,22 @@ pub const KEY_RENAMES: &[KeyRename] = &[
         old: "autoMerge.enabled",
         new: "pr.merge.enabled",
     },
+    KeyRename {
+        old: "maxEffortLevel",
+        new: "effort.max",
+    },
+    KeyRename {
+        old: "auto.budgetUsd",
+        new: "auto.budget.mainUsd",
+    },
+    KeyRename {
+        old: "auto.agentBudgetUsd",
+        new: "auto.budget.agentUsd",
+    },
+    KeyRename {
+        old: "auto.sessionCeilingUsd",
+        new: "auto.budget.ceilingUsd",
+    },
 ];
 
 /// The table unit tests run against, because the real one has no row that
@@ -277,12 +293,12 @@ pub const SHARED_KEYS: &[&str] = &[
     "usage.budget.monthlyUsd",
     "usage.budget.weeklyUsd",
     "usage.ui.layout",
-    "maxEffortLevel",
+    "effort.max",
     "effort.auto",
     "routing.escalate",
-    "auto.budgetUsd",
-    "auto.agentBudgetUsd",
-    "auto.sessionCeilingUsd",
+    "auto.budget.mainUsd",
+    "auto.budget.agentUsd",
+    "auto.budget.ceilingUsd",
     "pr.draft",
     "commit.signOff",
 ];
@@ -392,14 +408,14 @@ pub fn default_value(key: &str) -> Option<Value> {
         )])),
         "worktreeCleanup.enabled" => Some(Value::Bool(true)),
         "mode" => Some(Value::String("ask".to_string())),
-        "maxEffortLevel" => Some(Value::String("auto".to_string())),
+        "effort.max" => Some(Value::String("auto".to_string())),
         "effort.auto" => Some(Value::String("off".to_string())),
         "memory.source" => Some(Value::String("both".to_string())),
         "models.haiku" | "models.sonnet" | "models.opus" => Some(Value::String(String::new())),
         "routing.escalate" => Some(Value::String("auto".to_string())),
-        "auto.budgetUsd" => Some(Value::Number(AUTO_BUDGET_USD.into())),
-        "auto.agentBudgetUsd" => Some(Value::Number(AUTO_AGENT_BUDGET_USD.into())),
-        "auto.sessionCeilingUsd" => Some(Value::Number(0.into())),
+        "auto.budget.mainUsd" => Some(Value::Number(AUTO_BUDGET_USD.into())),
+        "auto.budget.agentUsd" => Some(Value::Number(AUTO_AGENT_BUDGET_USD.into())),
+        "auto.budget.ceilingUsd" => Some(Value::Number(0.into())),
         "gate.maxRounds" => Some(Value::Number(GATE_MAX_ROUNDS_DEFAULT.into())),
         "fix.maxFiles" => Some(Value::Number(3.into())),
         "fix.maxLines" => Some(Value::Number(500.into())),
@@ -443,7 +459,7 @@ pub fn allowed_enum_values(key: &str) -> Option<&'static [&'static str]> {
     match key {
         "pr.review.type" => Some(&["quick", "deep", "auto"]),
         "mode" => Some(&["ask", "auto"]),
-        "maxEffortLevel" => Some(&["auto", "low", "medium", "high", "xhigh", "max"]),
+        "effort.max" => Some(&["auto", "low", "medium", "high", "xhigh", "max"]),
         "memory.source" => Some(&["both", "playbook"]),
         "effort.auto" => Some(&["off", "suggest", "on"]),
         "routing.escalate" => Some(&["ask", "auto", "deny"]),
@@ -488,9 +504,6 @@ pub fn model_override_error(key: &str, value: &str) -> Option<String> {
 #[cfg(test)]
 const LEGACY_KEY_NAMES: &[&str] = &[
     "worktreeCleanup.enabled",
-    "maxEffortLevel",
-    "auto.agentBudgetUsd",
-    "auto.sessionCeilingUsd",
     "systemPrompt.enabled",
     "watch.maxCatchupHours",
     "watch.limits.actionsPerDay",
@@ -788,15 +801,15 @@ mod tests {
     #[test]
     fn the_auto_budgets_default_to_the_measured_caps_and_the_ceiling_to_zero() {
         assert_eq!(
-            default_value("auto.sessionCeilingUsd"),
+            default_value("auto.budget.ceilingUsd"),
             Some(Value::Number(0.into()))
         );
         assert_eq!(
-            default_value("auto.budgetUsd"),
+            default_value("auto.budget.mainUsd"),
             Some(Value::Number(200.into()))
         );
         assert_eq!(
-            default_value("auto.agentBudgetUsd"),
+            default_value("auto.budget.agentUsd"),
             Some(Value::Number(50.into()))
         );
     }

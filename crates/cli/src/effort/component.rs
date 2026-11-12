@@ -5,7 +5,7 @@
 //! command or a skill, and its ceiling comes from `effort.<kind>.<name>`.
 //!
 //! The ceiling for a component is the lowest of Claude Code's own
-//! `maxEffortLevel`, playbook's `maxEffortLevel` and the component's key. The
+//! `maxEffortLevel`, playbook's `effort.max` and the component's key. The
 //! effective effort is the lower of the shipped effort and that ceiling, so a
 //! ceiling never raises anything. For an agent the effective effort is the
 //! value the orchestrator passes as the `effort` parameter of the `Agent`
@@ -102,7 +102,7 @@ pub struct Resolution {
     pub model_cap: Option<String>,
     /// The component's own key, `auto` when unset.
     pub configured: String,
-    /// playbook's `maxEffortLevel`.
+    /// playbook's `effort.max`.
     pub global: String,
     pub claude: Option<String>,
     /// The lowest ceiling in play, `None` when nothing limits.
@@ -459,7 +459,7 @@ mod tests {
         .unwrap();
         let r = resolve(Kind::Agent, "critic", &home, None, Some(&root));
         assert_eq!(r.model_cap.as_deref(), Some("medium"));
-        set(&home, "maxEffortLevel", "medium");
+        set(&home, "effort.max", "medium");
         let r = resolve(Kind::Agent, "critic", &home, None, Some(&root));
         assert_eq!(
             r.ceiling.as_deref(),
@@ -506,7 +506,7 @@ mod tests {
         let (home, root) = plugin("cmp-global");
         write::set(
             Tier::Global,
-            "maxEffortLevel",
+            "effort.max",
             &Value::String("medium".into()),
             &home,
             None,
@@ -521,7 +521,7 @@ mod tests {
         let (home, root) = plugin("cmp-spawn-effort");
         write::set(
             Tier::Global,
-            "maxEffortLevel",
+            "effort.max",
             &Value::String("medium".into()),
             &home,
             None,
@@ -602,12 +602,12 @@ mod tests {
         // Claude Code's maxEffortLevel.
         let r = resolve(Kind::Agent, "reviewer", &home, Some("medium"), Some(&root));
         assert_eq!(r.to_json()["effort"], "medium");
-        // playbook's maxEffortLevel.
-        set(&home, "maxEffortLevel", "low");
+        // playbook's effort.max.
+        set(&home, "effort.max", "low");
         let r = resolve(Kind::Agent, "reviewer", &home, None, Some(&root));
         assert_eq!(r.to_json()["effort"], "low");
         // The per-agent key, with the global ceiling off again.
-        set(&home, "maxEffortLevel", "auto");
+        set(&home, "effort.max", "auto");
         set(&home, "effort.agents.reviewer", "medium");
         let r = resolve(Kind::Agent, "reviewer", &home, None, Some(&root));
         assert_eq!(r.to_json()["effort"], "medium");

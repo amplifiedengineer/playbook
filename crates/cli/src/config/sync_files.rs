@@ -131,7 +131,14 @@ mod tests {
         // Arrange
         let home = scratch_home("values");
         set(Tier::Global, "usage.theme", &json!("dark"), &home, None).unwrap();
-        set(Tier::Global, "auto.budgetUsd", &json!(150), &home, None).unwrap();
+        set(
+            Tier::Global,
+            "auto.budget.mainUsd",
+            &json!(150),
+            &home,
+            None,
+        )
+        .unwrap();
         set(
             Tier::Global,
             "docs.anydocPath",
@@ -149,7 +156,7 @@ mod tests {
         let doc = read(&home, VALUES_FILE);
         assert_eq!(
             doc,
-            json!({ "values": { "usage.theme": "dark", "auto.budgetUsd": "150" } })
+            json!({ "values": { "usage.theme": "dark", "auto.budget.mainUsd": "150" } })
         );
     }
 

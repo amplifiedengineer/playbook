@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! `auto-cost` budgets per agent, as seen from the real binary. The main
-//! session is held to `auto.budgetUsd` against its own transcript, each
-//! subagent to `auto.agentBudgetUsd` against its own, and the whole tree to
-//! `auto.sessionCeilingUsd` for new `Agent` spawns. The caller is named by the
+//! session is held to `auto.budget.mainUsd` against its own transcript, each
+//! subagent to `auto.budget.agentUsd` against its own, and the whole tree to
+//! `auto.budget.ceilingUsd` for new `Agent` spawns. The caller is named by the
 //! `agent_id` field of the hook input, and the closing steps stay allowed at
 //! every cap.
 
@@ -399,8 +399,8 @@ fn new_work_is_denied_at_a_cap_and_the_reason_names_the_unblocking_commands() {
     tree.spend_agent("a1", 5.0);
 
     for (agent, key) in [
-        (None, "auto.budgetUsd"),
-        (Some("a1"), "auto.agentBudgetUsd"),
+        (None, "auto.budget.mainUsd"),
+        (Some("a1"), "auto.budget.agentUsd"),
     ] {
         for (tool, command, label) in NEW_WORK {
             // Act
@@ -437,7 +437,7 @@ fn at_the_ceiling_every_caller_is_parked_and_the_closing_steps_continue() {
         for denied in [&spawn, &edit, &build] {
             let reason = denied.reason();
             assert!(
-                reason.contains("`playbook config set auto.sessionCeilingUsd 20`"),
+                reason.contains("`playbook config set auto.budget.ceilingUsd 20`"),
                 "{reason}"
             );
             assert!(reason.contains("`playbook mode ask`"), "{reason}");
@@ -461,7 +461,7 @@ fn a_main_cap_and_an_agent_cap_that_differ_each_apply_to_their_own_caller() {
     assert!(!main.is_denied(), "3.00 is under 8.00: {main:?}");
     let reason = agent.reason();
     assert!(reason.contains("$2.00"), "{reason}");
-    assert!(reason.contains("auto.agentBudgetUsd"), "{reason}");
+    assert!(reason.contains("auto.budget.agentUsd"), "{reason}");
 }
 
 #[test]
@@ -477,7 +477,7 @@ fn the_guard_still_denies_settings_for_a_parked_caller_and_an_unreadable_one() {
 
     for agent in ["a1", "u1"] {
         // Act
-        let set = tree.bash(Some(agent), "playbook config set auto.agentBudgetUsd 99");
+        let set = tree.bash(Some(agent), "playbook config set auto.budget.agentUsd 99");
         let ask = tree.bash(Some(agent), "playbook mode ask");
 
         // Assert
@@ -578,11 +578,11 @@ fn the_default_caps_allow_the_spend_the_old_five_dollar_cap_denied() {
 fn the_default_caps_still_park_a_caller_past_its_new_cap() {
     // Arrange: rows are (caller, spend, the command the reason names)
     let rows = [
-        (None, 200.0, "`playbook config set auto.budgetUsd 400`"),
+        (None, 200.0, "`playbook config set auto.budget.mainUsd 400`"),
         (
             Some("a1"),
             50.0,
-            "`playbook config set auto.agentBudgetUsd 100`",
+            "`playbook config set auto.budget.agentUsd 100`",
         ),
     ];
     for (n, (agent, usd, command)) in rows.into_iter().enumerate() {
@@ -620,7 +620,7 @@ fn an_invalid_agent_budget_falls_back_to_fifty_with_a_one_time_note() {
     let Outcome::Note(note) = first else {
         panic!("the first call must note the invalid budget, got {first:?}");
     };
-    assert!(note.contains("auto.agentBudgetUsd"), "{note}");
+    assert!(note.contains("auto.budget.agentUsd"), "{note}");
     assert!(note.contains("$50.00"), "{note}");
     assert!(!second.is_denied(), "{second:?}");
     assert!(at_cap.reason().contains("budget reached"), "{at_cap:?}");
@@ -644,7 +644,7 @@ fn the_default_ceiling_is_ten_times_the_default_main_cap() {
     let reason = over.reason();
     assert!(reason.contains("$2000.00"), "{reason}");
     assert!(
-        reason.contains("`playbook config set auto.sessionCeilingUsd 4000`"),
+        reason.contains("`playbook config set auto.budget.ceilingUsd 4000`"),
         "{reason}"
     );
 }
@@ -685,9 +685,9 @@ fn the_new_keys_are_locked_like_the_other_auto_keys() {
     // Arrange
     let tree = Tree::new("self-protection", 5.0, 5.0, 100.0);
     let commands = [
-        "playbook config set auto.agentBudgetUsd 100",
-        "playbook config set --global auto.sessionCeilingUsd 1000",
-        "playbook config set auto.budgetUsd 100",
+        "playbook config set auto.budget.agentUsd 100",
+        "playbook config set --global auto.budget.ceilingUsd 1000",
+        "playbook config set auto.budget.mainUsd 100",
     ];
 
     for agent in [None, Some("a1")] {

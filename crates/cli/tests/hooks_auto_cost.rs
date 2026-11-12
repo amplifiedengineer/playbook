@@ -93,7 +93,7 @@ impl Session {
         Session { s, sid, env }
     }
 
-    /// Rewrites the global config with the given `auto.budgetUsd`, keeping
+    /// Rewrites the global config with the given `auto.budget.mainUsd`, keeping
     /// the mode the session was built with.
     fn seed_budget(&self, budget_usd: &Value) {
         self.seed_auto(json!({"budgetUsd": budget_usd}));
@@ -1515,9 +1515,9 @@ fn the_default_main_cap_allows_five_to_twenty_dollars_and_denies_at_two_hundred(
     let denied = session.bash("npm test");
     let reason = denied.reason("200.00 reaches the cap");
     assert!(reason.contains("$200.00"), "reason: {reason}");
-    assert!(reason.contains("`auto.budgetUsd`"), "reason: {reason}");
+    assert!(reason.contains("`auto.budget.mainUsd`"), "reason: {reason}");
     assert!(
-        reason.contains("`playbook config set auto.budgetUsd 400`"),
+        reason.contains("`playbook config set auto.budget.mainUsd 400`"),
         "reason: {reason}"
     );
 }
@@ -1544,7 +1544,7 @@ fn an_invalid_budget_in_the_config_falls_back_to_the_default_with_a_one_time_not
         let Outcome::Note(note) = first else {
             panic!("{invalid}: the first call must warn about the budget, got {first:?}");
         };
-        assert!(note.contains("auto.budgetUsd"), "{invalid}: {note}");
+        assert!(note.contains("auto.budget.mainUsd"), "{invalid}: {note}");
         assert!(note.contains("0.01"), "{invalid}: {note}");
         assert!(note.contains("$200.00"), "{invalid}: {note}");
         assert_eq!(second, Outcome::Silent, "{invalid}: the note is one-time");
@@ -1878,7 +1878,7 @@ fn mode_switches_and_guarded_config_writes_are_denied_in_auto_under_the_cap() {
     let guarded = [
         "playbook mode ask",
         "playbook mode auto",
-        "playbook config set auto.budgetUsd 1000",
+        "playbook config set auto.budget.mainUsd 1000",
         "playbook config set auto.warnPct 100",
         "playbook config set auto.anything 1",
         "playbook config set fix.maxFiles 99",
@@ -1891,7 +1891,7 @@ fn mode_switches_and_guarded_config_writes_are_denied_in_auto_under_the_cap() {
         "playbook config set mode auto",
         "playbook config set --global mode ask",
         "playbook config set mode ask --org",
-        "playbook config set --org auto.budgetUsd 1000",
+        "playbook config set --org auto.budget.mainUsd 1000",
     ];
     for (from, source) in both_sources() {
         let session = Session::under_budget(&format!("guard-{source}"), from);
@@ -1916,7 +1916,7 @@ fn read_only_mode_and_config_commands_and_near_misses_are_not_denied() {
         "playbook mode status",
         "playbook mode status --json",
         "playbook config get mode",
-        "playbook config get auto.budgetUsd",
+        "playbook config get auto.budget.mainUsd",
         "playbook config list",
         "playbook config set other.key x",
         "playbook config set pr.review.enabled false",
@@ -1960,7 +1960,7 @@ fn a_guarded_invocation_anywhere_in_the_command_string_is_denied() {
         "cd x && playbook mode ask",
         "cd x; playbook mode auto",
         "true || playbook config set mode ask",
-        "echo hi | playbook config set auto.budgetUsd 1000",
+        "echo hi | playbook config set auto.budget.mainUsd 1000",
         "echo hi\nplaybook mode ask",
         "echo hi\r\nplaybook mode ask",
         "playbook   mode   ask",
@@ -1976,7 +1976,7 @@ fn a_guarded_invocation_anywhere_in_the_command_string_is_denied() {
         "/usr/local/bin/playbook mode ask",
         "./target/debug/playbook config set fix.maxFiles 99",
         "playbook mode ask --extra",
-        "playbook config set \\\nauto.budgetUsd 1000",
+        "playbook config set \\\nauto.budget.mainUsd 1000",
         "playbook \\\nmode auto",
         "playbook \\\n  mode auto",
         "playbook mode \\\nask",
@@ -1985,7 +1985,7 @@ fn a_guarded_invocation_anywhere_in_the_command_string_is_denied() {
         "echo \"a $(echo \"b\") c\"; playbook mode ask",
         r#"playbook mode "ask""#,
         r#"playbook mode 'auto'"#,
-        r#"playbook config set "auto.budgetUsd" 1000"#,
+        r#"playbook config set "auto.budget.mainUsd" 1000"#,
         "playbook config set 'mode' ask",
         "'playbook' mode ask",
         r#""playbook" mode ask"#,
@@ -2009,9 +2009,9 @@ fn a_guarded_invocation_anywhere_in_the_command_string_is_denied() {
         "timeout 5 playbook mode ask",
         "timeout -s KILL 5 playbook mode ask",
         "sudo playbook mode ask",
-        "sudo -u root playbook config set auto.budgetUsd 100",
+        "sudo -u root playbook config set auto.budget.mainUsd 100",
         "sudo env -i nice timeout 9 playbook mode auto",
-        "cargo run -- config set auto.budgetUsd 100",
+        "cargo run -- config set auto.budget.mainUsd 100",
         "cargo run -q --release -- mode ask",
         "cargo r -- config set mode ask",
         "PLAYBOOK mode ask",
@@ -2043,11 +2043,11 @@ fn a_guarded_word_that_is_not_a_leading_playbook_invocation_is_not_denied() {
         "ls; echo mode ask",
         "playbook mode status && echo mode ask",
         r#"git commit -m "docs: explain it; playbook mode ask turns it off""#,
-        "git commit -m 'fix: x && playbook config set auto.budgetUsd 1000'",
+        "git commit -m 'fix: x && playbook config set auto.budget.mainUsd 1000'",
         r#"echo "playbook mode ask""#,
         r#"echo 'a | playbook mode auto'"#,
         r#"git commit -m "a (playbook mode ask) b""#,
-        "cat <<EOF\nplaybook config set auto.budgetUsd 10\nEOF",
+        "cat <<EOF\nplaybook config set auto.budget.mainUsd 10\nEOF",
         "git commit -m \"$(cat <<'EOF'\nsay \"playbook mode ask\" (twice)\nEOF\n)\"",
         "cat <<'EOF' > notes.md\nplaybook mode ask\nEOF",
         "cat <<-EOF\n\tplaybook mode ask\n\tEOF",
@@ -2184,7 +2184,7 @@ fn ask_mode_leaves_self_protection_commands_and_config_writes_alone() {
             ("Bash", json!({"command": "cd x && playbook mode ask"})),
             (
                 "Bash",
-                json!({"command": "playbook config set auto.budgetUsd 1000"}),
+                json!({"command": "playbook config set auto.budget.mainUsd 1000"}),
             ),
             ("Write", json!({"file_path": config_file})),
             ("Edit", json!({"file_path": config_file})),

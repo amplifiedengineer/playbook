@@ -974,8 +974,8 @@ mod tests {
     fn a_line_continuation_joins_lines_without_starting_a_word() {
         let table = [
             (
-                "playbook config set \\\nauto.budgetUsd 1000",
-                vec!["playbook", "config", "set", "auto.budgetUsd", "1000"],
+                "playbook config set \\\nauto.budget.mainUsd 1000",
+                vec!["playbook", "config", "set", "auto.budget.mainUsd", "1000"],
             ),
             ("playbook \\\nmode auto", vec!["playbook", "mode", "auto"]),
             ("playbook \\\n  mode auto", vec!["playbook", "mode", "auto"]),

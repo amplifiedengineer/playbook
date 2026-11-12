@@ -451,14 +451,14 @@ fn set_global(home: &Path, key: &str, value: &str) -> Output {
 fn set_rejects_an_out_of_range_auto_or_fix_value_with_a_clear_message_and_writes_nothing() {
     // Arrange: (key, value, what the message must say)
     let rows = [
-        ("auto.budgetUsd", "0", "at least 0.01"),
-        ("auto.budgetUsd", "-5", "at least 0.01"),
-        ("auto.budgetUsd", "0.004", "at least 0.01"),
-        ("auto.budgetUsd", "abc", "auto.budgetUsd"),
-        ("auto.agentBudgetUsd", "0", "at least 0.01"),
-        ("auto.agentBudgetUsd", "0.004", "at least 0.01"),
-        ("auto.sessionCeilingUsd", "-1", "at least 0.01"),
-        ("auto.sessionCeilingUsd", "0.004", "at least 0.01"),
+        ("auto.budget.mainUsd", "0", "at least 0.01"),
+        ("auto.budget.mainUsd", "-5", "at least 0.01"),
+        ("auto.budget.mainUsd", "0.004", "at least 0.01"),
+        ("auto.budget.mainUsd", "abc", "auto.budget.mainUsd"),
+        ("auto.budget.agentUsd", "0", "at least 0.01"),
+        ("auto.budget.agentUsd", "0.004", "at least 0.01"),
+        ("auto.budget.ceilingUsd", "-1", "at least 0.01"),
+        ("auto.budget.ceilingUsd", "0.004", "at least 0.01"),
         ("fix.maxFiles", "0", "positive integer"),
         ("fix.maxLines", "0", "positive integer"),
     ];
@@ -485,11 +485,11 @@ fn set_rejects_an_out_of_range_auto_or_fix_value_with_a_clear_message_and_writes
 fn set_writes_valid_auto_and_fix_values_including_a_fractional_budget() {
     // Arrange
     let rows = [
-        ("auto.budgetUsd", "2.5"),
-        ("auto.agentBudgetUsd", "0.5"),
-        ("auto.sessionCeilingUsd", "0"),
-        ("auto.sessionCeilingUsd", "200"),
-        ("auto.sessionCeilingUsd", "4000"),
+        ("auto.budget.mainUsd", "2.5"),
+        ("auto.budget.agentUsd", "0.5"),
+        ("auto.budget.ceilingUsd", "0"),
+        ("auto.budget.ceilingUsd", "200"),
+        ("auto.budget.ceilingUsd", "4000"),
         ("watch.limits.usdPerDay", "0.5"),
         ("fix.maxFiles", "99"),
         ("fix.maxLines", "1"),
@@ -514,44 +514,44 @@ fn set_keeps_a_set_session_ceiling_at_or_above_both_budgets() {
     let rows: [Row; 8] = [
         (
             &[],
-            ("auto.sessionCeilingUsd", "199.99"),
+            ("auto.budget.ceilingUsd", "199.99"),
             false,
-            "below auto.budgetUsd (200)",
+            "below auto.budget.mainUsd (200)",
         ),
-        (&[], ("auto.sessionCeilingUsd", "200"), true, ""),
+        (&[], ("auto.budget.ceilingUsd", "200"), true, ""),
         (
-            &[("auto.budgetUsd", "10")],
-            ("auto.sessionCeilingUsd", "40"),
+            &[("auto.budget.mainUsd", "10")],
+            ("auto.budget.ceilingUsd", "40"),
             false,
-            "below auto.agentBudgetUsd (50)",
+            "below auto.budget.agentUsd (50)",
         ),
         (
-            &[("auto.budgetUsd", "10"), ("auto.agentBudgetUsd", "5")],
-            ("auto.sessionCeilingUsd", "40"),
+            &[("auto.budget.mainUsd", "10"), ("auto.budget.agentUsd", "5")],
+            ("auto.budget.ceilingUsd", "40"),
             true,
             "",
         ),
         (
-            &[("auto.sessionCeilingUsd", "300")],
-            ("auto.budgetUsd", "301"),
+            &[("auto.budget.ceilingUsd", "300")],
+            ("auto.budget.mainUsd", "301"),
             false,
             "Raise the ceiling first",
         ),
         (
-            &[("auto.sessionCeilingUsd", "300")],
-            ("auto.agentBudgetUsd", "300"),
+            &[("auto.budget.ceilingUsd", "300")],
+            ("auto.budget.agentUsd", "300"),
             true,
             "",
         ),
         (
-            &[("auto.sessionCeilingUsd", "300")],
-            ("auto.agentBudgetUsd", "300.01"),
+            &[("auto.budget.ceilingUsd", "300")],
+            ("auto.budget.agentUsd", "300.01"),
             false,
-            "above auto.sessionCeilingUsd (300)",
+            "above auto.budget.ceilingUsd (300)",
         ),
         (
-            &[("auto.sessionCeilingUsd", "0")],
-            ("auto.budgetUsd", "5000"),
+            &[("auto.budget.ceilingUsd", "0")],
+            ("auto.budget.mainUsd", "5000"),
             true,
             "",
         ),
@@ -595,14 +595,14 @@ fn setting_a_budget_checks_only_that_budget_against_the_ceiling() {
         &root,
         playbook::config::write::Tier::Global,
         None,
-        "auto.sessionCeilingUsd",
+        "auto.budget.ceilingUsd",
         &serde_json::json!(30),
     )
     .expect("seed");
 
     // Act
-    let lower_agent = set_global(&home, "auto.agentBudgetUsd", "10");
-    let lower_main = set_global(&home, "auto.budgetUsd", "10");
+    let lower_agent = set_global(&home, "auto.budget.agentUsd", "10");
+    let lower_main = set_global(&home, "auto.budget.mainUsd", "10");
 
     // Assert: lowering a budget under the ceiling always works
     assert!(lower_agent.status.success(), "{}", stderr_of(&lower_agent));
@@ -615,8 +615,8 @@ fn a_global_write_is_checked_inside_the_repo_and_outside_any_repo() {
     let repo = seeded_repo("cap-order-tiers");
     let home = scratch_dir("cap-order-tiers-home");
     for (key, value) in [
-        ("auto.sessionCeilingUsd", "1000"),
-        ("auto.budgetUsd", "300"),
+        ("auto.budget.ceilingUsd", "1000"),
+        ("auto.budget.mainUsd", "300"),
     ] {
         let out = run_playbook(&repo, &home, &["config", "set", key, value]);
         assert!(out.status.success(), "{key}: {}", stderr_of(&out));
@@ -624,15 +624,15 @@ fn a_global_write_is_checked_inside_the_repo_and_outside_any_repo() {
     let global_ceiling = run_playbook(
         &repo,
         &home,
-        &["config", "set", "--global", "auto.sessionCeilingUsd", "250"],
+        &["config", "set", "--global", "auto.budget.ceilingUsd", "250"],
     );
-    let outside = set_global(&home, "auto.sessionCeilingUsd", "250");
+    let outside = set_global(&home, "auto.budget.ceilingUsd", "250");
 
     // Act: a global budget above the global ceiling, written from the repo
     let global_budget = run_playbook(
         &repo,
         &home,
-        &["config", "set", "--global", "auto.budgetUsd", "800"],
+        &["config", "set", "--global", "auto.budget.mainUsd", "800"],
     );
 
     // Assert: the repo's own budget of 300 refuses a global ceiling of 250
@@ -641,14 +641,14 @@ fn a_global_write_is_checked_inside_the_repo_and_outside_any_repo() {
         !global_ceiling.status.success(),
         "a repo budget of 300 is above 250"
     );
-    assert!(stderr_of(&global_ceiling).contains("below auto.budgetUsd (300)"));
+    assert!(stderr_of(&global_ceiling).contains("below auto.budget.mainUsd (300)"));
     assert!(outside.status.success(), "{}", stderr_of(&outside));
     // The repo ceiling of 1000 does not hide the global ceiling of 250
     assert!(
         !global_budget.status.success(),
         "800 is above the global 250"
     );
-    assert!(stderr_of(&global_budget).contains("above auto.sessionCeilingUsd (250)"));
+    assert!(stderr_of(&global_budget).contains("above auto.budget.ceilingUsd (250)"));
 }
 
 #[test]

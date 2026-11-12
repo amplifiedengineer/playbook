@@ -75,8 +75,8 @@ pub enum ConfigError {
         constraint: &'static str,
     },
     /// A spend cap and the session ceiling would be out of order: a set
-    /// `auto.sessionCeilingUsd` below `auto.budgetUsd` or
-    /// `auto.agentBudgetUsd`. `reason` says which and how to fix it.
+    /// `auto.budget.ceilingUsd` below `auto.budget.mainUsd` or
+    /// `auto.budget.agentUsd`. `reason` says which and how to fix it.
     CapOrder {
         key: String,
         value: String,
@@ -184,7 +184,7 @@ pub fn adopt_late_config(home: &Path) -> Vec<String> {
 /// An auto spend cap or ceiling in whole cents, the way the spend hook reads
 /// it: a number rounded to cents, kept only when it is above 0. `None` means
 /// the hook uses the built-in default instead (or, for the ceiling, ten times
-/// `auto.budgetUsd`).
+/// `auto.budget.mainUsd`).
 pub fn auto_cap_cents(value: &Value) -> Option<i64> {
     value
         .as_f64()

@@ -7,13 +7,20 @@
 //! migrate` and through the first run of any command. Any other value stays,
 //! and a store that holds no budget gets no write.
 
-use playbook::config::write::{set, Tier};
+use playbook::config::store;
+use playbook::config::write::Tier;
 use serde_json::{json, Value};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
 const SLUG: &str = "acme/app";
+const READ_KEYS: [&str; 4] = [
+    "fix.maxFiles",
+    "auto.budgetUsd",
+    "auto.agentBudgetUsd",
+    "auto.sessionCeilingUsd",
+];
 
 fn scratch(tag: &str) -> PathBuf {
     let home = std::env::temp_dir().join(format!(
@@ -44,14 +51,33 @@ fn root(home: &Path) -> PathBuf {
     playbook::common::paths::playbook_root_from(home)
 }
 
+/// The stored rows, read under the old names the migration still works on:
+/// the key rename waits for the next release, so export leaves them out.
 fn stored(home: &Path) -> Value {
-    playbook::config::store::export(&root(home)).unwrap()
+    let root = root(home);
+    let mut global = serde_json::Map::new();
+    let mut repo = serde_json::Map::new();
+    let mut org = serde_json::Map::new();
+    for key in READ_KEYS {
+        let found = store::lookup(&root, key, Some(SLUG)).unwrap();
+        for (map, value) in [
+            (&mut global, found.global),
+            (&mut repo, found.repo),
+            (&mut org, found.org),
+        ] {
+            if let Some(value) = value {
+                map.insert(key.to_string(), value);
+            }
+        }
+    }
+    json!({ "global": global, "repos": { SLUG: repo }, "orgs": { "acme": org } })
 }
 
 /// Seeds the store the way an older binary left it, without running this one.
+/// The keys are stored as given, so a row can sit under an old name.
 fn seed(home: &Path, rows: &[(Tier, &str, Value)]) {
     for (tier, key, value) in rows {
-        set(*tier, key, &value.clone(), home, Some(SLUG)).unwrap();
+        store::put(&root(home), *tier, Some(SLUG), key, value).unwrap();
     }
 }
 

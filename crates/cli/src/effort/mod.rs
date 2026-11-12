@@ -3,8 +3,8 @@
 
 //! `playbook effort`: playbook's own ceiling on effort.
 //!
-//! The config key `maxEffortLevel` (`auto`, `low`, `medium`, `high`, `xhigh`,
-//! `max`) is playbook's setting, named like Claude Code's own key. `auto` is
+//! The config key `effort.max` (`auto`, `low`, `medium`, `high`, `xhigh`,
+//! `max`) is playbook's setting. `auto` is
 //! the default: playbook sets no ceiling and Claude Code's applies. `max` sets
 //! none either, since nothing is above it. Playbook only ever reads Claude
 //! Code's key and never writes to its settings files.
@@ -34,7 +34,7 @@ use std::path::{Path, PathBuf};
 pub const LIMIT: &str = "playbook's ceiling lowers the effort an orchestrator passes when it spawns an agent, the launcher's default effort and what the binary reports. It does not cap a command or skill that ships its own effort, a spawn that skips the resolve step, or a level you state for the session (--effort, effortLevel, CLAUDE_CODE_EFFORT_LEVEL, /effort), because only Claude Code's maxEffortLevel setting can, and playbook never writes it";
 
 /// The config key.
-pub const KEY: &str = "maxEffortLevel";
+pub const KEY: &str = "effort.max";
 
 /// Every accepted value: `auto`, then Claude Code's set, lowest first.
 pub const LEVELS: [&str; 6] = ["auto", "low", "medium", "high", "xhigh", "max"];
@@ -162,10 +162,10 @@ pub fn run_set(home: &Path, level: &str) -> Result<String, String> {
     )
     .map_err(|err| err.to_string())?;
     Ok(if level == "auto" || level == "max" {
-        format!("maxEffortLevel set to {level}, playbook sets no ceiling and Claude Code's applies")
+        format!("effort.max set to {level}, playbook sets no ceiling and Claude Code's applies")
     } else {
         format!(
-            "playbook maxEffortLevel set to {level}. The effort passed to a spawned agent and the launcher's default effort stay at or below it, \
+            "playbook effort.max set to {level}. The effort passed to a spawned agent and the launcher's default effort stay at or below it, \
              and never above your Claude Code maxEffortLevel. Claude Code's settings are not changed. {LIMIT}."
         )
     })
@@ -190,7 +190,7 @@ pub fn run_status(home: &Path, claude_home: &Path, cwd: &Path, json: bool) -> St
         .to_string();
     }
     format!(
-        "playbook maxEffortLevel: {}\nClaude Code maxEffortLevel: {}\neffective ceiling: {} ({winner})",
+        "playbook effort.max: {}\nClaude Code maxEffortLevel: {}\neffective ceiling: {} ({winner})",
         c.playbook,
         c.claude.as_deref().unwrap_or("none"),
         c.effective
@@ -301,7 +301,7 @@ mod tests {
         .unwrap();
         run_set(&home, "xhigh").unwrap();
         let s = run_status(&home, &claude, &home, false);
-        assert!(s.contains("playbook maxEffortLevel: xhigh"), "{s}");
+        assert!(s.contains("playbook effort.max: xhigh"), "{s}");
         assert!(s.contains("Claude Code maxEffortLevel: medium"), "{s}");
         assert!(s.contains("effective ceiling: medium (claude-code)"), "{s}");
         let j: Value = serde_json::from_str(&run_status(&home, &claude, &home, true)).unwrap();

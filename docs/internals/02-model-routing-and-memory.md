@@ -28,7 +28,7 @@ Design work uses `/playbook:plan` and `/playbook:adr`, not the built-in plan mod
 | `implement` (`--tier low\|medium\|high`) | sonnet, low, medium or high | `implementer` |
 | `design` | opus, xhigh | `critic` (stress-tests the design at its own Sonnet medium; the design itself runs in the command on Opus) |
 
-Approval is needed for the top model, the high implement tier, and a task that has failed twice (`--failures 2`). `routing.escalate` decides what happens then: `ask` tells the orchestrator to ask you, `auto` (default) proceeds (auto mode and `auto.budgetUsd` still cap the spend), `deny` returns the next cheaper route. Your effort ceiling always wins. `--json` prints the decision for scripts.
+Approval is needed for the top model, the high implement tier, and a task that has failed twice (`--failures 2`). `routing.escalate` decides what happens then: `ask` tells the orchestrator to ask you, `auto` (default) proceeds (auto mode and `auto.budget.mainUsd` still cap the spend), `deny` returns the next cheaper route. Your effort ceiling always wins. `--json` prints the decision for scripts.
 
 ### auto-model-detect
 
@@ -127,7 +127,7 @@ The Haiku 5.5 evaluation (#576) found `xhigh` costs 2x `medium` for the same pas
 - Haiku roles stop at `medium` by default.
 - A role may go up to `xhigh` only when it has an entry in `OPT_INS` with a recorded reason. No role has one today.
 
-The cap is a ceiling like the others. The lowest ceiling wins, your `maxEffortLevel` still beats it when lower, and it never raises anything. It applies in `playbook effort resolve`, in the variants `playbook cc` and `playbook ccd` render, and it shows in `playbook effort list` and `playbook doctor models`.
+The cap is a ceiling like the others. The lowest ceiling wins, your Claude Code `maxEffortLevel` still beats it when lower, and it never raises anything. It applies in `playbook effort resolve`, in the variants `playbook cc` and `playbook ccd` render, and it shows in `playbook effort list` and `playbook doctor models`.
 
 An agent runs at its own effort unless the orchestrator passes another `effort` on the `Agent` call, chosen by ceiling, diff size and risk. Do not request xhigh or max on your own for anything else. If a deployment rejects it, omit the parameter.
 
@@ -163,7 +163,7 @@ The candidates are the levels at or under every ceiling, so the result is an `ef
 - Every call in `suggest` or `on` mode appends a row to `effort/auto.log`.
 - `resolve` keeps its contract, so `choose` is a separate lookup.
 
-No new ceiling key was added: the patch works inside the existing ceilings (`maxEffortLevel` and `effort.<kind>.<name>`, ADR-0017).
+No new ceiling key was added: the patch works inside the existing ceilings (`effort.max` and `effort.<kind>.<name>`, ADR-0017).
 
 ### Model tiers and the 5.5 rule
 

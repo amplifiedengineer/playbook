@@ -106,7 +106,7 @@ fn xhigh_under_a_claude_code_max_is_playbooks_to_apply() {
     .unwrap();
     assert!(h.run(&["effort", "xhigh"]).status.success());
     let body = text(&h.run(&["effort"]));
-    assert!(body.contains("playbook maxEffortLevel: xhigh"), "{body}");
+    assert!(body.contains("playbook effort.max: xhigh"), "{body}");
     assert!(body.contains("Claude Code maxEffortLevel: max"), "{body}");
     assert!(
         body.contains("effective ceiling: xhigh (playbook)"),
@@ -136,11 +136,11 @@ fn a_lower_claude_code_ceiling_wins_in_the_status() {
 fn config_set_accepts_the_key_and_rejects_a_bad_value() {
     let h = Home::new("config");
     assert!(h
-        .run(&["config", "set", "--global", "maxEffortLevel", "xhigh"])
+        .run(&["config", "set", "--global", "effort.max", "xhigh"])
         .status
         .success());
     assert!(!h
-        .run(&["config", "set", "--global", "maxEffortLevel", "huge"])
+        .run(&["config", "set", "--global", "effort.max", "huge"])
         .status
         .success());
 }
@@ -290,7 +290,7 @@ fn the_plain_effort_status_still_works_next_to_the_subcommands() {
     let h = Home::new("component-compat");
     let out = h.run(&["effort"]);
     assert!(out.status.success(), "{}", text(&out));
-    assert!(text(&out).contains("playbook maxEffortLevel"));
+    assert!(text(&out).contains("playbook effort.max"));
     assert!(h.run(&["effort", "high"]).status.success());
 }
 

@@ -136,17 +136,19 @@ pub(crate) fn validate_key_and_value(key: &str, value: &Value) -> Result<(), Con
     Ok(())
 }
 
-const CEILING_KEY: &str = "auto.sessionCeilingUsd";
+const MAIN_BUDGET_KEY: &str = "auto.budget.mainUsd";
+const AGENT_BUDGET_KEY: &str = "auto.budget.agentUsd";
+const CEILING_KEY: &str = "auto.budget.ceilingUsd";
 const BUDGET_KEYS: [(&str, u32); 2] = [
-    ("auto.budgetUsd", keys::AUTO_BUDGET_USD),
-    ("auto.agentBudgetUsd", keys::AUTO_AGENT_BUDGET_USD),
+    (MAIN_BUDGET_KEY, keys::AUTO_BUDGET_USD),
+    (AGENT_BUDGET_KEY, keys::AUTO_AGENT_BUDGET_USD),
 ];
 
-/// Keep a set `auto.sessionCeilingUsd` at least as large as `auto.budgetUsd`
-/// and `auto.agentBudgetUsd`, since a lower ceiling parks every agent before
+/// Keep a set `auto.budget.ceilingUsd` at least as large as `auto.budget.mainUsd`
+/// and `auto.budget.agentUsd`, since a lower ceiling parks every agent before
 /// its own cap is reached. Setting the ceiling checks it against both
 /// budgets; setting a budget checks only that budget against the ceiling. A
-/// ceiling of 0 means ten times `auto.budgetUsd` and is not checked. The
+/// ceiling of 0 means ten times `auto.budget.mainUsd` and is not checked. The
 /// other keys are read the way the spend hook reads them, as they resolve
 /// for `repo_slug`, and for a global write also as they resolve outside any
 /// repo, since a global value reaches every repo.
@@ -183,7 +185,7 @@ fn check_cap_order(
                 let budget = cents(budget_key).unwrap_or(i64::from(*default) * 100);
                 (budget > ceiling).then(|| {
                     format!(
-                        "it is below {budget_key} ({}). Set it to 0 (ten times auto.budgetUsd) or to at least {}",
+                        "it is below {budget_key} ({}). Set it to 0 (ten times {MAIN_BUDGET_KEY}) or to at least {}",
                         usd(budget),
                         usd(budget)
                     )
@@ -193,7 +195,7 @@ fn check_cap_order(
             let budget = super::auto_cap_cents(value).unwrap_or(i64::from(budget_default) * 100);
             cents(CEILING_KEY).filter(|ceiling| budget > *ceiling).map(|ceiling| {
                 format!(
-                    "it is above auto.sessionCeilingUsd ({}). Raise the ceiling first with `playbook config set auto.sessionCeilingUsd <usd>`, or set it to 0 (ten times auto.budgetUsd)",
+                    "it is above {CEILING_KEY} ({}). Raise the ceiling first with `playbook config set {CEILING_KEY} <usd>`, or set it to 0 (ten times {MAIN_BUDGET_KEY})",
                     usd(ceiling)
                 )
             })
@@ -215,7 +217,7 @@ fn usd(cents: i64) -> String {
     text.trim_end_matches('0').trim_end_matches('.').to_string()
 }
 
-/// `auto.budgetUsd` and `auto.agentBudgetUsd` take any number of at least one cent, since the spend cap
+/// `auto.budget.mainUsd` and `auto.budget.agentUsd` take any number of at least one cent, since the spend cap
 /// is held in whole cents, so a fractional budget works.
 /// `usage.budget.*Usd` takes any number from 0 (no budget).
 /// The `fix.` and `review.stack`
@@ -223,15 +225,15 @@ fn usd(cents: i64) -> String {
 fn validate_number(key: &str, value: &Value) -> Result<(), ConfigError> {
     let whole = value.as_i64();
     let (valid, constraint) = match key {
-        "auto.budgetUsd" | "auto.agentBudgetUsd" => (
+        MAIN_BUDGET_KEY | AGENT_BUDGET_KEY => (
             value.as_f64().is_some_and(|n| n.is_finite() && n >= 0.01),
             "a number of at least 0.01",
         ),
-        "auto.sessionCeilingUsd" => (
+        CEILING_KEY => (
             value
                 .as_f64()
                 .is_some_and(|n| n.is_finite() && (n == 0.0 || n >= 0.01)),
-            "0 (ten times auto.budgetUsd) or a number of at least 0.01 that is not below auto.budgetUsd or auto.agentBudgetUsd",
+            "0 (ten times auto.budget.mainUsd) or a number of at least 0.01 that is not below auto.budget.mainUsd or auto.budget.agentUsd",
         ),
         "usage.budget.monthlyUsd" | "usage.budget.weeklyUsd" => (
             value

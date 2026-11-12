@@ -567,7 +567,7 @@ fn no_effort_or_config_path_writes_claude_settings_or_passes_settings() {
 
     set_effort(&e, "low");
     let out = Command::new(env!("CARGO_BIN_EXE_playbook"))
-        .args(["config", "set", "--global", "maxEffortLevel", "low"])
+        .args(["config", "set", "--global", "effort.max", "low"])
         .current_dir(&e.work)
         .env("HOME", &e.home)
         .output()

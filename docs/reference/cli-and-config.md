@@ -25,16 +25,16 @@ Set a key with `playbook config set <key> <value>` and read it with `playbook co
 | `pr.ticketPatterns` | `["[A-Z][A-Z0-9]+-[0-9]+"]` | see the config keys page |
 | `worktreeCleanup.enabled` | `true` | `true`, `false` |
 | `mode` | `ask` | `ask`, `auto` |
-| `maxEffortLevel` | `auto` | `auto`, `low`, `medium`, `high`, `xhigh`, `max` |
+| `effort.max` | `auto` | `auto`, `low`, `medium`, `high`, `xhigh`, `max` |
 | `effort.auto` | `off` | `off`, `suggest`, `on` |
 | `memory.source` | `both` | `both`, `playbook` |
 | `models.haiku` | empty | empty, or `claude-<tier>-<major>[-<minor>]` for that tier |
 | `models.sonnet` | empty | empty, or `claude-<tier>-<major>[-<minor>]` for that tier |
 | `models.opus` | empty | empty, or `claude-<tier>-<major>[-<minor>]` for that tier |
 | `routing.escalate` | `auto` | `ask`, `auto`, `deny` |
-| `auto.budgetUsd` | `200` | a number, see the config keys page for the range |
-| `auto.agentBudgetUsd` | `50` | a number, see the config keys page for the range |
-| `auto.sessionCeilingUsd` | `0` | a number, see the config keys page for the range |
+| `auto.budget.mainUsd` | `200` | a number, see the config keys page for the range |
+| `auto.budget.agentUsd` | `50` | a number, see the config keys page for the range |
+| `auto.budget.ceilingUsd` | `0` | a number, see the config keys page for the range |
 | `gate.maxRounds` | `5` | a number, see the config keys page for the range |
 | `fix.maxFiles` | `3` | a number, see the config keys page for the range |
 | `fix.maxLines` | `500` | a number, see the config keys page for the range |
@@ -563,7 +563,7 @@ Set playbook's own ceiling on effort, or inspect one component's
 
 `playbook effort list` shows every command, skill and agent with its shipped effort and effective level. `playbook effort resolve agents reviewer` says which agent file to dispatch under the ceilings. Set a per-component ceiling with `playbook config set --global effort.agents.reviewer medium`. `playbook effort suggest` reads your usage and lists agents where a change looks safe or needed.
 
-`auto` (the default) sets no ceiling, so Claude Code's own `maxEffortLevel` decides how high effort may go. Each skill, command and agent still keeps the effort it ships with. `low`, `medium`, `high`, `xhigh` or `max` set playbook's own ceiling. The key is `maxEffortLevel`, named like Claude Code's. The effective ceiling is the lower of this and Claude Code's own `maxEffortLevel`, which playbook only reads and never changes. Sessions started with `playbook cc` or `playbook ccd` get the ceiling. With no level, shows both values and the one that wins.
+`auto` (the default) sets no ceiling, so Claude Code's own `maxEffortLevel` decides how high effort may go. Each skill, command and agent still keeps the effort it ships with. `low`, `medium`, `high`, `xhigh` or `max` set playbook's own ceiling. The key is `effort.max`. The effective ceiling is the lower of this and Claude Code's own `maxEffortLevel`, which playbook only reads and never changes. Sessions started with `playbook cc` or `playbook ccd` get the ceiling. With no level, shows both values and the one that wins.
 
 The ceiling lowers the `effort` an orchestrator passes when it spawns an agent, the default effort the launcher adds and what the binary reports. It does not cap a command or skill that ships its own effort, a level you state for the session, or a spawn that skips the resolve step, because only Claude Code's `maxEffortLevel` setting can, and playbook never writes it.
 
@@ -1302,7 +1302,7 @@ Example: `playbook review triage-merge --lenses security,logic --tiers triage.js
 
 Say which model, effort and agent a kind of task goes to
 
-One routing table for every command that dispatches agents. Kinds: mechanical, classify, check, review, write, implement, design. Only `implement` reads `--tier` (low, medium or high). The answer includes whether the user must approve first (the top model, the high tier, or a task that failed twice). `routing.escalate` decides what happens then: `ask` tells you to ask the user, `auto` (default) proceeds (auto mode and `auto.budgetUsd` still cap the spend), `deny` returns the cheaper route. Your effort ceiling always wins.
+One routing table for every command that dispatches agents. Kinds: mechanical, classify, check, review, write, implement, design. Only `implement` reads `--tier` (low, medium or high). The answer includes whether the user must approve first (the top model, the high tier, or a task that failed twice). `routing.escalate` decides what happens then: `ask` tells you to ask the user, `auto` (default) proceeds (auto mode and `auto.budget.mainUsd` still cap the spend), `deny` returns the cheaper route. Your effort ceiling always wins.
 
 Example: `playbook route implement --tier medium --json`
 

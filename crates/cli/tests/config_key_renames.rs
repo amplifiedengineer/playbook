@@ -48,7 +48,8 @@ fn other_than_default(row: &KeyRename) -> Value {
         Value::String(current) => keys::allowed_enum_values(row.new)
             .and_then(|allowed| allowed.iter().find(|word| *word != current))
             .map_or_else(|| json!(format!("{current}x")), |word| json!(word)),
-        other => json!(other.as_i64().unwrap_or(0) + 1),
+        // At least the default main budget, so a session ceiling stays valid.
+        other => json!((other.as_i64().unwrap_or(0) + 1).max(i64::from(keys::AUTO_BUDGET_USD))),
     }
 }
 

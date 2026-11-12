@@ -554,7 +554,7 @@ mod tests {
             "gh api -X POST repos/o/r/issues",
             "gh api repos/o/r/issues -f title=x",
             "playbook mode ask",
-            "playbook config set auto.budgetUsd 50",
+            "playbook config set auto.budget.mainUsd 50",
             "git status && rm -rf x",
             "git push --force origin main",
             "git push -f",

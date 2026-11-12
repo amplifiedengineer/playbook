@@ -10,7 +10,7 @@ Each command and agent names its model and effort in its own frontmatter. Spend 
 
 Plugin files name only the alias, and `playbook cc` passes the fallback chain. Run `playbook doctor models` to see the table, your overrides and the chain in force.
 
-- **Effort ceiling.** `playbook effort <auto|low|medium|high|xhigh|max>` sets `maxEffortLevel`. The lower of this and Claude Code's own `maxEffortLevel` wins, and playbook never changes Claude Code's setting. The ceiling does not cap a command, skill or base agent that ships its own effort, or a level you state for the session, since only Claude Code's setting can. See the [config keys page](../reference/config-keys.md#what-the-effort-ceiling-does-and-does-not-cap). Override one component with `effort.agents.<name>`, `effort.commands.<name>` or `effort.skills.<name>`.
+- **Effort ceiling.** `playbook effort <auto|low|medium|high|xhigh|max>` sets `effort.max`. The lower of this and Claude Code's own `maxEffortLevel` wins, and playbook never changes Claude Code's setting. The ceiling does not cap a command, skill or base agent that ships its own effort, or a level you state for the session, since only Claude Code's setting can. See the [config keys page](../reference/config-keys.md#what-the-effort-ceiling-does-and-does-not-cap). Override one component with `effort.agents.<name>`, `effort.commands.<name>` or `effort.skills.<name>`.
 - **Effort per spawn.** The orchestrator passes the `effort` parameter on the `Agent` call, lowered by every ceiling you set. The old `agents.variants` setting is retired: `config set` refuses it and a stored value is ignored.
 - **Routing.** `playbook route <kind>` says which model, effort and agent a task goes to, and when you must approve first. See [Approval prompts](#approval-prompts).
 - **Measure.** `playbook eval bench` compares roles across models and efforts on real cases, with a cost cap.
@@ -27,7 +27,7 @@ The `routing.escalate` key decides what happens:
 | Value | What happens |
 |---|---|
 | `ask` | The command stops and asks you first. |
-| `auto` (default) | The command proceeds on the top model and logs the assumption. `auto.budgetUsd` still caps the spend. |
+| `auto` (default) | The command proceeds on the top model and logs the assumption. `auto.budget.mainUsd` still caps the spend. |
 | `deny` | The command never escalates. It uses the next cheaper route (Sonnet at high effort, or the medium implement tier). |
 
 To turn the prompts on, run this in the repo, or add `--global` for every repo. The default is `auto`.

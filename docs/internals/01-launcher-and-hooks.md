@@ -99,7 +99,7 @@ A tagged handoff with no marker belongs to a session still running and is left a
 
 **`bg-await-guard`.** Warns when a Bash call backgrounds an install, build, or typecheck whose output a later step usually needs. Also nudges a foreground `gh run watch`, `gh pr checks --watch`, or `cargo test`/`build`/`nextest`/`clippy` that sets no timeout, to pass a longer timeout or use `run_in_background`, since the default 2 minute timeout kills it.
 
-**`auto-cost`.** Per agent, warns at 70 percent of that agent's cap. At the cap it denies new work except reads, the closing steps (commit, push, pull request skills and commands, read-only `gh`, `playbook mode status`) and its own park note. The caller comes from `agent_id` in the hook input, and `auto.sessionCeilingUsd` stops new `Agent` spawns for the tree.
+**`auto-cost`.** Per agent, warns at 70 percent of that agent's cap. At the cap it denies new work except reads, the closing steps (commit, push, pull request skills and commands, read-only `gh`, `playbook mode status`) and its own park note. The caller comes from `agent_id` in the hook input, and `auto.budget.ceilingUsd` stops new `Agent` spawns for the tree.
 
 **`rm-workspace-guard`.** The target `/` or the home folder (`~`, `$HOME`, the literal path, with `/` or `/*` after it) is denied. That holds after a wrapper such as `sudo`, `env` or `command`, in a `;`, `&&`, `||` or `|` chain, in a group or subshell, and in a `bash -c` script. The line is split on separators and read word by word. `cd`, variables and `find -delete` are not followed, and anything unreadable passes. Every other path is allowed. Best-effort protection against an accidental `rm`, not a security boundary. See [ADR 0045](../adr/0045-rm-guard-roots-and-parser.md).
 

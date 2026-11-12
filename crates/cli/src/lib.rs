@@ -661,7 +661,7 @@ pub enum Command {
     /// `maxEffortLevel` decides how high effort may go. Each skill, command and
     /// agent still keeps the effort it ships with. `low`, `medium`, `high`,
     /// `xhigh` or `max` set playbook's own ceiling. The key is
-    /// `maxEffortLevel`, named like Claude Code's. The effective ceiling is the lower of this and Claude Code's own
+    /// `effort.max`. The effective ceiling is the lower of this and Claude Code's own
     /// `maxEffortLevel`, which playbook only reads and never changes. Sessions
     /// started with `playbook cc` or `playbook ccd` get the ceiling. With no level, shows both
     /// values and the one that wins.
@@ -692,7 +692,7 @@ pub enum Command {
     /// whether the user must approve first (the top model, the high tier, or a
     /// task that failed twice). `routing.escalate` decides what happens then:
     /// `ask` tells you to ask the user, `auto` (default) proceeds (auto mode
-    /// and `auto.budgetUsd` still cap the spend), `deny` returns the cheaper
+    /// and `auto.budget.mainUsd` still cap the spend), `deny` returns the cheaper
     /// route. Your effort ceiling always wins.
     ///
     /// Example: `playbook route implement --tier medium --json`

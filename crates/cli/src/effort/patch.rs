@@ -344,7 +344,10 @@ pub fn reset(home: &Path, all: bool, now: i64) -> Result<String, String> {
     }
     if all {
         for key in store::global_keys(&root).map_err(|e| e.to_string())? {
-            if key.starts_with("effort.") && !targets.iter().any(|(k, _, _)| *k == key) {
+            if key.starts_with("effort.")
+                && key != super::KEY
+                && !targets.iter().any(|(k, _, _)| *k == key)
+            {
                 if let Some(default) = keys::default_value(&key) {
                     if global_value(home, &key)?.as_ref() != Some(&default) {
                         targets.push((key, default, "reset to the default"));
@@ -537,7 +540,7 @@ mod tests {
         assert!(validate(&line("implementer", "medium", "high")).is_ok());
         assert!(validate(&line("implementer", "bogus", "high")).is_err());
         let mut other = line("implementer", "medium", "high");
-        other.key = "maxEffortLevel".into();
+        other.key = "effort.max".into();
         assert!(validate(&other).is_err());
     }
 
@@ -668,12 +671,12 @@ mod tests {
         let h = home("effort-patch-all");
         set_global(&h, "effort.agents.reviewer", json!("low")).unwrap();
         set_global(&h, "effort.commands.fix", json!("high")).unwrap();
-        set_global(&h, "maxEffortLevel", json!("medium")).unwrap();
+        set_global(&h, "effort.max", json!("medium")).unwrap();
         reset(&h, true, 100).unwrap();
         assert_eq!(cfg(&h, "effort.agents.reviewer"), Some(json!("auto")));
         assert_eq!(cfg(&h, "effort.commands.fix"), Some(json!("auto")));
-        // The global ceiling is not an effort.* component key.
-        assert_eq!(cfg(&h, "maxEffortLevel"), Some(json!("medium")));
+        // The global ceiling is not a component key, so reset-all leaves it.
+        assert_eq!(cfg(&h, "effort.max"), Some(json!("medium")));
     }
 
     #[test]
