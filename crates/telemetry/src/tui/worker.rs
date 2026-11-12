@@ -17,9 +17,8 @@ use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
 use std::thread::JoinHandle;
 use std::time::Duration;
 
-/// How often the store is re-read when nothing else asks, unless
-/// `usage.refreshSeconds` says otherwise.
-pub const DEFAULT_REFRESH_SECONDS: u64 = 5;
+/// How often the store is re-read when nothing else asks.
+pub const REFRESH_SECONDS: u64 = 5;
 
 pub enum Request {
     /// Show this range and filter now, then keep refreshing them.

@@ -24,12 +24,7 @@ pub const KEYS: &[&str] = &[
     "usage.maskAccount",
     "usage.weekStart",
     "usage.timeZone",
-    "usage.refreshSeconds",
     "usage.telemetry",
-    "usage.telemetryRetentionDays",
-    "usage.telemetryMaxRows",
-    "usage.autoIngest",
-    "usage.autoIngestMinutes",
     "usage.budget.monthlyUsd",
     "usage.budget.weeklyUsd",
     "usage.ui.layout",
@@ -43,12 +38,7 @@ pub fn default_value(key: &str) -> Option<Value> {
         "usage.maskAccount" => Value::from(false),
         "usage.weekStart" => Value::from("monday"),
         "usage.timeZone" => Value::from("local"),
-        "usage.refreshSeconds" => Value::from(5),
         "usage.telemetry" => Value::from("auto"),
-        "usage.autoIngest" => Value::from(true),
-        "usage.autoIngestMinutes" => Value::from(10),
-        "usage.telemetryRetentionDays" => Value::from(90),
-        "usage.telemetryMaxRows" => Value::from(500_000),
         "usage.budget.monthlyUsd" | "usage.budget.weeklyUsd" => Value::from(0),
         "usage.ui.layout" | "usage.ui.state" => Value::from(""),
         _ => return None,
@@ -87,10 +77,8 @@ pub fn validate(key: &str, value: &Value) -> Result<(), String> {
             Some(text) if text.len() <= MAX_STATE_BYTES => Ok(()),
             _ => Err(format!("expected text of at most {MAX_STATE_BYTES} bytes")),
         },
-        "usage.autoIngest" | "usage.maskAccount" if !value.is_boolean() => {
-            Err("expected true or false".into())
-        }
-        "usage.autoIngest" | "usage.maskAccount" => Ok(()),
+        "usage.maskAccount" if !value.is_boolean() => Err("expected true or false".into()),
+        "usage.maskAccount" => Ok(()),
         _ => match value.as_f64() {
             Some(n) if n >= 0.0 => Ok(()),
             _ => Err("expected a number of zero or more".into()),
@@ -283,10 +271,7 @@ mod tests {
     fn defaults_apply_when_nothing_is_stored() {
         let h = home("cfg-none");
         assert_eq!(resolve(&h, "usage.theme"), Some(Value::from("default")));
-        assert_eq!(
-            resolve(&h, "usage.autoIngestMinutes"),
-            Some(Value::from(10))
-        );
+        assert_eq!(resolve(&h, "usage.budget.weeklyUsd"), Some(Value::from(0)));
         assert_eq!(resolve(&h, "model.default"), None);
     }
 
@@ -344,9 +329,9 @@ mod tests {
     fn an_invalid_value_falls_back_to_the_default() {
         let h = home("cfg-invalid");
         put_store(&h, "usage.theme", "\"neon\"");
-        put_store(&h, "usage.refreshSeconds", "-3");
+        put_store(&h, "usage.budget.monthlyUsd", "-3");
         assert_eq!(resolve(&h, "usage.theme"), Some(Value::from("default")));
-        assert_eq!(resolve(&h, "usage.refreshSeconds"), Some(Value::from(5)));
+        assert_eq!(resolve(&h, "usage.budget.monthlyUsd"), Some(Value::from(0)));
     }
 
     #[test]
@@ -368,6 +353,22 @@ mod tests {
         for key in KEYS {
             let d = default_value(key).unwrap();
             assert!(validate(key, &d).is_ok(), "{key}");
+        }
+    }
+
+    #[test]
+    fn the_cut_settings_are_not_usage_keys_and_stored_values_are_ignored() {
+        let h = home("cfg-cut");
+        put_store(&h, "usage.refreshSeconds", "30");
+        for key in [
+            "usage.refreshSeconds",
+            "usage.telemetryRetentionDays",
+            "usage.telemetryMaxRows",
+            "usage.autoIngest",
+            "usage.autoIngestMinutes",
+        ] {
+            assert_eq!(default_value(key), None, "{key}");
+            assert_eq!(resolve(&h, key), None, "{key}");
         }
     }
 

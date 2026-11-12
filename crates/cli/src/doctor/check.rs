@@ -1312,7 +1312,7 @@ fn telemetry_rows(env: &Env) -> Vec<Row> {
         );
     }
     let last =
-        crate::usage::collector::status(&paths, crate::usage::collector::configured_retention())
+        crate::usage::collector::status(&paths, crate::usage::telemetry_db::Retention::default())
             .ok()
             .and_then(|s| s.last_event);
     let now = i64::try_from(crate::common::time::now_epoch_secs()).unwrap_or(i64::MAX);

@@ -196,8 +196,6 @@ fn event_loop(
         std::env::var("COLORTERM").ok().as_deref(),
         std::env::var("TERM").ok().as_deref(),
     );
-    let every = Duration::from_secs(super::entry::configured_refresh_seconds());
-    app.refresh_every = every;
     app.telemetry = Some(super::telemetry_status::detect_here(paths));
     let worker = Worker::spawn(
         paths.clone(),
@@ -205,7 +203,7 @@ fn event_loop(
         app.filter.clone(),
         app.account.clone(),
         app.machine.clone(),
-        every,
+        app.refresh_every,
     );
     let mut sessions = SessionsLoop::new(paths.clone());
     while !app.quit {

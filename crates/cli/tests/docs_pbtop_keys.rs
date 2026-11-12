@@ -148,6 +148,22 @@ fn every_key_of_the_help_window_is_in_the_block() {
 }
 
 #[test]
+fn the_block_and_the_page_name_none_of_the_cut_settings() {
+    let page = fs::read_to_string(root().join(PAGE)).unwrap();
+    let text = block(&help_lines());
+    for key in [
+        "usage.refreshSeconds",
+        "usage.telemetryRetentionDays",
+        "usage.telemetryMaxRows",
+        "usage.autoIngest",
+        "usage.autoIngestMinutes",
+    ] {
+        assert!(!text.contains(key), "the generated block names {key}");
+        assert!(!page.contains(key), "{PAGE} names {key}");
+    }
+}
+
+#[test]
 fn a_pipe_in_a_cell_is_escaped() {
     assert_eq!(cell("a|b"), "a\\|b");
 }

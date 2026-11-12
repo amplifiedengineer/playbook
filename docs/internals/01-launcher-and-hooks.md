@@ -68,7 +68,7 @@ Every hook is a module under `crates/cli/src/hooks/`, run as `playbook hook <nam
 | Hook | Purpose |
 |---|---|
 | `session-init` | Creates the per-session runtime dir and zeros its counters. Clears the statusline PR/CI cache for the current branch. Checks the config hash and warns on drift when a resumed session is running on stale config. Injects `additionalContext` (list below). Read only: it never writes to the memory store. |
-| `usage-warm` | Starts a detached, low priority, time bounded `playbook usage warm` when the last finished run is older than `usage.autoIngestMinutes`, so the usage store is filled before you open `playbook usage`. Returns at once with no output. Off with `usage.autoIngest` false. |
+| `usage-warm` | Starts a detached, low priority, time bounded `playbook usage warm` when the last finished run is older than 10 minutes, so the usage store is filled before you open `playbook usage`. Returns at once with no output. |
 
 `session-init` injects the tool map (what `playbook tools map` prints, on every start including headless, ending with a pointer to `playbook commands`), an auto-learn nudge, a handoff (after `/clear` or `/compact`, the one the session saved for itself, see `context-hygiene`) and one small ranked memory block (pinned, most used, most linked facts, capped near 2,500 characters). The whole string stays under 9,000 characters because Claude Code replaces a hook string over 10,000 with a 2,000 character preview.
 

@@ -271,7 +271,7 @@ The time to the limit needs at least one hour of elapsed time in the period. The
 
 ## Refresh
 
-A background thread owns the database. It reads new transcript lines and re-reads the store every 5 seconds, or at the `usage.refreshSeconds` you set. It also reads at once when you change the range or the filter, and when you press `R` or `B`. A refresh keeps your cursor, focus, sorts and selected rows. The footer shows when the last read happened. A first read of a large history runs in small batches, and the screen shows the store as it grows.
+A background thread owns the database. It reads new transcript lines and re-reads the store every 5 seconds. It also reads at once when you change the range or the filter, and when you press `R` or `B`. A refresh keeps your cursor, focus, sorts and selected rows. The footer shows when the last read happened. A first read of a large history runs in small batches, and the screen shows the store as it grows.
 
 Live means a session whose last message is no older than 15 minutes.
 
@@ -282,7 +282,6 @@ Live means a session whose last message is no older than 15 minutes.
 | `usage.theme` | `default` | The color theme. Choices are `default`, `spectrum`, `dark`, `light` and `mono`. `t` cycles them. |
 | `usage.weekStart` | `monday` | The first day of the week. |
 | `usage.timeZone` | `local` | `local` or `utc`. |
-| `usage.refreshSeconds` | `5` | Seconds between reads. |
 | `usage.telemetry` | `auto` | `off` stops Playbook from pointing sessions at the receiver. |
 | `usage.budget.monthlyUsd` | `0` | A manual monthly budget. `0` means none. |
 | `usage.budget.weeklyUsd` | `0` | The same for the week. |

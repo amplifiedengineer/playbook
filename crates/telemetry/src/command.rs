@@ -89,10 +89,9 @@ pub enum UsageCommand {
     },
     /// Delete old telemetry rows
     ///
-    /// Removes telemetry rows older than `usage.telemetryRetentionDays` (default
-    /// 90, 0 keeps them) and the oldest rows beyond `usage.telemetryMaxRows` per
-    /// table (default 500000, 0 means no limit). The receiver does the same when
-    /// it starts and every few hours. Transcript data and every total are left
+    /// Removes telemetry rows older than 90 days and the oldest rows beyond
+    /// 500000 per table. The receiver does the same when it starts and every
+    /// few hours. Transcript data and every total are left
     /// alone, because totals come from transcripts.
     ///
     /// Example: `playbook usage prune --dry-run`

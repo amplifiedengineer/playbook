@@ -97,12 +97,7 @@ Settings are playbook's own, from the global tier of its config store (`~/.confi
 | `usage.maskAccount` | `false` | true or false |
 | `usage.weekStart` | `monday` | `monday`, `sunday`, `saturday` |
 | `usage.timeZone` | `local` | `local`, `utc`. Under `playbook`, a `playbook config` key. Pbtop reads it only from the `usage` object of `config.json`, and only when no config store exists |
-| `usage.refreshSeconds` | `5` | number |
 | `usage.telemetry` | `auto` | `auto`, `off` |
-| `usage.telemetryRetentionDays` | `90` | number, 0 keeps all |
-| `usage.telemetryMaxRows` | `500000` | number, 0 means no limit |
-| `usage.autoIngest` | `true` | true or false |
-| `usage.autoIngestMinutes` | `10` | number |
 | `usage.budget.monthlyUsd` | `0` | number |
 | `usage.budget.weeklyUsd` | `0` | number |
 | `usage.ui.layout` | empty | text like `Charts=spend.total,spend.model\|tokens,hourly\|burnup;Numbers=models,breakdown;Sessions=live,sessions`; press `e` in pbtop to edit, changes save at once |

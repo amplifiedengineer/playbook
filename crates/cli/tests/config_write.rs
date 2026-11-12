@@ -364,16 +364,6 @@ fn a_budget_of_a_cent_or_more_including_a_fractional_one_is_written() {
 }
 
 #[test]
-fn a_usage_refresh_interval_from_one_to_3600_seconds_is_written_and_others_rejected() {
-    for value in [json!(1), json!(5), json!(3600)] {
-        assert_written("usage.refreshSeconds", &value);
-    }
-    for value in [json!(0), json!(3601), json!(-1), json!(2.5)] {
-        assert_rejected("usage.refreshSeconds", &value, "between 1 and 3600");
-    }
-}
-
-#[test]
 fn a_gate_round_cap_from_one_to_twenty_is_written_and_others_rejected() {
     for value in [json!(1), json!(5), json!(20)] {
         assert_written("gate.maxRounds", &value);
@@ -421,7 +411,7 @@ fn a_non_number_for_a_numeric_auto_or_fix_key_is_rejected_and_writes_nothing() {
 
 #[test]
 fn zero_is_still_accepted_for_the_other_numeric_keys() {
-    assert_written("usage.telemetryRetentionDays", &json!(0));
+    assert_written("usage.budget.monthlyUsd", &json!(0));
 }
 
 const BOOL_SETTINGS: [&str; 4] = [

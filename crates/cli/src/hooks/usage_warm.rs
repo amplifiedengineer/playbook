@@ -38,7 +38,7 @@ pub fn run(payload: &Payload) {
         return;
     };
     paths.db = dir.join("usage.db");
-    crate::usage::warm::maybe_spawn(&home, &paths, &exe);
+    crate::usage::warm::maybe_spawn(&paths, &exe);
 }
 
 /// The account `~/.claude.json` is signed in to, or none when it names none.

@@ -381,7 +381,7 @@ impl Status {
             }
         };
         lines.push(format!(
-            "retention: {}, {} per table (usage.telemetryRetentionDays, usage.telemetryMaxRows)",
+            "retention: {}, {} per table",
             limit(self.retention.days, "days"),
             limit(self.retention.max_rows, "rows")
         ));
@@ -407,26 +407,6 @@ fn age(seconds: i64) -> String {
     }
 }
 
-/// The telemetry limits from the `usage.telemetryRetentionDays` and
-/// `usage.telemetryMaxRows` config keys, the defaults when unset or invalid.
-pub fn configured_retention() -> Retention {
-    let read = |key: &str, default: u64| {
-        super::host::config_value_now(key)
-            .and_then(|value| value.as_u64())
-            .unwrap_or(default)
-    };
-    Retention {
-        days: read(
-            "usage.telemetryRetentionDays",
-            super::telemetry_db::DEFAULT_RETENTION_DAYS,
-        ),
-        max_rows: read(
-            "usage.telemetryMaxRows",
-            super::telemetry_db::DEFAULT_MAX_ROWS,
-        ),
-    }
-}
-
 /// `playbook usage prune`: deletes telemetry rows past the limits, or with
 /// `dry_run` only counts them. Creates no database when there is none.
 pub fn run_prune(paths: &Paths, dry_run: bool) -> Result<String, String> {
@@ -435,7 +415,7 @@ pub fn run_prune(paths: &Paths, dry_run: bool) -> Result<String, String> {
     }
     let conn = super::db::open_db(&paths.db)?;
     migrate_up(&conn)?;
-    let retention = configured_retention();
+    let retention = Retention::default();
     let p: Pruned = prune(&conn, crate::util::time::now_secs(), retention, dry_run)?;
     let verb = if dry_run { "would remove" } else { "removed" };
     Ok(format!(
@@ -537,7 +517,7 @@ fn run_collect_with(
         version: env!("CARGO_PKG_VERSION").to_string(),
     };
     write_state(&path, &state)?;
-    let retention = configured_retention();
+    let retention = Retention::default();
     let _ = prune(&conn, crate::util::time::now_secs(), retention, false);
     let cfg = Config {
         token: Some(token),

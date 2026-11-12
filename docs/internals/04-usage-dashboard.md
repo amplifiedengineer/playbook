@@ -437,11 +437,11 @@ Plain `claude` sessions (not started through `cc`) send nothing to the receiver 
 
 ## Background warm-up
 
-The `usage-warm` hook (SessionStart and SessionEnd, wired by `playbook setup`) keeps the store current without you opening the view. It checks `usage.autoIngest` and a stamp file, then starts `playbook usage warm` detached and returns in a few milliseconds with no output.
+The `usage-warm` hook (SessionStart and SessionEnd, wired by `playbook setup`) keeps the store current without you opening the view. It checks a stamp file, then starts `playbook usage warm` detached and returns in a few milliseconds with no output.
 
 - The child takes `auto-ingest.lock` in the usage directory so one read runs at a time (a lock older than 20 minutes counts as dead).
 - It lowers its priority, runs the same resume-safe batched ingest as the usage view, and stops after two minutes.
-- A finished read writes `auto-ingest.stamp`. Hooks skip while the stamp is younger than `usage.autoIngestMinutes` (default 10).
+- A finished read writes `auto-ingest.stamp`. Hooks skip while the stamp is younger than 10 minutes.
 - A read that hit the time limit leaves no stamp, keeps its committed batches, and the next hook resumes it.
 - It stores only what ingest already stores and logs nothing. The plugin-disabled pause applies, since no hook runs then.
 
@@ -488,7 +488,7 @@ If the collector is not running when a session starts, Claude Code may drop what
 - **What is stored.** Only `api_request` rows with the session id, request id, model, effort, agent name, the four token counts, the cost and the call duration, plus one row per tool call (tool name, outcome, duration), per failed API attempt (status code, attempt number, duration) and per metric point of active time, lines of code, commits or pull requests (session id, type, interval, value). Prompts, tool content, file paths, emails, user, account and organization ids, and resource attributes are dropped when the receiver parses a request and never reach the database.
 - **What `cc` sets.** With `usage.telemetry` at `auto`, a running receiver and no telemetry setting of yours, `cc` sets these in the session's environment only: `CLAUDE_CODE_ENABLE_TELEMETRY`, `OTEL_LOGS_EXPORTER=otlp`, `OTEL_METRICS_EXPORTER=otlp`, the traces exporter to `none`, the `http/json` protocol, the loopback endpoint, an `Authorization` header with the receiver's token and `OTEL_METRICS_INCLUDE_ACCOUNT_UUID=false`. It never turns on `OTEL_LOG_USER_PROMPTS`, `OTEL_LOG_TOOL_DETAILS`, `OTEL_LOG_TOOL_CONTENT` or `OTEL_LOG_RAW_API_BODIES`.
 - **What it never does.** `cc` never writes Claude Code settings and adds no `--settings` flag. Only `playbook setup --telemetry`, with your consent, or `playbook config set --global usage.telemetry auto`, which you run yourself, writes the same variables (and nothing else) into the `env` block of your settings. If any telemetry variable is already set in your environment or in a settings `env` block (user, project, local or managed), or such a file cannot be parsed, `cc` sets nothing and your own configuration wins. `setup` has one exception, described above: a yes replaces a lone off switch in the user settings.
-- **How long it is kept.** 90 days and 500000 rows per table by default (`usage.telemetryRetentionDays`, `usage.telemetryMaxRows`), pruned automatically and by `playbook usage prune`.
+- **How long it is kept.** 90 days and 500000 rows per table, pruned automatically and by `playbook usage prune`.
 - **Where it goes.** The receiver listens on 127.0.0.1 only and the store file is private to you. Telemetry rows never leave the machine, and [usage sync](../guides/17-sync.md) does not send them either. `usage.telemetry` set to `off` stops `cc` from touching the environment at all.
 
 ## Choosing a source per session

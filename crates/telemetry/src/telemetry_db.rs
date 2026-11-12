@@ -640,10 +640,9 @@ fn metric_sum(
     Ok(v.round() as u64)
 }
 
-/// Defaults of the two telemetry size limits (config keys
-/// `usage.telemetryRetentionDays` and `usage.telemetryMaxRows`).
-pub const DEFAULT_RETENTION_DAYS: u64 = 90;
-pub const DEFAULT_MAX_ROWS: u64 = 500_000;
+/// How many days of telemetry rows are kept, and the most rows kept per table.
+pub const RETENTION_DAYS: u64 = 90;
+pub const MAX_ROWS: u64 = 500_000;
 
 const PRUNED_TABLES: [&str; 4] = [
     "telemetry_requests",
@@ -664,8 +663,8 @@ pub struct Retention {
 impl Default for Retention {
     fn default() -> Self {
         Self {
-            days: DEFAULT_RETENTION_DAYS,
-            max_rows: DEFAULT_MAX_ROWS,
+            days: RETENTION_DAYS,
+            max_rows: MAX_ROWS,
         }
     }
 }

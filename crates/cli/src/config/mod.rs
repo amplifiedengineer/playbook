@@ -468,26 +468,26 @@ mod tests {
     }
 
     #[test]
-    fn retention_days_defaults_to_ninety_with_no_override() {
+    fn max_files_defaults_to_three_with_no_override() {
         // Arrange
-        let home = scratch_home("retention-days-default");
+        let home = scratch_home("max-files-default");
 
         // Act
-        let result = resolve("usage.telemetryRetentionDays", &home, None);
+        let result = resolve("fix.maxFiles", &home, None);
 
         // Assert
-        assert_eq!(result.unwrap(), (Value::Number(90.into()), Source::Default));
+        assert_eq!(result.unwrap(), (Value::Number(3.into()), Source::Default));
 
         let _ = fs::remove_dir_all(&home);
     }
 
     #[test]
-    fn retention_days_round_trips_through_write_and_resolve() {
+    fn max_files_round_trips_through_write_and_resolve() {
         // Arrange
-        let home = scratch_home("retention-days-round-trip");
+        let home = scratch_home("max-files-round-trip");
         write::set(
             Tier::Repo,
-            "usage.telemetryRetentionDays",
+            "fix.maxFiles",
             &Value::Number(14.into()),
             &home,
             Some("owner/repo"),
@@ -495,7 +495,7 @@ mod tests {
         .expect("write should succeed once the key is known");
 
         // Act
-        let result = resolve("usage.telemetryRetentionDays", &home, Some("owner/repo"));
+        let result = resolve("fix.maxFiles", &home, Some("owner/repo"));
 
         // Assert
         assert_eq!(result.unwrap(), (Value::Number(14.into()), Source::Repo));
@@ -582,32 +582,29 @@ mod tests {
     }
 
     #[test]
-    fn rejects_invalid_retention_days_values() {
+    fn rejects_invalid_max_files_values() {
         // Each case pairs an invalid value with substrings its rejection
         // error must contain.
         let cases: Vec<(Value, Vec<&str>)> = vec![
             (
                 Value::String("not-a-number".to_string()),
-                vec!["usage.telemetryRetentionDays", "number"],
+                vec!["fix.maxFiles", "number"],
             ),
-            (
-                Value::Number((-5).into()),
-                vec!["usage.telemetryRetentionDays", "-5"],
-            ),
+            (Value::Number((-5).into()), vec!["fix.maxFiles", "-5"]),
             (
                 Value::Number(serde_json::Number::from_f64(3.5).unwrap()),
-                vec!["usage.telemetryRetentionDays", "3.5"],
+                vec!["fix.maxFiles", "3.5"],
             ),
         ];
 
         for (value, expected_substrings) in cases {
             // Arrange
-            let home = scratch_home("retention-days-rejects");
+            let home = scratch_home("max-files-rejects");
 
             // Act
             let result = write::set(
                 Tier::Repo,
-                "usage.telemetryRetentionDays",
+                "fix.maxFiles",
                 &value,
                 &home,
                 Some("owner/repo"),
@@ -629,21 +626,21 @@ mod tests {
     }
 
     #[test]
-    fn accepts_zero_as_retention_days_value() {
+    fn accepts_zero_as_a_usage_budget() {
         // Arrange
-        let home = scratch_home("retention-days-accepts-zero");
+        let home = scratch_home("budget-accepts-zero");
 
         // Act
         let result = write::set(
             Tier::Repo,
-            "usage.telemetryRetentionDays",
+            "usage.budget.monthlyUsd",
             &Value::Number(0.into()),
             &home,
             Some("owner/repo"),
         );
 
         // Assert
-        assert!(result.is_ok(), "zero should be accepted as non-negative");
+        assert!(result.is_ok(), "zero zero means no budget");
 
         let _ = fs::remove_dir_all(&home);
     }

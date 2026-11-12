@@ -217,7 +217,7 @@ fn usd(cents: i64) -> String {
 /// `auto.budgetUsd` and `auto.agentBudgetUsd` take any number of at least one cent, since the spend cap
 /// is held in whole cents, so a fractional budget works.
 /// `usage.budget.*Usd` takes any number from 0 (no budget).
-/// `usage.refreshSeconds` takes a whole number within 1 to 3600, the `fix.` and `review.stack`
+/// The `fix.` and `review.stack`
 /// limits a whole number of at least 1, and every other numeric key 0 or more.
 fn validate_number(key: &str, value: &Value) -> Result<(), ConfigError> {
     let whole = value.as_i64();
@@ -243,10 +243,6 @@ fn validate_number(key: &str, value: &Value) -> Result<(), ConfigError> {
                 .as_f64()
                 .is_some_and(|n| n.is_finite() && (0.0..=1_000_000_000.0).contains(&n)),
             "a number of dollars, 0 to 1000000000",
-        ),
-        "usage.refreshSeconds" => (
-            whole.is_some_and(|n| (1..=3600).contains(&n)),
-            "a whole number between 1 and 3600",
         ),
         "watch.pollSeconds" => (
             whole.is_some_and(|n| (1..=86_400).contains(&n)),

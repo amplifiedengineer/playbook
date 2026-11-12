@@ -154,7 +154,8 @@ pub fn run(
         Some(UsageCommand::Machine { name }) => super::machine::run(paths, name.as_deref()),
         Some(UsageCommand::Prune { dry_run }) => super::collector::run_prune(paths, dry_run),
         Some(UsageCommand::Status { json }) => {
-            let status = super::collector::status(paths, super::collector::configured_retention())?;
+            let status =
+                super::collector::status(paths, super::telemetry_db::Retention::default())?;
             if json {
                 serde_json::to_string_pretty(&status)
                     .map_err(|e| format!("failed to encode the collector status: {e}"))
@@ -229,15 +230,6 @@ pub fn configured_week_start() -> WeekStart {
     super::host::config_value_now("usage.weekStart")
         .and_then(|value| value.as_str().and_then(WeekStart::parse))
         .unwrap_or_default()
-}
-
-/// Seconds between refreshes of the terminal view, from the
-/// `usage.refreshSeconds` config key.
-pub fn configured_refresh_seconds() -> u64 {
-    super::host::config_value_now("usage.refreshSeconds")
-        .and_then(|value| value.as_u64())
-        .filter(|n| *n > 0)
-        .unwrap_or(tui::worker::DEFAULT_REFRESH_SECONDS)
 }
 
 /// Parses a range name with the configured week start.

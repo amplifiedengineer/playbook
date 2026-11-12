@@ -16,7 +16,7 @@ use super::sort::{
 };
 use super::theme::{ColorDepth, Theme};
 use super::view::{self, help_height};
-use super::worker::DEFAULT_REFRESH_SECONDS;
+use super::worker::REFRESH_SECONDS;
 
 use crate::period::pair_groups;
 use crate::query::{Range, WeekStart};
@@ -241,7 +241,7 @@ impl App {
             indexing: None,
             sources: String::new(),
             telemetry: None,
-            refresh_every: Duration::from_secs(DEFAULT_REFRESH_SECONDS),
+            refresh_every: Duration::from_secs(REFRESH_SECONDS),
             layout: super::layout::Layout::classic(),
             tab: 0,
             editor: None,

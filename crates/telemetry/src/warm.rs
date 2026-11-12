@@ -3,14 +3,14 @@
 
 //! Warms the usage store in the background so `playbook usage` opens with
 //! data. The `usage-warm` hook calls `maybe_spawn`, which returns in
-//! milliseconds: it checks the config, a stamp and a lock, then starts a
+//! milliseconds: it checks a stamp and a lock, then starts a
 //! detached `playbook usage warm` and does not wait for it.
 //!
 //! The child (`run_warm`) takes a lock so one ingest runs at a time, lowers
 //! its priority, runs the same resume-safe batched ingest the usage view
 //! uses, and stops after a time limit. A run that finished writes the stamp,
 //! and a later hook skips while the stamp is younger than
-//! `usage.autoIngestMinutes`. A run that hit the limit leaves no stamp, and
+//! `INGEST_INTERVAL_MINUTES`. A run that hit the limit leaves no stamp, and
 //! its committed batches stay, so the next run resumes. It reads transcripts
 //! only as the ingest already does, writes nothing to them, prints nothing and
 //! logs no content.
@@ -21,6 +21,8 @@ use std::time::{Duration, SystemTime};
 
 const STAMP: &str = "auto-ingest.stamp";
 const LOCK: &str = "auto-ingest.lock";
+/// The least time between two background reads.
+pub const INGEST_INTERVAL_MINUTES: u64 = 10;
 /// A lock older than this is from a run that died.
 const LOCK_STALE: Duration = Duration::from_secs(20 * 60);
 /// The most a warm run works before it stops and lets the next one resume.
@@ -109,16 +111,13 @@ pub fn run_warm(paths: &Paths) -> Result<(), String> {
     Ok(())
 }
 
-/// What the hook does: starts a detached warm run when the config allows it
-/// and one is due. Never waits for it, never prints.
-pub fn maybe_spawn(home: &Path, paths: &Paths, exe: &Path) {
-    if !enabled(home) {
-        return;
-    }
+/// What the hook does: starts a detached warm run when one is due. Never
+/// waits for it, never prints.
+pub fn maybe_spawn(paths: &Paths, exe: &Path) {
     let Some(dir) = paths.db.parent() else {
         return;
     };
-    if !due(dir, minutes(home), SystemTime::now()) {
+    if !due(dir, INGEST_INTERVAL_MINUTES, SystemTime::now()) {
         return;
     }
     let mut cmd = std::process::Command::new(exe);
@@ -130,22 +129,6 @@ pub fn maybe_spawn(home: &Path, paths: &Paths, exe: &Path) {
     #[cfg(unix)]
     std::os::unix::process::CommandExt::process_group(&mut cmd, 0);
     let _ = cmd.spawn();
-}
-
-fn value(home: &Path, key: &str) -> Option<serde_json::Value> {
-    super::host::config_value(key, home)
-}
-
-/// `usage.autoIngest`, on unless the config says false.
-pub fn enabled(home: &Path) -> bool {
-    value(home, "usage.autoIngest").and_then(|v| v.as_bool()) != Some(false)
-}
-
-/// `usage.autoIngestMinutes`, 10 when unset.
-pub fn minutes(home: &Path) -> u64 {
-    value(home, "usage.autoIngestMinutes")
-        .and_then(|v| v.as_u64())
-        .unwrap_or(10)
 }
 
 #[cfg(test)]
@@ -234,29 +217,9 @@ mod tests {
         assert!(!usage.join(STAMP).exists());
     }
 
-    #[test]
-    fn the_defaults_are_on_and_ten_minutes() {
-        let home = dir("warm-defaults");
-        assert!(enabled(&home));
-        assert_eq!(minutes(&home), 10);
-    }
-
-    #[test]
-    fn the_config_keys_turn_it_off_and_set_the_minutes() {
-        let home = dir("warm-config");
-        config(
-            &home,
-            r#"{"usage":{"autoIngest":false,"autoIngestMinutes":3}}"#,
-        );
-        assert!(!enabled(&home));
-        assert_eq!(minutes(&home), 3);
-    }
-
-    #[test]
-    fn off_in_the_config_spawns_nothing() {
-        let home = dir("warm-off");
-        config(&home, r#"{"usage":{"autoIngest":false}}"#);
-        let paths = Paths::from_home(&home);
+    /// Runs `maybe_spawn` with a fake program and reports whether it started.
+    fn spawned(home: &Path) -> bool {
+        let paths = Paths::from_home(home);
         let marker = home.join("ran");
         let script = home.join("fake");
         std::fs::write(
@@ -269,8 +232,33 @@ mod tests {
             use std::os::unix::fs::PermissionsExt;
             std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o755)).unwrap();
         }
-        maybe_spawn(&home, &paths, &script);
-        std::thread::sleep(Duration::from_millis(300));
-        assert!(!marker.exists());
+        maybe_spawn(&paths, &script);
+        let deadline = std::time::Instant::now() + Duration::from_secs(5);
+        while std::time::Instant::now() < deadline {
+            if marker.exists() {
+                return true;
+            }
+            std::thread::sleep(Duration::from_millis(50));
+        }
+        false
+    }
+
+    #[test]
+    fn a_stored_off_switch_does_not_stop_the_spawn() {
+        let home = dir("warm-off");
+        config(&home, r#"{"usage":{"autoIngest":false}}"#);
+
+        assert!(spawned(&home));
+    }
+
+    #[test]
+    fn a_stored_interval_does_not_shorten_the_wait() {
+        let home = dir("warm-interval");
+        config(&home, r#"{"usage":{"autoIngestMinutes":0}}"#);
+        let usage = Paths::from_home(&home).db.parent().unwrap().to_path_buf();
+        std::fs::create_dir_all(&usage).unwrap();
+        aged(&usage.join(STAMP), 5 * 60);
+
+        assert!(!spawned(&home));
     }
 }

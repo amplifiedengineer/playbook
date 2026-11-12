@@ -86,12 +86,7 @@ pub const KNOWN_KEYS: &[&str] = &[
     "usage.maskAccount",
     "usage.weekStart",
     "usage.timeZone",
-    "usage.refreshSeconds",
     "usage.telemetry",
-    "usage.telemetryRetentionDays",
-    "usage.telemetryMaxRows",
-    "usage.autoIngest",
-    "usage.autoIngestMinutes",
     "usage.budget.monthlyUsd",
     "usage.budget.weeklyUsd",
     "usage.ui.layout",
@@ -159,6 +154,11 @@ pub static FIXED_KEYS: LazyLock<Vec<(&'static str, Value)>> = LazyLock::new(|| {
         ("worktreeCleanup.conflictGracePeriodDays", json!(90)),
         ("update.checkIntervalHours", json!(24)),
         ("auto.warnPct", json!(70)),
+        ("usage.refreshSeconds", json!(5)),
+        ("usage.telemetryRetentionDays", json!(90)),
+        ("usage.telemetryMaxRows", json!(500_000)),
+        ("usage.autoIngest", json!(true)),
+        ("usage.autoIngestMinutes", json!(10)),
     ]
 });
 
@@ -246,12 +246,7 @@ pub const LOCAL_ONLY_KEYS: &[&str] = &[
     "review.suggest.packageSpan",
     "review.suggest.untestedLines",
     "security.defaults",
-    "usage.refreshSeconds",
     "usage.telemetry",
-    "usage.telemetryRetentionDays",
-    "usage.telemetryMaxRows",
-    "usage.autoIngest",
-    "usage.autoIngestMinutes",
     "usage.ui.state",
     "hygiene.enabled",
     "docs.convert",
@@ -363,12 +358,7 @@ pub fn default_value(key: &str) -> Option<Value> {
         "usage.maskAccount" => Some(Value::Bool(false)),
         "usage.weekStart" => Some(Value::String("monday".to_string())),
         "usage.timeZone" => Some(Value::String("local".to_string())),
-        "usage.refreshSeconds" => Some(Value::Number(5.into())),
         "usage.telemetry" => Some(Value::String("auto".to_string())),
-        "usage.autoIngest" => Some(Value::Bool(true)),
-        "usage.autoIngestMinutes" => Some(Value::Number(10.into())),
-        "usage.telemetryRetentionDays" => Some(Value::Number(90.into())),
-        "usage.telemetryMaxRows" => Some(Value::Number(500_000.into())),
         "usage.budget.monthlyUsd" | "usage.budget.weeklyUsd" => Some(Value::Number(0.into())),
         "usage.ui.layout" | "usage.ui.state" => Some(Value::String(String::new())),
         "hygiene.enabled" => Some(Value::Bool(true)),
@@ -463,9 +453,6 @@ const LEGACY_KEY_NAMES: &[&str] = &[
     "auto.sessionCeilingUsd",
     "review.stackMaxPrs",
     "review.stackMaxLines",
-    "usage.telemetryRetentionDays",
-    "usage.telemetryMaxRows",
-    "usage.autoIngestMinutes",
     "code.briefFactsTokens",
     "systemPrompt.enabled",
     "watch.maxCatchupHours",
@@ -479,7 +466,7 @@ const COMPOUND_GROUPS: &[&str] = &["proseLint", "policyGuard"];
 
 /// The exact size of `KNOWN_KEYS`; each Segment that cuts keys lowers it.
 #[cfg(test)]
-const KEY_CEILING: usize = 72;
+const KEY_CEILING: usize = 67;
 
 #[cfg(test)]
 mod tests {
@@ -641,6 +628,31 @@ mod tests {
         for key in cut {
             assert!(fixed.contains(&key), "{key} is not in FIXED_KEYS");
             assert!(!KNOWN_KEYS.contains(&key), "{key} is still known");
+        }
+    }
+
+    #[test]
+    fn every_cut_pbtop_key_is_fixed_to_its_old_default_and_no_longer_known() {
+        // Arrange
+        let cut = [
+            ("usage.refreshSeconds", json!(5)),
+            ("usage.telemetryRetentionDays", json!(90)),
+            ("usage.telemetryMaxRows", json!(500_000)),
+            ("usage.autoIngest", json!(true)),
+            ("usage.autoIngestMinutes", json!(10)),
+        ];
+
+        // Act
+        let fixed = FIXED_KEYS.clone();
+
+        // Assert
+        for (key, value) in cut {
+            assert!(
+                fixed.contains(&(key, value)),
+                "{key} is not fixed to its old default"
+            );
+            assert!(!KNOWN_KEYS.contains(&key), "{key} is still known");
+            assert!(default_value(key).is_none(), "{key} still has a default");
         }
     }
 

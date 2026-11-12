@@ -55,12 +55,7 @@ Set a key with `playbook config set <key> <value>` and read it with `playbook co
 | `usage.maskAccount` | `false` | `true`, `false` |
 | `usage.weekStart` | `monday` | `monday`, `sunday`, `saturday` |
 | `usage.timeZone` | `local` | `local`, `utc` |
-| `usage.refreshSeconds` | `5` | a number, see the config keys page for the range |
 | `usage.telemetry` | `auto` | `auto`, `off` |
-| `usage.telemetryRetentionDays` | `90` | a number, see the config keys page for the range |
-| `usage.telemetryMaxRows` | `500000` | a number, see the config keys page for the range |
-| `usage.autoIngest` | `true` | `true`, `false` |
-| `usage.autoIngestMinutes` | `10` | a number, see the config keys page for the range |
 | `usage.budget.monthlyUsd` | `0` | a number, see the config keys page for the range |
 | `usage.budget.weeklyUsd` | `0` | a number, see the config keys page for the range |
 | `usage.ui.layout` | empty | see the config keys page |
@@ -1764,7 +1759,7 @@ Example: `playbook usage machine --name laptop`
 
 Delete old telemetry rows
 
-Removes telemetry rows older than `usage.telemetryRetentionDays` (default 90, 0 keeps them) and the oldest rows beyond `usage.telemetryMaxRows` per table (default 500000, 0 means no limit). The receiver does the same when it starts and every few hours. Transcript data and every total are left alone, because totals come from transcripts.
+Removes telemetry rows older than 90 days and the oldest rows beyond 500000 per table. The receiver does the same when it starts and every few hours. Transcript data and every total are left alone, because totals come from transcripts.
 
 Example: `playbook usage prune --dry-run`
 
