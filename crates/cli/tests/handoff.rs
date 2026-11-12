@@ -420,20 +420,25 @@ fn a_disabled_config_keeps_the_hook_silent() {
 }
 
 #[test]
-fn the_threshold_is_configurable() {
+fn a_stored_threshold_is_ignored_and_the_built_in_one_applies() {
+    // Arrange
     let env = Env::new("hy-thresh");
-    env.run(
-        &[
-            "config",
-            "set",
-            "--global",
-            "hygiene.thresholdTokens",
-            "400000",
-        ],
-        "",
-    );
+    let root = playbook::common::paths::playbook_root_from(&env.home);
+    playbook::config::store::put(
+        &root,
+        playbook::config::write::Tier::Global,
+        None,
+        "hygiene.thresholdTokens",
+        &serde_json::json!(400_000),
+    )
+    .unwrap();
     let t = env.transcript("t.jsonl", BIG);
-    assert_eq!(env.prompt("sess1", &t).1.trim(), "");
+
+    // Act
+    let (_, out) = env.prompt("sess1", &t);
+
+    // Assert
+    assert!(out.contains("Context is large"), "{out}");
 }
 
 #[test]

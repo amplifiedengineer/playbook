@@ -1292,7 +1292,7 @@ mod tests {
     fn import_refuses_a_per_user_key_outside_the_global_section() {
         let r = root("store-import-user-key");
         let org = json!({"orgs": {"acme": {"update.mode": "off"}}});
-        let repo = json!({"repos": {"acme/w": {"update.checkIntervalHours": 6}}});
+        let repo = json!({"repos": {"acme/w": {"update.plugin": "off"}}});
         let global = json!({"global": {"update.mode": "off"}});
         assert!(matches!(import(&r, &org), Err(ConfigError::GlobalOnly(_))));
         assert!(matches!(import(&r, &repo), Err(ConfigError::GlobalOnly(_))));

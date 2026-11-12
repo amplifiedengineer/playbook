@@ -779,7 +779,7 @@ pub enum Command {
     ///
     /// Shows the repo, branch, worktree, linked PR, state, context size and
     /// cost of each session. Read only. A session is done when the PR of its
-    /// branch is merged or closed, and stale after `sessions.staleAfterDays`
+    /// branch is merged or closed, and stale after a few days
     /// without activity. Suggestions are printed, never acted on, and a
     /// worktree with uncommitted changes is flagged, never removed.
     ///
@@ -2291,7 +2291,7 @@ pub enum DocCommand {
         /// Character offset to start the slice at (default 0)
         #[arg(long)]
         offset: Option<usize>,
-        /// Most characters to print, capped at docs.displayChars
+        /// Most characters to print, capped at the display size
         #[arg(long)]
         limit: Option<usize>,
         /// Print one section by its number from the section index

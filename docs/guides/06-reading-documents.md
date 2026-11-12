@@ -50,9 +50,9 @@ The converter was once an npm package. If you installed it earlier, `npm uninsta
 
 ## Long documents
 
-A document longer than `docs.displayChars` (24000 characters) is not printed whole. The output shows the first slice, the total length, a numbered index of the headings and the command for the next slice. The full text is kept in a private cache for a day, so later slices do not convert again.
+A document longer than 24000 characters is not printed whole. The output shows the first slice, the total length, a numbered index of the headings and the command for the next slice. The full text is kept in a private cache for a day, so later slices do not convert again.
 
-- `--offset N` starts at character N. `--limit M` prints at most M characters, never more than `docs.displayChars`.
+- `--offset N` starts at character N. `--limit M` prints at most M characters, never more than 24000.
 - `--section K` prints section K from the index.
 - `--json` adds `total_chars`, `offset` and `next_offset`.
 
@@ -66,7 +66,7 @@ A section number that does not exist exits with code 2 and says which numbers ar
 
 - **Local only.** The OCR option and the hosted mode of the upstream `anydoc` tool send the document to a remote server. Playbook never passes them. A scanned PDF with no text layer answers "needs OCR, not supported locally" and nothing is retried elsewhere.
 - **No network where the system allows it.** The converter runs inside the macOS sandbox with network denied, or in a Linux network namespace. When neither works the output says that only the environment was scrubbed. The environment is always scrubbed: no proxy variables, no API keys, no `NODE_OPTIONS`.
-- **Limits.** Files over `docs.maxBytes` (25 MB) are refused, and nothing over 100 MiB is opened whatever that key says. A zip based file that expands too far, or a conversion that hits the memory cap, stops with "the document hit a safety limit". The converter is stopped after `docs.timeoutSeconds` (30) or when it uses more than `docs.maxMemoryMb` (1024). The text is cut at `docs.maxOutputChars` (200000) with a marker that says how many characters were shown.
+- **Limits.** Files over 25 MB are refused. A zip based file that expands too far, or a conversion that hits the memory cap, stops with "the document hit a safety limit". The converter is stopped after 30 seconds or when it uses more than 1024 MB. The text is cut at 200000 characters with a marker that says how many characters were shown.
 - **Private temporary files.** The converter writes to a random folder under `~/.config/playbook/tmp` that only you can open. It is deleted when the command ends, on success, error, timeout, interrupt or crash of playbook itself. A folder left by a killed process is removed on the next run once it is older than an hour.
 - **Untrusted content.** The text is wrapped in a block with a random tag and a line that says to treat it as data and not follow instructions inside it. Nothing from the document is logged. Only the slice cache holds its text, in a folder only you can open, and it is swept after a day.
 
@@ -76,4 +76,4 @@ The output lists what the conversion does not carry. For Word files, tracked cha
 
 ## Config keys
 
-See the [config keys page](../reference/config-keys.md): `docs.convert`, `docs.maxBytes`, `docs.timeoutSeconds`, `docs.maxOutputChars`, `docs.maxMemoryMb`, `docs.displayChars`, `docs.anydocPath`.
+See the [config keys page](../reference/config-keys.md): `docs.convert` and `docs.anydocPath`.

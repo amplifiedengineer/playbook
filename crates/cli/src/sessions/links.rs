@@ -6,7 +6,7 @@
 //! request of the branch. Every call is bounded by a timeout and every failure
 //! reads as "unknown". Nothing here writes or changes anything.
 
-use super::{is_trunk, Place, Pr, PrKind, Settings};
+use super::{is_trunk, Place, Pr, PrKind};
 use crate::common::git;
 use crate::common::proc::run_with_timeout;
 use crate::usage::run::Paths;
@@ -165,22 +165,6 @@ pub fn gather(
             .collect();
         handles.into_iter().filter_map(|h| h.join().ok()).collect()
     })
-}
-
-/// The two `sessions.*` limits from config, falling back to the defaults.
-pub fn settings(home: &Path) -> Settings {
-    let read = |key: &str, default: i64| {
-        crate::config::resolve(key, home, None)
-            .ok()
-            .and_then(|(v, _)| v.as_i64())
-            .filter(|n| *n >= 1)
-            .unwrap_or(default)
-    };
-    let d = Settings::default();
-    Settings {
-        stale_after_days: read("sessions.staleAfterDays", d.stale_after_days),
-        recent_days: read("sessions.recentDays", d.recent_days),
-    }
 }
 
 #[cfg(test)]

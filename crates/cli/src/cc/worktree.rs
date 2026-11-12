@@ -166,9 +166,6 @@ const BASE_BRANCH_CANDIDATES: [&str; 4] = ["main", "master", "trunk", "develop"]
 /// Last resort when the remote is unreachable and no candidate exists locally.
 const BASE_BRANCH_FALLBACK: &str = "master";
 
-/// A worktree is stale once its last commit is older than this.
-const STALE_AFTER_DAYS: i64 = 30;
-
 const SECS_PER_DAY: i64 = 86_400;
 
 /// Cleanup runs at most this often per repo. Kept as its own name so callers
@@ -297,7 +294,7 @@ pub fn is_stale(status: &WorktreeStatus, now_epoch: i64) -> bool {
     if status.merged_into_base {
         return true;
     }
-    let cutoff = now_epoch - (STALE_AFTER_DAYS * SECS_PER_DAY);
+    let cutoff = now_epoch - (crate::worktree::STALE_AFTER_DAYS * SECS_PER_DAY);
     status.last_commit_epoch < cutoff
 }
 

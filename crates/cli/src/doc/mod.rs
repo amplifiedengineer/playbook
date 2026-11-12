@@ -24,40 +24,74 @@ const KB_PER_MB: u64 = 1024;
 const STALE_AFTER: Duration = Duration::from_secs(3600);
 const CACHE_STALE_AFTER: Duration = Duration::from_secs(24 * 3600);
 
-/// The limits and converter path from config, with built in fallbacks.
+/// The largest file `doc read` opens, in bytes (25 MiB).
+pub const MAX_BYTES: u64 = 26_214_400;
+/// Seconds a conversion may run before it is stopped.
+pub const TIMEOUT_SECONDS: u64 = 30;
+/// Characters of converted text kept before the output is cut.
+pub const MAX_OUTPUT_CHARS: usize = 200_000;
+/// Resident megabytes a conversion may use before it is stopped.
+pub const MAX_MEMORY_MB: u64 = 1024;
+/// The most document characters printed at once.
+pub const DISPLAY_CHARS: usize = 24_000;
+
+// A built-in cap above the hard ceiling would make the ceiling the real cap.
+const _: () = assert!(MAX_BYTES <= converter::HARD_MAX_INPUT_BYTES);
+
+/// The converter limits, the converter path and the display size.
 pub struct Settings {
     pub limits: Limits,
     pub anydoc_path: String,
-    /// `docs.maxBytes` was above the hard ceiling and has been lowered to it.
-    pub max_bytes_clamped: bool,
-    /// Most document characters printed at once, from `docs.displayChars`.
     pub display_chars: usize,
 }
 
-fn number(home: &Path, slug: Option<&str>, key: &str) -> u64 {
-    crate::config::resolve_valid(key, home, slug)
-        .ok()
-        .and_then(|(v, _, _)| v.as_u64())
-        .or_else(|| crate::config::keys::default_value(key).and_then(|v| v.as_u64()))
-        .unwrap_or(1)
-}
+/// Env var that lowers the limits in debug builds so tests can reach them,
+/// as a JSON object of `Limits` field names.
+#[cfg(debug_assertions)]
+const TEST_LIMITS_VAR: &str = "PLAYBOOK_TEST_DOC_LIMITS";
 
 pub fn settings(home: &Path) -> Settings {
     let slug = crate::common::repo_slug();
     let slug = (!slug.is_empty()).then_some(slug);
-    let slug = slug.as_deref();
-    let anydoc_path = converter::configured_path(home, slug);
-    let max_bytes = number(home, slug, "docs.maxBytes");
-    Settings {
+    let anydoc_path = converter::configured_path(home, slug.as_deref());
+    let mut cfg = Settings {
         limits: Limits {
-            max_input_bytes: max_bytes.min(converter::HARD_MAX_INPUT_BYTES),
-            timeout: Duration::from_secs(number(home, slug, "docs.timeoutSeconds")),
-            max_output_chars: number(home, slug, "docs.maxOutputChars") as usize,
-            max_rss_kb: number(home, slug, "docs.maxMemoryMb").saturating_mul(KB_PER_MB),
+            max_input_bytes: MAX_BYTES,
+            timeout: Duration::from_secs(TIMEOUT_SECONDS),
+            max_output_chars: MAX_OUTPUT_CHARS,
+            max_rss_kb: MAX_MEMORY_MB * KB_PER_MB,
         },
         anydoc_path,
-        max_bytes_clamped: max_bytes > converter::HARD_MAX_INPUT_BYTES,
-        display_chars: number(home, slug, "docs.displayChars") as usize,
+        display_chars: DISPLAY_CHARS,
+    };
+    #[cfg(debug_assertions)]
+    apply_test_limits(&mut cfg);
+    cfg
+}
+
+#[cfg(debug_assertions)]
+fn apply_test_limits(cfg: &mut Settings) {
+    let Some(overrides) = std::env::var(TEST_LIMITS_VAR)
+        .ok()
+        .and_then(|raw| serde_json::from_str::<serde_json::Value>(&raw).ok())
+    else {
+        return;
+    };
+    let number = |field: &str| overrides.get(field).and_then(|v| v.as_u64());
+    if let Some(n) = number("max_input_bytes") {
+        cfg.limits.max_input_bytes = n;
+    }
+    if let Some(n) = number("timeout_seconds") {
+        cfg.limits.timeout = Duration::from_secs(n);
+    }
+    if let Some(n) = number("max_output_chars") {
+        cfg.limits.max_output_chars = n as usize;
+    }
+    if let Some(n) = number("max_memory_mb") {
+        cfg.limits.max_rss_kb = n * KB_PER_MB;
+    }
+    if let Some(n) = number("display_chars") {
+        cfg.display_chars = n as usize;
     }
 }
 
@@ -119,13 +153,6 @@ struct Shown {
 /// every other failure.
 pub fn read(home: &Path, file: &Path, json: bool, req: &SliceRequest) -> i32 {
     let cfg = settings(home);
-    if cfg.max_bytes_clamped {
-        eprintln!(
-            "doc read: note: docs.maxBytes is above the {} ceiling ({} bytes), so the ceiling applies",
-            converter::ceiling_label(),
-            converter::HARD_MAX_INPUT_BYTES
-        );
-    }
     let root = scratch_root(home);
     tmp::sweep_stale(&root, STALE_AFTER);
     let cache_dir = slice::cache_dir(&crate::common::paths::playbook_root_from(home));
@@ -379,4 +406,42 @@ pub fn status(home: &Path) -> i32 {
         println!("{line}");
     }
     report.exit_code
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_limits_are_the_built_in_values_whatever_is_stored() {
+        // Arrange
+        let home = crate::testing::scratch_root("doc-limits-fixed");
+        let root = crate::common::paths::playbook_root_from(&home);
+        for key in [
+            "docs.maxBytes",
+            "docs.timeoutSeconds",
+            "docs.maxOutputChars",
+            "docs.maxMemoryMb",
+            "docs.displayChars",
+        ] {
+            crate::config::store::put(
+                &root,
+                crate::config::write::Tier::Global,
+                None,
+                key,
+                &serde_json::json!(3),
+            )
+            .unwrap();
+        }
+
+        // Act
+        let cfg = settings(&home);
+
+        // Assert
+        assert_eq!(cfg.limits.max_input_bytes, MAX_BYTES);
+        assert_eq!(cfg.limits.timeout, Duration::from_secs(TIMEOUT_SECONDS));
+        assert_eq!(cfg.limits.max_output_chars, MAX_OUTPUT_CHARS);
+        assert_eq!(cfg.limits.max_rss_kb, MAX_MEMORY_MB * KB_PER_MB);
+        assert_eq!(cfg.display_chars, DISPLAY_CHARS);
+    }
 }

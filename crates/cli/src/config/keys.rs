@@ -38,12 +38,10 @@ pub fn gate_max_rounds_in_range(n: i64) -> bool {
     (1..=GATE_MAX_ROUNDS_CEILING).contains(&n)
 }
 
-/// The largest input a document converter opens, whatever `docs.maxBytes`
-/// says. The bundled `pbdoc` keeps its own copy because it must not depend on
-/// this crate; a test in `doc::converter` keeps the two equal.
+/// The largest input a document converter opens. The bundled `pbdoc` keeps
+/// its own copy because it must not depend on this crate; a test in
+/// `doc::converter` keeps the two equal.
 pub const HARD_MAX_INPUT_BYTES: u64 = 104_857_600;
-/// The most `docs.maxMemoryMb` may be. The bundled `pbdoc` clamps to it too.
-pub const DOCS_MAX_MEMORY_MB_CEILING: i64 = 4096;
 
 /// Every config key playbook resolves, in v1.
 pub const KNOWN_KEYS: &[&str] = &[
@@ -62,8 +60,6 @@ pub const KNOWN_KEYS: &[&str] = &[
     "pr.bodyMaxChars",
     "pr.ticketPatterns",
     "worktreeCleanup.enabled",
-    "worktreeCleanup.staleAfterDays",
-    "worktreeCleanup.conflictGracePeriodDays",
     "mode",
     "maxEffortLevel",
     "effort.auto",
@@ -75,7 +71,6 @@ pub const KNOWN_KEYS: &[&str] = &[
     "auto.budgetUsd",
     "auto.agentBudgetUsd",
     "auto.sessionCeilingUsd",
-    "auto.warnPct",
     "gate.maxRounds",
     "fix.maxFiles",
     "fix.maxLines",
@@ -101,16 +96,8 @@ pub const KNOWN_KEYS: &[&str] = &[
     "usage.budget.weeklyUsd",
     "usage.ui.layout",
     "usage.ui.state",
-    "sessions.staleAfterDays",
-    "sessions.recentDays",
     "hygiene.enabled",
-    "hygiene.thresholdTokens",
     "docs.convert",
-    "docs.maxBytes",
-    "docs.timeoutSeconds",
-    "docs.maxOutputChars",
-    "docs.maxMemoryMb",
-    "docs.displayChars",
     "docs.anydocPath",
     "code.briefFactsTokens",
     "launcher.shortName",
@@ -119,7 +106,6 @@ pub const KNOWN_KEYS: &[&str] = &[
     "hooks.proseLint.mode",
     "hooks.policyGuard.enabled",
     "update.mode",
-    "update.checkIntervalHours",
     "update.plugin",
     "watch.enabled",
     "watch.repos",
@@ -161,6 +147,18 @@ pub static FIXED_KEYS: LazyLock<Vec<(&'static str, Value)>> = LazyLock::new(|| {
         ("gc.buildOutputActiveMinutes", json!(15)),
         ("gc.freeSpaceWarnGiB", json!(10)),
         ("gc.freeSpaceWarnPercent", json!(5)),
+        ("docs.maxBytes", json!(26_214_400)),
+        ("docs.timeoutSeconds", json!(30)),
+        ("docs.maxOutputChars", json!(200_000)),
+        ("docs.maxMemoryMb", json!(1024)),
+        ("docs.displayChars", json!(24_000)),
+        ("sessions.staleAfterDays", json!(3)),
+        ("sessions.recentDays", json!(7)),
+        ("hygiene.thresholdTokens", json!(250_000)),
+        ("worktreeCleanup.staleAfterDays", json!(30)),
+        ("worktreeCleanup.conflictGracePeriodDays", json!(90)),
+        ("update.checkIntervalHours", json!(24)),
+        ("auto.warnPct", json!(70)),
     ]
 });
 
@@ -173,7 +171,6 @@ pub fn is_retired(key: &str) -> bool {
 /// The per-user settings, which live only in the global tier.
 pub const USER_KEYS: &[&str] = &[
     "update.mode",
-    "update.checkIntervalHours",
     "update.plugin",
     "systemPrompt.enabled",
     "attribution.enabled",
@@ -212,7 +209,6 @@ pub const SHARED_KEYS: &[&str] = &[
     "auto.budgetUsd",
     "auto.agentBudgetUsd",
     "auto.sessionCeilingUsd",
-    "auto.warnPct",
     "pr.draft",
     "commit.signOff",
 ];
@@ -234,8 +230,6 @@ pub const LOCAL_ONLY_KEYS: &[&str] = &[
     "pr.bodyMaxChars",
     "pr.ticketPatterns",
     "worktreeCleanup.enabled",
-    "worktreeCleanup.staleAfterDays",
-    "worktreeCleanup.conflictGracePeriodDays",
     "mode",
     "memory.source",
     "models.haiku",
@@ -259,16 +253,8 @@ pub const LOCAL_ONLY_KEYS: &[&str] = &[
     "usage.autoIngest",
     "usage.autoIngestMinutes",
     "usage.ui.state",
-    "sessions.staleAfterDays",
-    "sessions.recentDays",
     "hygiene.enabled",
-    "hygiene.thresholdTokens",
     "docs.convert",
-    "docs.maxBytes",
-    "docs.timeoutSeconds",
-    "docs.maxOutputChars",
-    "docs.maxMemoryMb",
-    "docs.displayChars",
     "docs.anydocPath",
     "code.briefFactsTokens",
     "launcher.shortName",
@@ -277,7 +263,6 @@ pub const LOCAL_ONLY_KEYS: &[&str] = &[
     "hooks.proseLint.mode",
     "hooks.policyGuard.enabled",
     "update.mode",
-    "update.checkIntervalHours",
     "update.plugin",
     "watch.enabled",
     "watch.repos",
@@ -354,8 +339,6 @@ pub fn default_value(key: &str) -> Option<Value> {
             "[A-Z][A-Z0-9]+-[0-9]+".to_string(),
         )])),
         "worktreeCleanup.enabled" => Some(Value::Bool(true)),
-        "worktreeCleanup.staleAfterDays" => Some(Value::Number(30.into())),
-        "worktreeCleanup.conflictGracePeriodDays" => Some(Value::Number(90.into())),
         "mode" => Some(Value::String("ask".to_string())),
         "maxEffortLevel" => Some(Value::String("auto".to_string())),
         "effort.auto" => Some(Value::String("off".to_string())),
@@ -365,7 +348,6 @@ pub fn default_value(key: &str) -> Option<Value> {
         "auto.budgetUsd" => Some(Value::Number(AUTO_BUDGET_USD.into())),
         "auto.agentBudgetUsd" => Some(Value::Number(AUTO_AGENT_BUDGET_USD.into())),
         "auto.sessionCeilingUsd" => Some(Value::Number(0.into())),
-        "auto.warnPct" => Some(Value::Number(70.into())),
         "gate.maxRounds" => Some(Value::Number(GATE_MAX_ROUNDS_DEFAULT.into())),
         "fix.maxFiles" => Some(Value::Number(3.into())),
         "fix.maxLines" => Some(Value::Number(500.into())),
@@ -389,16 +371,8 @@ pub fn default_value(key: &str) -> Option<Value> {
         "usage.telemetryMaxRows" => Some(Value::Number(500_000.into())),
         "usage.budget.monthlyUsd" | "usage.budget.weeklyUsd" => Some(Value::Number(0.into())),
         "usage.ui.layout" | "usage.ui.state" => Some(Value::String(String::new())),
-        "sessions.staleAfterDays" => Some(Value::Number(3.into())),
-        "sessions.recentDays" => Some(Value::Number(7.into())),
         "hygiene.enabled" => Some(Value::Bool(true)),
-        "hygiene.thresholdTokens" => Some(Value::Number(250_000.into())),
         "docs.convert" => Some(Value::String("auto".to_string())),
-        "docs.maxBytes" => Some(Value::Number(26_214_400.into())),
-        "docs.timeoutSeconds" => Some(Value::Number(30.into())),
-        "docs.maxOutputChars" => Some(Value::Number(200_000.into())),
-        "docs.maxMemoryMb" => Some(Value::Number(1024.into())),
-        "docs.displayChars" => Some(Value::Number(24_000.into())),
         "docs.anydocPath" => Some(Value::String(String::new())),
         "code.briefFactsTokens" => Some(Value::Number(0.into())),
         "launcher.shortName" => Some(Value::Bool(false)),
@@ -407,7 +381,6 @@ pub fn default_value(key: &str) -> Option<Value> {
         "hooks.proseLint.mode" => Some(Value::String("warn".to_string())),
         "hooks.policyGuard.enabled" => Some(Value::Bool(false)),
         "update.mode" => Some(Value::String("notify".to_string())),
-        "update.checkIntervalHours" => Some(Value::Number(24.into())),
         "update.plugin" => Some(Value::String("auto".to_string())),
         "watch.enabled" => Some(Value::Bool(false)),
         "watch.repos" | "watch.allowedAuthors" => Some(Value::Array(Vec::new())),
@@ -485,8 +458,6 @@ const LEGACY_KEY_NAMES: &[&str] = &[
     "autoMerge.enabled",
     "pr.bodyMaxChars",
     "worktreeCleanup.enabled",
-    "worktreeCleanup.staleAfterDays",
-    "worktreeCleanup.conflictGracePeriodDays",
     "maxEffortLevel",
     "auto.agentBudgetUsd",
     "auto.sessionCeilingUsd",
@@ -495,12 +466,8 @@ const LEGACY_KEY_NAMES: &[&str] = &[
     "usage.telemetryRetentionDays",
     "usage.telemetryMaxRows",
     "usage.autoIngestMinutes",
-    "sessions.staleAfterDays",
-    "docs.maxOutputChars",
-    "docs.maxMemoryMb",
     "code.briefFactsTokens",
     "systemPrompt.enabled",
-    "update.checkIntervalHours",
     "watch.maxCatchupHours",
     "watch.limits.actionsPerDay",
     "watch.limits.usdPerDay",
@@ -512,7 +479,7 @@ const COMPOUND_GROUPS: &[&str] = &["proseLint", "policyGuard"];
 
 /// The exact size of `KNOWN_KEYS`; each Segment that cuts keys lowers it.
 #[cfg(test)]
-const KEY_CEILING: usize = 84;
+const KEY_CEILING: usize = 72;
 
 #[cfg(test)]
 mod tests {
@@ -647,6 +614,34 @@ mod tests {
         let count = KNOWN_KEYS.len();
         // Assert
         assert_eq!(count, KEY_CEILING);
+    }
+
+    #[test]
+    fn every_cut_threshold_key_is_fixed_and_no_longer_known() {
+        // Arrange
+        let cut = [
+            "docs.maxBytes",
+            "docs.timeoutSeconds",
+            "docs.maxOutputChars",
+            "docs.maxMemoryMb",
+            "docs.displayChars",
+            "sessions.staleAfterDays",
+            "sessions.recentDays",
+            "hygiene.thresholdTokens",
+            "worktreeCleanup.staleAfterDays",
+            "worktreeCleanup.conflictGracePeriodDays",
+            "update.checkIntervalHours",
+            "auto.warnPct",
+        ];
+
+        // Act
+        let fixed: Vec<&str> = FIXED_KEYS.iter().map(|(key, _)| *key).collect();
+
+        // Assert
+        for key in cut {
+            assert!(fixed.contains(&key), "{key} is not in FIXED_KEYS");
+            assert!(!KNOWN_KEYS.contains(&key), "{key} is still known");
+        }
     }
 
     #[test]

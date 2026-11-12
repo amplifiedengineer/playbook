@@ -17,7 +17,6 @@ use std::path::{Path, PathBuf};
 /// The converter version these safeguards were tested with.
 pub const TESTED_VERSION: &str = "0.2";
 
-const BYTES_PER_MIB: u64 = 1 << 20;
 const BUNDLED_NAME: &str = "pbdoc";
 const EXTERNAL_NAME: &str = "anydoc";
 const CONFIG_KEY: &str = "docs.anydocPath";
@@ -49,11 +48,6 @@ pub const DOCTOR_ROW_EXTERNAL: &str =
     "doc converter: external anydoc, playbook does not check that it is offline";
 pub const DOCTOR_ROW_NONE: &str = "doc converter: not found";
 pub const DOCTOR_ROW_SKEW: &str = "doc converter: pbdoc version differs from playbook";
-
-/// The input ceiling in words, such as `100 MiB`.
-pub fn ceiling_label() -> String {
-    format!("{} MiB", HARD_MAX_INPUT_BYTES / BYTES_PER_MIB)
-}
 
 /// The `docs.anydocPath` value, empty when unset.
 pub fn configured_path(home: &Path, slug: Option<&str>) -> String {
@@ -533,11 +527,6 @@ mod tests {
 
         // Assert
         assert_eq!(found, bundled(beside_link));
-    }
-
-    #[test]
-    fn the_ceiling_label_names_whole_mebibytes() {
-        assert_eq!(ceiling_label(), "100 MiB");
     }
 
     #[test]

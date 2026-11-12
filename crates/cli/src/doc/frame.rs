@@ -91,7 +91,7 @@ fn push_line_terminated(out: &mut String, text: &str) {
 }
 
 /// A whole document framed. `truncated_from` is the original length when the
-/// converter output was cut at `docs.maxOutputChars`.
+/// converter output was cut at the output limit.
 pub fn wrap(
     markdown: &str,
     truncated_from: Option<usize>,
@@ -110,9 +110,7 @@ pub fn wrap(
 }
 
 fn truncation_notice(shown: usize, total: usize) -> String {
-    format!(
-        "[truncated: showing the first {shown} of {total} characters, raise docs.maxOutputChars to read more]\n"
-    )
+    format!("[truncated: showing the first {shown} of {total} characters]\n")
 }
 
 /// One slice of a long document and what the reader needs to continue.
@@ -120,8 +118,8 @@ pub struct SliceView<'a> {
     pub text: &'a str,
     pub offset: usize,
     pub total_chars: usize,
-    /// The original length when the converter output was cut at
-    /// `docs.maxOutputChars`.
+    /// The original length when the converter output was cut at the output
+    /// limit.
     pub truncated_from: Option<usize>,
     /// Where the full Markdown is cached, when it could be written.
     pub cache: Option<&'a Path>,

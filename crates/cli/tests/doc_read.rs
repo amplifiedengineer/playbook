@@ -12,6 +12,7 @@ use playbook::doc::converter::{
     STATUS_OVERRIDE_NOTE, STATUS_VERSION_PREFIX,
 };
 use serde_json::Value;
+use std::cell::RefCell;
 use std::fs;
 use std::os::unix::fs::{MetadataExt, PermissionsExt};
 use std::path::{Path, PathBuf};
@@ -21,10 +22,14 @@ use std::time::{Duration, Instant};
 
 static COUNTER: AtomicU64 = AtomicU64::new(0);
 
+/// Names the debug build reads from `LIMITS_VAR` to lower a limit.
+const LIMITS_VAR: &str = "PLAYBOOK_TEST_DOC_LIMITS";
+
 struct Env {
     root: PathBuf,
     home: PathBuf,
     bin: PathBuf,
+    limits: RefCell<serde_json::Map<String, Value>>,
 }
 
 impl Env {
@@ -38,7 +43,12 @@ impl Env {
         let bin = root.join("bin");
         fs::create_dir_all(&home).unwrap();
         fs::create_dir_all(&bin).unwrap();
-        Self { root, home, bin }
+        Self {
+            root,
+            home,
+            bin,
+            limits: RefCell::default(),
+        }
     }
 
     fn argv_log(&self) -> PathBuf {
@@ -120,6 +130,13 @@ impl Env {
         set(Tier::Global, key, &value, &self.home, None).unwrap();
     }
 
+    /// Lowers one built-in limit for the commands run after this call.
+    fn limit(&self, name: &str, value: impl Into<Value>) {
+        self.limits
+            .borrow_mut()
+            .insert(name.to_string(), value.into());
+    }
+
     /// Runs an isolated copy of the binary, so the `pbdoc` built beside the
     /// real one is never found as bundled and the PATH route is exercised.
     fn command(&self, args: &[&str]) -> Command {
@@ -142,6 +159,10 @@ impl Env {
             .env("FIRECRAWL_API_KEY", "fc-test-secret")
             .env("HTTPS_PROXY", "http://127.0.0.1:9")
             .env("NODE_OPTIONS", "--require=/nonexistent");
+        let limits = self.limits.borrow();
+        if !limits.is_empty() {
+            c.env(LIMITS_VAR, Value::Object(limits.clone()).to_string());
+        }
         c
     }
 
@@ -365,7 +386,7 @@ fn a_converter_that_runs_too_long_is_stopped_and_cleaned_up() {
     // Arrange
     let env = Env::new("timeout");
     env.fake("sleep 30");
-    env.config("docs.timeoutSeconds", Value::from(1));
+    env.limit("timeout_seconds", 1);
     let doc = env.doc("slow.pdf", b"%PDF-1.4");
     let start = Instant::now();
 
@@ -388,7 +409,7 @@ fn a_converter_that_uses_too_much_memory_is_stopped() {
     // Arrange
     let env = Env::new("mem");
     env.fake(MEMORY_HOG_BODY);
-    env.config("docs.maxMemoryMb", Value::from(64));
+    env.limit("max_memory_mb", 64);
     let doc = env.doc("big.pdf", b"%PDF-1.4");
 
     // Act
@@ -439,7 +460,7 @@ fn output_over_the_cap_is_truncated_with_a_count() {
     // Arrange
     let env = Env::new("cap");
     env.fake("head -c 500 /dev/zero | tr '\\0' 'a' > \"$out\"");
-    env.config("docs.maxOutputChars", Value::from(50));
+    env.limit("max_output_chars", 50);
     let doc = env.doc("long.pdf", b"%PDF-1.4");
 
     // Act
@@ -457,7 +478,7 @@ fn a_file_over_the_size_cap_is_refused_before_the_converter_runs() {
     // Arrange
     let env = Env::new("size");
     env.fake(OK);
-    env.config("docs.maxBytes", Value::from(10));
+    env.limit("max_input_bytes", 10);
     let doc = env.doc("big.pdf", &[b'x'; 100]);
 
     // Act
@@ -611,19 +632,24 @@ fn the_scratch_root_is_private() {
 }
 
 #[test]
-fn the_docs_keys_default_to_auto_and_sane_limits() {
+fn the_convert_key_defaults_to_auto_and_the_limits_are_not_keys() {
     // Arrange
     let env = Env::new("keys");
 
     // Act
-    let get = |k: &str| playbook::config::resolve(k, &env.home, None).unwrap().0;
+    let get = |k: &str| playbook::config::resolve(k, &env.home, None);
 
     // Assert
-    assert_eq!(get("docs.convert"), Value::from("auto"));
-    assert_eq!(get("docs.timeoutSeconds"), Value::from(30));
-    assert_eq!(get("docs.maxBytes"), Value::from(26_214_400));
-    assert_eq!(get("docs.maxOutputChars"), Value::from(200_000));
-    assert_eq!(get("docs.displayChars"), Value::from(24_000));
+    assert_eq!(get("docs.convert").unwrap().0, Value::from("auto"));
+    for key in [
+        "docs.timeoutSeconds",
+        "docs.maxBytes",
+        "docs.maxOutputChars",
+        "docs.maxMemoryMb",
+        "docs.displayChars",
+    ] {
+        assert!(get(key).is_err(), "{key} is still a key");
+    }
 }
 
 /// With the real converter on PATH, a malformed generated PDF is rejected
@@ -857,10 +883,6 @@ const SPARSE_ALLOCATED_LIMIT: u64 = MIB;
 const HARD_CEILING_LITERAL: u64 = 104_857_600;
 const DEFAULT_MAX_BYTES: u64 = 26_214_400;
 const FIVE_GIB: u64 = 5 * GIB;
-const TEN_GIB: u64 = 10 * GIB;
-const OVER_HARD_CEILING_CONFIG: u64 = 1_000_000_000;
-const OVER_HARD_CEILING_FILE: u64 = 150 * MIB;
-const CEILING_NOTE: &str = "100 MiB";
 const SAFETY_LIMIT_PREFIX: &str = "the document hit a safety limit: ";
 const MEMORY_LIMIT_REASON: &str = "memory limit reached";
 /// The helper prints `error: <message>` on stderr, as the real one does.
@@ -879,13 +901,6 @@ impl Env {
             return None;
         }
         Some(path)
-    }
-
-    /// Store a value the way a hand-edited config would hold it: without the
-    /// checks `config set` applies.
-    fn config_unchecked(&self, key: &str, value: Value) {
-        let root = playbook::common::paths::playbook_root_from(&self.home);
-        playbook::config::store::put(&root, Tier::Global, None, key, &value).unwrap();
     }
 
     fn read_bundled(&self, file: &Path) -> Output {
@@ -912,7 +927,6 @@ fn a_five_gib_sparse_file_is_refused_without_running_the_converter() {
     // Arrange
     let env = Env::new("ceiling-5gib");
     env.fake(OK);
-    env.config_unchecked("docs.maxBytes", Value::from(TEN_GIB));
     let Some(doc) = env.sparse("huge.csv", FIVE_GIB) else {
         return;
     };
@@ -969,65 +983,6 @@ fn a_file_one_byte_over_the_default_limit_is_refused() {
 }
 
 #[test]
-fn a_hand_written_max_bytes_above_the_ceiling_is_clamped_and_says_so() {
-    // Arrange
-    let env = Env::new("ceiling-clamp");
-    env.fake(OK);
-    env.config_unchecked("docs.maxBytes", Value::from(OVER_HARD_CEILING_CONFIG));
-    let Some(doc) = env.sparse("clamped.csv", OVER_HARD_CEILING_FILE) else {
-        return;
-    };
-
-    // Act
-    let out = env.read(&doc);
-
-    // Assert
-    assert_eq!(out.status.code(), Some(1), "{}", text(&out));
-    assert!(text(&out).contains(CEILING_NOTE), "{}", text(&out));
-    assert!(
-        !env.argv_log().exists(),
-        "the converter should not have run"
-    );
-}
-
-#[test]
-fn config_set_rejects_max_bytes_above_the_ceiling_and_names_it() {
-    // Arrange
-    let env = Env::new("set-over");
-    let over = (HARD_CEILING_LITERAL + 1).to_string();
-
-    // Act
-    let out = env
-        .command(&["config", "set", "--global", "docs.maxBytes", &over])
-        .output()
-        .unwrap();
-
-    // Assert
-    assert!(!out.status.success(), "{}", text(&out));
-    assert!(
-        text(&out).contains(&HARD_CEILING_LITERAL.to_string()),
-        "{}",
-        text(&out)
-    );
-}
-
-#[test]
-fn config_set_accepts_max_bytes_at_the_ceiling() {
-    // Arrange
-    let env = Env::new("set-at");
-    let at = HARD_CEILING_LITERAL.to_string();
-
-    // Act
-    let out = env
-        .command(&["config", "set", "--global", "docs.maxBytes", &at])
-        .output()
-        .unwrap();
-
-    // Assert
-    assert!(out.status.success(), "{}", text(&out));
-}
-
-#[test]
 fn a_bundled_converter_that_exits_4_is_reported_as_a_safety_limit() {
     // Arrange
     let env = Env::new("bundled-exit4");
@@ -1052,7 +1007,7 @@ fn a_bundled_converter_stopped_by_the_outer_watchdog_gives_the_helpers_own_reaso
     // Arrange
     let env = Env::new("bundled-outer-mem");
     env.fake_bundled(&own_pbdoc_version(), MEMORY_HOG_BODY);
-    env.config("docs.maxMemoryMb", Value::from(64));
+    env.limit("max_memory_mb", 64);
     let doc = env.doc("report.pdf", b"%PDF-1.4");
 
     // Act
@@ -1147,7 +1102,7 @@ fn the_real_converter_hitting_its_memory_cap_is_reported_as_a_safety_limit() {
     env.playbook_copy();
     let bundled = env.bundled_dir().join("pbdoc");
     link_or_copy(Path::new(&pbdoc), &bundled);
-    env.config("docs.maxMemoryMb", Value::from(LOW_MEMORY_MB));
+    env.limit("max_memory_mb", LOW_MEMORY_MB);
     let row = "a,b,c,d,e,f,g,h\n";
     let doc = env.doc("big.csv", row.repeat(REAL_CSV_BYTES / row.len()).as_bytes());
 
@@ -1201,7 +1156,7 @@ fn next_offset(stdout: &str) -> Option<usize> {
 }
 
 fn display_chars(env: &Env, n: usize) {
-    env.config("docs.displayChars", Value::from(n));
+    env.limit("display_chars", n as u64);
 }
 
 mod section_index_cases {
@@ -1773,7 +1728,7 @@ fn the_cache_key_changes_with_the_document_the_converter_version_and_the_output_
     assert_eq!(env.conversions(), 3);
 
     // Another output cap is a new entry.
-    env.config("docs.maxOutputChars", Value::from(LOWER_OUTPUT_CAP));
+    env.limit("max_output_chars", LOWER_OUTPUT_CAP as u64);
     assert!(slice(&env).status.success());
     assert_eq!(env.conversions(), 4);
     assert!(slice(&env).status.success());
@@ -1819,46 +1774,6 @@ fn stale_cache_files_are_swept_and_symlinks_are_left_alone() {
 }
 
 #[test]
-fn config_rejects_display_chars_outside_1000_to_120000() {
-    // Arrange
-    let env = Env::new("slice-cfg-bad");
-
-    for bad in [500, 999, 120_001, 200_000] {
-        // Act
-        let result = set(
-            Tier::Global,
-            "docs.displayChars",
-            &Value::from(bad),
-            &env.home,
-            None,
-        );
-
-        // Assert
-        assert!(result.is_err(), "{bad} was accepted");
-    }
-}
-
-#[test]
-fn config_accepts_display_chars_inside_1000_to_120000() {
-    // Arrange
-    let env = Env::new("slice-cfg-ok");
-
-    for good in [1_000, 24_000, 120_000] {
-        // Act
-        let result = set(
-            Tier::Global,
-            "docs.displayChars",
-            &Value::from(good),
-            &env.home,
-            None,
-        );
-
-        // Assert
-        assert!(result.is_ok(), "{good} was rejected: {result:?}");
-    }
-}
-
-#[test]
 fn json_output_of_a_slice_carries_total_offset_and_next_offset() {
     // Arrange
     let env = Env::new("slice-json");
@@ -1891,7 +1806,7 @@ const TRUNCATION_NOTICE: &str = "[truncated: showing the first 5000 of ";
 fn truncating_env(name: &str) -> Env {
     let env = Env::new(name);
     env.fake_markdown(&big_markdown());
-    env.config("docs.maxOutputChars", Value::from(TRUNCATING_OUTPUT_CAP));
+    env.limit("max_output_chars", TRUNCATING_OUTPUT_CAP as u64);
     display_chars(&env, MIN_DISPLAY_CHARS);
     env
 }

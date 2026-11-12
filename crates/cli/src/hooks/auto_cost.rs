@@ -101,7 +101,8 @@ const DEFAULT_AGENT_BUDGET_CENTS: i64 = config::keys::AUTO_AGENT_BUDGET_USD as i
 /// With `auto.sessionCeilingUsd` unset, the tree's ceiling is this many
 /// times the main cap.
 const CEILING_FACTOR: i64 = config::keys::AUTO_CEILING_FACTOR as i64;
-const DEFAULT_WARN_PCT: u64 = 70;
+/// The percent of a cap at which the spend hook warns.
+const WARN_PCT: u64 = 70;
 const SAFE_TOOLS: [&str; 3] = ["Read", "Grep", "Glob"];
 const MODE_ESCAPE: &str = "playbook mode ask";
 
@@ -166,10 +167,6 @@ impl Limits {
         let cents = |key: &str| value(key).and_then(|value| config::auto_cap_cents(&value));
         let budget = cents("auto.budgetUsd");
         let agent_budget = cents("auto.agentBudgetUsd");
-        let pct = value("auto.warnPct")
-            .and_then(|value| value.as_u64())
-            .filter(|pct| (1..=100).contains(pct))
-            .unwrap_or(DEFAULT_WARN_PCT);
         let cap = budget.unwrap_or(DEFAULT_BUDGET_CENTS);
         let set_ceiling = cents("auto.sessionCeilingUsd");
         Limits {
@@ -177,7 +174,7 @@ impl Limits {
             agent_cap: agent_budget.unwrap_or(DEFAULT_AGENT_BUDGET_CENTS),
             ceiling: set_ceiling.unwrap_or(cap.saturating_mul(CEILING_FACTOR)),
             ceiling_is_set: set_ceiling.is_some(),
-            pct,
+            pct: WARN_PCT,
             budget_is_valid: budget.is_some(),
             agent_budget_is_valid: agent_budget.is_some(),
             mode_from_env: false,
@@ -943,6 +940,27 @@ mod tests {
                 "{cents} {ceiling:?}"
             );
         }
+    }
+
+    #[test]
+    fn the_warn_percentage_is_built_in_whatever_is_stored() {
+        // Arrange
+        let home = crate::testing::scratch_root("auto-cost-warn-fixed");
+        let root = crate::common::paths::playbook_root_from(&home);
+        config::store::put(
+            &root,
+            config::write::Tier::Global,
+            None,
+            "auto.warnPct",
+            &serde_json::json!(100),
+        )
+        .unwrap();
+
+        // Act
+        let limits = Limits::read(&home, None);
+
+        // Assert
+        assert_eq!(limits.pct, WARN_PCT);
     }
 
     #[test]

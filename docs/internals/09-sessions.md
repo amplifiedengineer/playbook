@@ -11,7 +11,7 @@ playbook sessions --json
 
 | Column | Where it comes from |
 |---|---|
-| State | `working` (a message in the last 2 minutes), `idle`, `stale` (no activity for `sessions.staleAfterDays`), `done` (the pull request of the branch is merged or closed). |
+| State | `working` (a message in the last 2 minutes), `idle`, `stale` (no activity for 3 days), `done` (the pull request of the branch is merged or closed). |
 | Session | The first 8 characters of the session id. |
 | Repo, Branch | The newest message of the session in the usage store. |
 | Worktree | Whether the directory the session started in is a linked git worktree, with the playbook convention that made it (`cc` for `playbook cc launch worktree`, `wu`, `agent`, `review`), `main checkout`, or `gone` when the folder no longer exists. |
@@ -49,4 +49,4 @@ For each finished session, one line says what a sweep would do with its worktree
 - `working` is a guess from the last message time. A session that is thinking and has not written a message looks idle.
 - Codex sessions show repo, branch, context and cost, but no directory, so no worktree or PR.
 
-Keys: `sessions.staleAfterDays` and `sessions.recentDays` in [config keys](../reference/config-keys.md).
+The list covers the last 7 days.

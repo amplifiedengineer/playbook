@@ -364,20 +364,6 @@ fn a_budget_of_a_cent_or_more_including_a_fractional_one_is_written() {
 }
 
 #[test]
-fn a_warn_percentage_outside_one_to_a_hundred_or_fractional_is_rejected() {
-    for value in [json!(0), json!(-1), json!(101), json!(1000), json!(70.5)] {
-        assert_rejected("auto.warnPct", &value, "between 1 and 100");
-    }
-}
-
-#[test]
-fn a_warn_percentage_from_one_to_a_hundred_is_written() {
-    for value in [json!(1), json!(70), json!(100)] {
-        assert_written("auto.warnPct", &value);
-    }
-}
-
-#[test]
 fn a_usage_refresh_interval_from_one_to_3600_seconds_is_written_and_others_rejected() {
     for value in [json!(1), json!(5), json!(3600)] {
         assert_written("usage.refreshSeconds", &value);
@@ -417,12 +403,7 @@ fn a_positive_integer_fix_threshold_is_written() {
 
 #[test]
 fn a_non_number_for_a_numeric_auto_or_fix_key_is_rejected_and_writes_nothing() {
-    for key in [
-        "auto.budgetUsd",
-        "auto.warnPct",
-        "fix.maxFiles",
-        "fix.maxLines",
-    ] {
+    for key in ["auto.budgetUsd", "fix.maxFiles", "fix.maxLines"] {
         // Arrange
         let home = scratch_home("non-number");
 
@@ -440,7 +421,7 @@ fn a_non_number_for_a_numeric_auto_or_fix_key_is_rejected_and_writes_nothing() {
 
 #[test]
 fn zero_is_still_accepted_for_the_other_numeric_keys() {
-    assert_written("worktreeCleanup.staleAfterDays", &json!(0));
+    assert_written("usage.telemetryRetentionDays", &json!(0));
 }
 
 const BOOL_SETTINGS: [&str; 4] = [
@@ -523,42 +504,6 @@ fn a_bad_ui_layout_error_lists_the_panels_and_the_dotted_view_words() {
     }
 
     let _ = fs::remove_dir_all(&home);
-}
-
-#[test]
-fn docs_max_memory_mb_accepts_up_to_the_ceiling_and_refuses_more() {
-    // Arrange
-    let home = std::env::temp_dir().join(format!("playbook-memory-cap-{}", std::process::id()));
-    std::fs::create_dir_all(&home).unwrap();
-
-    // Act
-    let at_cap = set(
-        Tier::Global,
-        "docs.maxMemoryMb",
-        &Value::from(4096),
-        &home,
-        None,
-    );
-    let over_cap = set(
-        Tier::Global,
-        "docs.maxMemoryMb",
-        &Value::from(4097),
-        &home,
-        None,
-    );
-    let huge = set(
-        Tier::Global,
-        "docs.maxMemoryMb",
-        &Value::from(i64::MAX),
-        &home,
-        None,
-    );
-
-    // Assert
-    std::fs::remove_dir_all(&home).unwrap();
-    assert!(at_cap.is_ok());
-    assert!(over_cap.is_err());
-    assert!(huge.is_err());
 }
 
 #[test]

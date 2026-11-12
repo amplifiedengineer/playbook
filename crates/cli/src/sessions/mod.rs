@@ -32,6 +32,11 @@ pub(crate) const ACTIVE_SECONDS: i64 = 900;
 pub const WORKING_SECONDS: i64 = 120;
 const DAY: i64 = 86_400;
 
+/// Days without activity after which an unfinished session reads `stale`.
+pub const STALE_AFTER_DAYS: i64 = 3;
+/// How many days back `playbook sessions` looks for sessions.
+pub const RECENT_DAYS: i64 = 7;
+
 /// The limits that decide a state.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Settings {
@@ -42,8 +47,8 @@ pub struct Settings {
 impl Default for Settings {
     fn default() -> Self {
         Settings {
-            stale_after_days: 3,
-            recent_days: 7,
+            stale_after_days: STALE_AFTER_DAYS,
+            recent_days: RECENT_DAYS,
         }
     }
 }
@@ -285,7 +290,7 @@ pub fn load(
     home: &std::path::Path,
 ) -> Result<(Vec<Record>, i64), String> {
     let now = crate::common::time::now_secs();
-    let cfg = links::settings(home);
+    let cfg = Settings::default();
     let (conn, _) = crate::usage::run::ingest_new(paths)?;
     let events = crate::usage::db::load_usage_events_since(&conn, now - cfg.recent_days * DAY)?;
     let mut newest: std::collections::BTreeMap<&str, &UsageEvent> = Default::default();
@@ -344,6 +349,18 @@ mod tests {
     use super::*;
 
     const NOW: i64 = 1_788_400_000;
+
+    #[test]
+    fn the_default_limits_are_the_built_in_constants() {
+        // Arrange
+        let cfg = Settings::default();
+
+        // Act
+        let limits = (cfg.stale_after_days, cfg.recent_days);
+
+        // Assert
+        assert_eq!(limits, (STALE_AFTER_DAYS, RECENT_DAYS));
+    }
 
     fn ev(session: &str, ts: i64, branch: &str, cost: f64) -> UsageEvent {
         UsageEvent {

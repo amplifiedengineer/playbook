@@ -214,18 +214,11 @@ fn usd(cents: i64) -> String {
     text.trim_end_matches('0').trim_end_matches('.').to_string()
 }
 
-/// The most `docs.maxBytes` may be: the converter's own input ceiling.
-const DOCS_MAX_BYTES_CEILING: i64 = keys::HARD_MAX_INPUT_BYTES as i64;
-
-const DOCS_DISPLAY_CHARS_MIN: i64 = 1_000;
-const DOCS_DISPLAY_CHARS_MAX: i64 = 120_000;
-
 /// `auto.budgetUsd` and `auto.agentBudgetUsd` take any number of at least one cent, since the spend cap
 /// is held in whole cents, so a fractional budget works.
 /// `usage.budget.*Usd` takes any number from 0 (no budget).
-/// `auto.warnPct` takes a whole number within 1 to 100, `usage.refreshSeconds` one within 1 to
-/// 3600, `hygiene.thresholdTokens` one of at least 10000, the `fix.` and `review.stack` limits a whole number of at least 1, and every other
-/// numeric key 0 or more.
+/// `usage.refreshSeconds` takes a whole number within 1 to 3600, the `fix.` and `review.stack`
+/// limits a whole number of at least 1, and every other numeric key 0 or more.
 fn validate_number(key: &str, value: &Value) -> Result<(), ConfigError> {
     let whole = value.as_i64();
     let (valid, constraint) = match key {
@@ -251,10 +244,6 @@ fn validate_number(key: &str, value: &Value) -> Result<(), ConfigError> {
                 .is_some_and(|n| n.is_finite() && (0.0..=1_000_000_000.0).contains(&n)),
             "a number of dollars, 0 to 1000000000",
         ),
-        "auto.warnPct" => (
-            whole.is_some_and(|n| (1..=100).contains(&n)),
-            "a whole number between 1 and 100",
-        ),
         "usage.refreshSeconds" => (
             whole.is_some_and(|n| (1..=3600).contains(&n)),
             "a whole number between 1 and 3600",
@@ -271,13 +260,6 @@ fn validate_number(key: &str, value: &Value) -> Result<(), ConfigError> {
             whole.is_some_and(keys::gate_max_rounds_in_range),
             "a whole number from 1 to 20",
         ),
-        "sessions.staleAfterDays" | "sessions.recentDays" => {
-            (whole.is_some_and(|n| n >= 1), "a positive integer")
-        }
-        "hygiene.thresholdTokens" => (
-            whole.is_some_and(|n| n >= 10_000),
-            "a whole number of at least 10000",
-        ),
         "fix.maxFiles"
         | "fix.maxLines"
         | "review.stackMaxPrs"
@@ -287,22 +269,8 @@ fn validate_number(key: &str, value: &Value) -> Result<(), ConfigError> {
         | "review.suggest.deepFiles"
         | "review.suggest.packageSpan"
         | "review.suggest.untestedLines"
-        | "update.checkIntervalHours" => (whole.is_some_and(|n| n >= 1), "a positive integer"),
-        "docs.maxBytes" => (
-            whole.is_some_and(|n| (1..=DOCS_MAX_BYTES_CEILING).contains(&n)),
-            "a whole number from 1 to 104857600 (the 100 MiB ceiling)",
-        ),
-        "docs.displayChars" => (
-            whole.is_some_and(|n| (DOCS_DISPLAY_CHARS_MIN..=DOCS_DISPLAY_CHARS_MAX).contains(&n)),
-            "a whole number from 1000 to 120000",
-        ),
-        "docs.maxMemoryMb" => (
-            whole.is_some_and(|n| (1..=keys::DOCS_MAX_MEMORY_MB_CEILING).contains(&n)),
-            "a whole number from 1 to 4096",
-        ),
-        "pr.bodyMaxChars" | "docs.timeoutSeconds" | "docs.maxOutputChars" => {
-            (whole.is_some_and(|n| n >= 1), "a positive integer")
-        }
+        => (whole.is_some_and(|n| n >= 1), "a positive integer"),
+        "pr.bodyMaxChars" => (whole.is_some_and(|n| n >= 1), "a positive integer"),
         _ => {
             return match whole {
                 Some(n) if n >= 0 => Ok(()),

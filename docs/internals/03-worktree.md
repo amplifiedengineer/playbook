@@ -37,7 +37,7 @@ Every removal in the sweep goes through the gc guard and takes the gc run lock, 
 
 A repo nobody opens is swept by neither trigger. That is a known limit: fixing it needs an OS scheduler, which nothing here uses.
 
-Settings: `worktreeCleanup.enabled`, `worktreeCleanup.staleAfterDays` and `worktreeCleanup.conflictGracePeriodDays`. See [Config keys](../reference/config-keys.md).
+Setting: `worktreeCleanup.enabled`. See [Config keys](../reference/config-keys.md). Two numbers are fixed in `crates/cli/src/worktree/mod.rs`: an agent or launcher branch with no pull request counts as landed after 30 days without a commit, and a worktree stopped on a cherry-pick conflict is kept for 90 days.
 
 ## Claude Code worktree hooks
 

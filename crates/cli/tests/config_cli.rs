@@ -363,21 +363,13 @@ fn list_shows_known_keys_with_value_and_source_tier() {
     assert!(stdout.contains("autoReview.type"), "{stdout}");
     assert!(stdout.contains("(source: default)"), "{stdout}");
     assert!(stdout.contains("worktreeCleanup.enabled"), "{stdout}");
-    assert!(
-        stdout.contains("worktreeCleanup.staleAfterDays"),
-        "{stdout}"
-    );
-    assert!(
-        stdout.contains("worktreeCleanup.conflictGracePeriodDays"),
-        "{stdout}"
-    );
     assert!(stdout.contains("worktreeCleanup.enabled: true"), "{stdout}");
     assert!(
-        stdout.contains("worktreeCleanup.staleAfterDays: 30"),
+        !stdout.contains("worktreeCleanup.staleAfterDays"),
         "{stdout}"
     );
     assert!(
-        stdout.contains("worktreeCleanup.conflictGracePeriodDays: 90"),
+        !stdout.contains("worktreeCleanup.conflictGracePeriodDays"),
         "{stdout}"
     );
 }
@@ -385,22 +377,14 @@ fn list_shows_known_keys_with_value_and_source_tier() {
 #[test]
 fn set_with_a_numeric_value_writes_it_and_get_reflects_it() {
     // Arrange: regression pin for the CLI's string-to-Value parser rejecting
-    // a valid numeric string for a numeric key such as staleAfterDays.
+    // a valid numeric string for a numeric key such as fix.maxFiles.
     let repo = seeded_repo("set-numeric");
     let home = scratch_dir("set-numeric-home");
-    let seed = run_playbook(
-        &repo,
-        &home,
-        &["config", "set", "worktreeCleanup.staleAfterDays", "14"],
-    );
+    let seed = run_playbook(&repo, &home, &["config", "set", "fix.maxFiles", "14"]);
     assert!(seed.status.success(), "stderr: {}", stderr_of(&seed));
 
     // Act
-    let out = run_playbook(
-        &repo,
-        &home,
-        &["config", "get", "worktreeCleanup.staleAfterDays"],
-    );
+    let out = run_playbook(&repo, &home, &["config", "get", "fix.maxFiles"]);
 
     // Assert
     assert!(out.status.success(), "stderr: {}", stderr_of(&out));
@@ -479,8 +463,6 @@ fn set_rejects_an_out_of_range_auto_or_fix_value_with_a_clear_message_and_writes
         ("auto.agentBudgetUsd", "0.004", "at least 0.01"),
         ("auto.sessionCeilingUsd", "-1", "at least 0.01"),
         ("auto.sessionCeilingUsd", "0.004", "at least 0.01"),
-        ("auto.warnPct", "0", "between 1 and 100"),
-        ("auto.warnPct", "101", "between 1 and 100"),
         ("fix.maxFiles", "0", "positive integer"),
         ("fix.maxLines", "0", "positive integer"),
     ];
@@ -512,7 +494,6 @@ fn set_writes_valid_auto_and_fix_values_including_a_fractional_budget() {
         ("auto.sessionCeilingUsd", "0"),
         ("auto.sessionCeilingUsd", "200"),
         ("auto.sessionCeilingUsd", "4000"),
-        ("auto.warnPct", "100"),
         ("watch.limits.usdPerDay", "0.5"),
         ("fix.maxFiles", "99"),
         ("fix.maxLines", "1"),

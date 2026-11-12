@@ -31,7 +31,8 @@ const DAY_SECS: u64 = 86_400;
 /// command starts another process or shows the notice; after it, an attempt
 /// that was never claimed (offline, say) falls back to the notice.
 const APPLY_GRACE_SECS: u64 = 15 * 60;
-const DEFAULT_INTERVAL_HOURS: u64 = 24;
+/// Hours a release check stays fresh before a command starts a new one.
+pub const INTERVAL_HOURS: u64 = 24;
 
 /// What `update.mode` asks for. This is separate from the playbook
 /// permission mode (`ask` or `auto`) that `Env::auto_mode` reads.
@@ -75,27 +76,22 @@ impl Settings {
             .unwrap_or(UpdateMode::Notify)
     }
 
-    /// Reads `update.mode` and `update.checkIntervalHours` from the global
-    /// tier, where `config set` puts these per-user keys. An unreadable store
-    /// or a bad value falls back to the default.
+    /// Reads `update.mode` from the global tier, where `config set` puts this
+    /// per-user key. An unreadable store or a bad value falls back to the
+    /// default.
     pub fn read(home: &Path) -> Settings {
         let mode = crate::config::resolve_valid("update.mode", home, None)
             .ok()
             .and_then(|(v, _, _)| v.as_str().map(UpdateMode::parse))
             .unwrap_or(UpdateMode::Notify);
-        Settings::with_mode(home, mode)
+        Settings::with_mode(mode)
     }
 
-    /// The settings for a mode already read, with the interval from config.
-    pub fn with_mode(home: &Path, mode: UpdateMode) -> Settings {
-        let hours = crate::config::resolve("update.checkIntervalHours", home, None)
-            .ok()
-            .and_then(|(v, _)| v.as_u64())
-            .filter(|h| *h > 0)
-            .unwrap_or(DEFAULT_INTERVAL_HOURS);
+    /// The settings for a mode already read.
+    pub fn with_mode(mode: UpdateMode) -> Settings {
         Settings {
             mode,
-            interval_secs: hours.saturating_mul(3600),
+            interval_secs: INTERVAL_HOURS * 3600,
         }
     }
 }
@@ -591,7 +587,7 @@ pub fn on_start(command: &Command, args: &[OsString]) {
             return;
         }
         match Settings::peek_mode(&root) {
-            UpdateMode::Auto => Settings::with_mode(&home, UpdateMode::Auto),
+            UpdateMode::Auto => Settings::with_mode(UpdateMode::Auto),
             _ => return,
         }
     };
@@ -1001,7 +997,7 @@ mod tests {
     }
 
     #[test]
-    fn the_settings_come_from_config_and_a_zero_interval_is_the_default() {
+    fn the_interval_is_built_in_and_the_mode_comes_from_config() {
         // Arrange
         let home = root("check-settings");
         let before = Settings::read(&home);
@@ -1015,8 +1011,6 @@ mod tests {
         put("update.checkIntervalHours", 6.into());
         put("update.mode", "off".into());
         let set = Settings::read(&home);
-        put("update.checkIntervalHours", 0.into());
-        let zero = Settings::read(&home);
 
         // Assert
         assert_eq!(before, notify());
@@ -1024,10 +1018,9 @@ mod tests {
             set,
             Settings {
                 mode: UpdateMode::Off,
-                interval_secs: 6 * HOUR
+                interval_secs: INTERVAL_HOURS * HOUR
             }
         );
-        assert_eq!(zero.interval_secs, 24 * HOUR);
     }
 
     #[test]

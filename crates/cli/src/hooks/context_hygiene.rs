@@ -3,7 +3,7 @@
 
 //! UserPromptSubmit hook: an advisory nudge when the main session's context
 //! grows large. A long session replays its whole context on every message, so
-//! cache reads dominate the bill. Past `hygiene.thresholdTokens` this injects
+//! cache reads dominate the bill. Past [`THRESHOLD_TOKENS`] this injects
 //! one short message per crossing that tells the model to save a session
 //! handoff itself, then tell the user it is saved and how to continue
 //! (`/clear`, then `/playbook:handoff-show`). It never clears or compacts
@@ -28,8 +28,9 @@ use std::fs::{self, File};
 use std::io::{Read, Seek, SeekFrom};
 use std::path::Path;
 
-/// Default for `hygiene.thresholdTokens`.
-pub const DEFAULT_THRESHOLD_TOKENS: u64 = 250_000;
+/// Context size in tokens past which the nudge fires, once per crossing of
+/// each multiple.
+pub const THRESHOLD_TOKENS: u64 = 250_000;
 
 /// Bytes read from the end of the transcript. The newest usage record is
 /// near the end, and one record can be large when a tool returned a lot.
@@ -52,10 +53,6 @@ pub fn run(payload: &Payload) {
     if value("hygiene.enabled").and_then(|v| v.as_bool()) == Some(false) {
         return;
     }
-    let threshold = value("hygiene.thresholdTokens")
-        .and_then(|v| v.as_u64())
-        .filter(|n| *n > 0)
-        .unwrap_or(DEFAULT_THRESHOLD_TOKENS);
 
     let sid = session_id(payload);
     let transcript = payload.field(".transcript_path");
@@ -69,7 +66,7 @@ pub fn run(payload: &Payload) {
     if dir.is_empty() {
         return;
     }
-    if crossed(&Path::new(&dir).join(STATE_FILE), tokens, threshold) {
+    if crossed(&Path::new(&dir).join(STATE_FILE), tokens, THRESHOLD_TOKENS) {
         emit_prompt_context(&message(tokens, &sid));
     }
 }

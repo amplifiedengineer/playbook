@@ -75,7 +75,7 @@ impl DocError {
             ),
             Self::NotAFile => "the path is not a regular file".to_string(),
             Self::TooLarge { bytes, max } => {
-                format!("the file is {bytes} bytes, over the limit of {max} (docs.maxBytes)")
+                format!("the file is {bytes} bytes, over the limit of {max}")
             }
             Self::NeedsOcr => {
                 "needs OCR, not supported locally. The document has pages with no text layer. \
@@ -83,12 +83,10 @@ impl DocError {
                     .to_string()
             }
             Self::Timeout(s) => {
-                format!("conversion stopped after {s} seconds (docs.timeoutSeconds)")
+                format!("conversion stopped after {s} seconds")
             }
             Self::MemoryLimit(mb) => {
-                format!(
-                    "conversion stopped, it used more than {mb} MB of memory (docs.maxMemoryMb)"
-                )
+                format!("conversion stopped, it used more than {mb} MB of memory")
             }
             Self::ResourceLimit(reason) => format!("the document hit a safety limit: {reason}"),
             Self::Interrupted(_) => "conversion interrupted".to_string(),
@@ -172,7 +170,7 @@ const EXIT_USAGE: i32 = 2;
 const EXIT_NEEDS_OCR: i32 = 3;
 /// The bundled helper exits with this code when it hits a safety limit.
 const EXIT_RESOURCE_LIMIT: i32 = 4;
-/// Added to `docs.maxMemoryMb` for the address space cap, so mapped libraries
+/// Added to the memory limit for the address space cap, so mapped libraries
 /// and thread stacks do not trip it before the memory cap does.
 const ADDRESS_SPACE_HEADROOM: u64 = 512 * 1024 * 1024;
 /// The line pbdoc's own watchdog prints. The outer watchdog reports the same

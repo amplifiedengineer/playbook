@@ -29,8 +29,6 @@ Set a key with `playbook config set <key> <value>` and read it with `playbook co
 | `pr.bodyMaxChars` | `1200` | a number, see the config keys page for the range |
 | `pr.ticketPatterns` | `["[A-Z][A-Z0-9]+-[0-9]+"]` | see the config keys page |
 | `worktreeCleanup.enabled` | `true` | `true`, `false` |
-| `worktreeCleanup.staleAfterDays` | `30` | a number, see the config keys page for the range |
-| `worktreeCleanup.conflictGracePeriodDays` | `90` | a number, see the config keys page for the range |
 | `mode` | `ask` | `ask`, `auto` |
 | `maxEffortLevel` | `auto` | `auto`, `low`, `medium`, `high`, `xhigh`, `max` |
 | `effort.auto` | `off` | `off`, `suggest`, `on` |
@@ -42,7 +40,6 @@ Set a key with `playbook config set <key> <value>` and read it with `playbook co
 | `auto.budgetUsd` | `200` | a number, see the config keys page for the range |
 | `auto.agentBudgetUsd` | `50` | a number, see the config keys page for the range |
 | `auto.sessionCeilingUsd` | `0` | a number, see the config keys page for the range |
-| `auto.warnPct` | `70` | a number, see the config keys page for the range |
 | `gate.maxRounds` | `5` | a number, see the config keys page for the range |
 | `fix.maxFiles` | `3` | a number, see the config keys page for the range |
 | `fix.maxLines` | `500` | a number, see the config keys page for the range |
@@ -68,16 +65,8 @@ Set a key with `playbook config set <key> <value>` and read it with `playbook co
 | `usage.budget.weeklyUsd` | `0` | a number, see the config keys page for the range |
 | `usage.ui.layout` | empty | see the config keys page |
 | `usage.ui.state` | empty | see the config keys page |
-| `sessions.staleAfterDays` | `3` | a number, see the config keys page for the range |
-| `sessions.recentDays` | `7` | a number, see the config keys page for the range |
 | `hygiene.enabled` | `true` | `true`, `false` |
-| `hygiene.thresholdTokens` | `250000` | a number, see the config keys page for the range |
 | `docs.convert` | `auto` | `auto`, `off` |
-| `docs.maxBytes` | `26214400` | a number, see the config keys page for the range |
-| `docs.timeoutSeconds` | `30` | a number, see the config keys page for the range |
-| `docs.maxOutputChars` | `200000` | a number, see the config keys page for the range |
-| `docs.maxMemoryMb` | `1024` | a number, see the config keys page for the range |
-| `docs.displayChars` | `24000` | a number, see the config keys page for the range |
 | `docs.anydocPath` | empty | see the config keys page |
 | `code.briefFactsTokens` | `0` | a number, see the config keys page for the range |
 | `launcher.shortName` | `false` | `true`, `false` |
@@ -86,7 +75,6 @@ Set a key with `playbook config set <key> <value>` and read it with `playbook co
 | `hooks.proseLint.mode` | `warn` | `warn`, `block`, `off` |
 | `hooks.policyGuard.enabled` | `false` | `true`, `false` |
 | `update.mode` | `notify` | `notify`, `auto`, `off` |
-| `update.checkIntervalHours` | `24` | a number, see the config keys page for the range |
 | `update.plugin` | `auto` | `auto`, `ask`, `off` |
 | `watch.enabled` | `false` | `true`, `false` |
 | `watch.repos` | `[]` | see the config keys page |
@@ -542,7 +530,7 @@ Example: `playbook doc read report.pdf --section 2`
 - `<FILE>`: Document to read
 - `--json`: Print one JSON object instead of the framed text
 - `--offset <OFFSET>`: Character offset to start the slice at (default 0)
-- `--limit <LIMIT>`: Most characters to print, capped at docs.displayChars
+- `--limit <LIMIT>`: Most characters to print, capped at the display size
 - `--section <SECTION>`: Print one section by its number from the section index
 
 ### `playbook doc status`
@@ -1416,7 +1404,7 @@ Example: `playbook segment size --base main`
 
 List recent agent sessions and their state
 
-Shows the repo, branch, worktree, linked PR, state, context size and cost of each session. Read only. A session is done when the PR of its branch is merged or closed, and stale after `sessions.staleAfterDays` without activity. Suggestions are printed, never acted on, and a worktree with uncommitted changes is flagged, never removed.
+Shows the repo, branch, worktree, linked PR, state, context size and cost of each session. Read only. A session is done when the PR of its branch is merged or closed, and stale after a few days without activity. Suggestions are printed, never acted on, and a worktree with uncommitted changes is flagged, never removed.
 
 Example: `playbook sessions --json`
 

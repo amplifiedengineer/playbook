@@ -468,34 +468,34 @@ mod tests {
     }
 
     #[test]
-    fn stale_after_days_defaults_to_thirty_with_no_override() {
+    fn retention_days_defaults_to_ninety_with_no_override() {
         // Arrange
-        let home = scratch_home("stale-after-days-default");
+        let home = scratch_home("retention-days-default");
 
         // Act
-        let result = resolve("worktreeCleanup.staleAfterDays", &home, None);
+        let result = resolve("usage.telemetryRetentionDays", &home, None);
 
         // Assert
-        assert_eq!(result.unwrap(), (Value::Number(30.into()), Source::Default));
+        assert_eq!(result.unwrap(), (Value::Number(90.into()), Source::Default));
 
         let _ = fs::remove_dir_all(&home);
     }
 
     #[test]
-    fn stale_after_days_round_trips_through_write_and_resolve() {
+    fn retention_days_round_trips_through_write_and_resolve() {
         // Arrange
-        let home = scratch_home("stale-after-days-round-trip");
+        let home = scratch_home("retention-days-round-trip");
         write::set(
             Tier::Repo,
-            "worktreeCleanup.staleAfterDays",
+            "usage.telemetryRetentionDays",
             &Value::Number(14.into()),
             &home,
             Some("owner/repo"),
         )
-        .expect("write should succeed once staleAfterDays is a known key");
+        .expect("write should succeed once the key is known");
 
         // Act
-        let result = resolve("worktreeCleanup.staleAfterDays", &home, Some("owner/repo"));
+        let result = resolve("usage.telemetryRetentionDays", &home, Some("owner/repo"));
 
         // Assert
         assert_eq!(result.unwrap(), (Value::Number(14.into()), Source::Repo));
@@ -582,32 +582,32 @@ mod tests {
     }
 
     #[test]
-    fn rejects_invalid_stale_after_days_values() {
+    fn rejects_invalid_retention_days_values() {
         // Each case pairs an invalid value with substrings its rejection
         // error must contain.
         let cases: Vec<(Value, Vec<&str>)> = vec![
             (
                 Value::String("not-a-number".to_string()),
-                vec!["worktreeCleanup.staleAfterDays", "number"],
+                vec!["usage.telemetryRetentionDays", "number"],
             ),
             (
                 Value::Number((-5).into()),
-                vec!["worktreeCleanup.staleAfterDays", "-5"],
+                vec!["usage.telemetryRetentionDays", "-5"],
             ),
             (
                 Value::Number(serde_json::Number::from_f64(3.5).unwrap()),
-                vec!["worktreeCleanup.staleAfterDays", "3.5"],
+                vec!["usage.telemetryRetentionDays", "3.5"],
             ),
         ];
 
         for (value, expected_substrings) in cases {
             // Arrange
-            let home = scratch_home("stale-after-days-rejects");
+            let home = scratch_home("retention-days-rejects");
 
             // Act
             let result = write::set(
                 Tier::Repo,
-                "worktreeCleanup.staleAfterDays",
+                "usage.telemetryRetentionDays",
                 &value,
                 &home,
                 Some("owner/repo"),
@@ -629,14 +629,14 @@ mod tests {
     }
 
     #[test]
-    fn accepts_zero_as_stale_after_days_value() {
+    fn accepts_zero_as_retention_days_value() {
         // Arrange
-        let home = scratch_home("stale-after-days-accepts-zero");
+        let home = scratch_home("retention-days-accepts-zero");
 
         // Act
         let result = write::set(
             Tier::Repo,
-            "worktreeCleanup.staleAfterDays",
+            "usage.telemetryRetentionDays",
             &Value::Number(0.into()),
             &home,
             Some("owner/repo"),

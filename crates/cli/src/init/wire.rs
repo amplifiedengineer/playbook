@@ -241,7 +241,7 @@ const PORTED_HOOK_SPECS: &[HookSpec] = &[
         matcher: None,
         name: "context-hygiene",
         group: Group::Hygiene,
-        purpose: "Nudges the model to save a handoff when the context passes `hygiene.thresholdTokens`.",
+        purpose: "Nudges the model to save a handoff when the context grows large.",
         if_cond: None,
         timeout: Some(10),
         also_replaces: None,

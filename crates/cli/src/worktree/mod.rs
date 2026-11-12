@@ -158,7 +158,7 @@ pub enum PrState {
 /// from the parallel judging step, so it must be `Sync`.
 pub type PrLookup<'a> = &'a (dyn Fn(&Path, &str) -> Option<PrState> + Sync);
 
-/// Seconds in a day, for converting `stale_after_days` into the age
+/// Seconds in a day, for converting a day count into the age
 /// comparison [`named_branch_landed`] runs against a commit timestamp.
 const SECS_PER_DAY: i64 = 86_400;
 
@@ -378,12 +378,17 @@ fn parse_porcelain(porcelain: &str) -> Option<Vec<WorktreeEntry>> {
     (!entries.is_empty()).then_some(entries)
 }
 
-/// The three `worktreeCleanup.*` config keys, resolved once per `sweep`/
-/// `remove` invocation rather than per worktree inside the loop.
+/// Days since the last commit after which the sweep treats an agent or
+/// launcher branch as landed.
+pub const STALE_AFTER_DAYS: i64 = 30;
+/// Days a worktree stopped on a cherry-pick conflict is kept, counted from
+/// the marker's timestamp.
+pub const CONFLICT_GRACE_PERIOD_DAYS: i64 = 90;
+
+/// `worktreeCleanup.enabled`, resolved once per `sweep`/`remove` invocation
+/// rather than per worktree inside the loop.
 pub struct SweepPolicy {
     pub enabled: bool,
-    pub stale_after_days: i64,
-    pub conflict_grace_period_days: i64,
 }
 
 /// Resolves [`SweepPolicy`] via `config::resolve`, propagating a malformed
@@ -394,17 +399,8 @@ pub fn resolve_policy(
     repo_slug: Option<&str>,
 ) -> Result<SweepPolicy, crate::config::ConfigError> {
     let (enabled, _) = crate::config::resolve("worktreeCleanup.enabled", home, repo_slug)?;
-    let (stale_after_days, _) =
-        crate::config::resolve("worktreeCleanup.staleAfterDays", home, repo_slug)?;
-    let (conflict_grace_period_days, _) =
-        crate::config::resolve("worktreeCleanup.conflictGracePeriodDays", home, repo_slug)?;
     Ok(SweepPolicy {
         enabled: require_bool("worktreeCleanup.enabled", &enabled)?,
-        stale_after_days: require_i64("worktreeCleanup.staleAfterDays", &stale_after_days)?,
-        conflict_grace_period_days: require_i64(
-            "worktreeCleanup.conflictGracePeriodDays",
-            &conflict_grace_period_days,
-        )?,
     })
 }
 
@@ -419,15 +415,6 @@ fn require_bool(key: &str, value: &serde_json::Value) -> Result<bool, crate::con
         .ok_or_else(|| crate::config::ConfigError::WrongType {
             key: key.to_string(),
             expected: "bool",
-        })
-}
-
-fn require_i64(key: &str, value: &serde_json::Value) -> Result<i64, crate::config::ConfigError> {
-    value
-        .as_i64()
-        .ok_or_else(|| crate::config::ConfigError::WrongType {
-            key: key.to_string(),
-            expected: "integer",
         })
 }
 
@@ -560,10 +547,9 @@ fn branch_has_own_commits(repo_root: &Path, branch: &str) -> bool {
 
 /// The reasons a worktree must not count as landed yet, however its commits
 /// compare to the default branch: too new, or a named branch that has never
-/// had a commit of its own and has not sat idle for `staleAfterDays`.
+/// had a commit of its own and has not sat idle for [`STALE_AFTER_DAYS`].
 fn too_new_to_be_landed(
     entry: &WorktreeEntry,
-    policy: &SweepPolicy,
     repo_root: &Path,
     now_epoch: i64,
 ) -> Option<&'static str> {
@@ -573,7 +559,7 @@ fn too_new_to_be_landed(
     }
     if let Some(branch) = entry.branch.as_deref() {
         if !branch_has_own_commits(repo_root, branch)
-            && age.is_none_or(|age| age < policy.stale_after_days * SECS_PER_DAY)
+            && age.is_none_or(|age| age < STALE_AFTER_DAYS * SECS_PER_DAY)
         {
             return Some("its branch has no commits of its own yet");
         }
@@ -593,7 +579,6 @@ fn is_landed(
     entry: &WorktreeEntry,
     convention: Convention,
     lock: &LockState,
-    policy: &SweepPolicy,
     repo: &RepoRef<'_>,
     now_epoch: i64,
     never_locked_grace_secs: i64,
@@ -603,18 +588,18 @@ fn is_landed(
         convention,
         Convention::Wu | Convention::AgentTool | Convention::CcLauncher
     ) && !entry.path.join(CONFLICT_MARKER_FILE).exists()
-        && too_new_to_be_landed(entry, policy, repo_root, now_epoch).is_some()
+        && too_new_to_be_landed(entry, repo_root, now_epoch).is_some()
     {
         return false;
     }
     match convention {
-        Convention::Wu => wu_landed(entry, policy, repo_root, default, now_epoch),
+        Convention::Wu => wu_landed(entry, repo_root, default, now_epoch),
         Convention::AgentTool | Convention::CcLauncher => match entry.branch.as_deref() {
             Some(branch) => match default {
                 Some(default) => named_branch_landed(
                     branch,
                     default,
-                    policy.stale_after_days,
+                    STALE_AFTER_DAYS,
                     repo_root,
                     now_epoch,
                     repo.pr_lookup.and_then(|lookup| lookup(repo_root, branch)),
@@ -639,14 +624,13 @@ fn is_landed(
 
 /// A present conflict-STOP marker overrides the normal commit-reachability
 /// check with a grace period measured from the marker's own timestamp, using
-/// this module's `staleAfterDays` inclusive-boundary convention: the
+/// this module's stale-after inclusive-boundary convention: the
 /// boundary itself already counts as landed. A present-but-unparseable
 /// marker fails closed (not landed) rather than falling through to the
 /// reachability check: the marker's whole purpose is to stop that check
 /// from firing, so a malformed timestamp must never silently defeat it.
 fn wu_landed(
     entry: &WorktreeEntry,
-    policy: &SweepPolicy,
     repo_root: &Path,
     default: Option<&str>,
     now_epoch: i64,
@@ -656,7 +640,7 @@ fn wu_landed(
         return match read_conflict_marker_epoch(&entry.path) {
             Some(marker_epoch) => {
                 let age = now_epoch - marker_epoch;
-                age >= policy.conflict_grace_period_days * SECS_PER_DAY
+                age >= CONFLICT_GRACE_PERIOD_DAYS * SECS_PER_DAY
             }
             None => false,
         };
@@ -964,7 +948,7 @@ fn decide_target_with(
         default: default.as_deref(),
         pr_lookup: probes.lookup,
     };
-    let landed = is_landed(&entry, convention, &lock, &policy, &repo, now_epoch, 0);
+    let landed = is_landed(&entry, convention, &lock, &repo, now_epoch, 0);
     let report = decide_and_report(
         &entry,
         landed,
@@ -1119,7 +1103,6 @@ pub fn sweep_removing(
                 entry,
                 *convention,
                 &lock,
-                &policy,
                 &repo,
                 now_epoch,
                 NEVER_LOCKED_GRACE_SECS,
@@ -1483,5 +1466,33 @@ mod tests {
         // Assert
         assert_eq!(in_use, f.line(REPORT_IN_USE));
         assert_eq!(idle_line, f.line(REPORT_WOULD_REMOVE));
+    }
+
+    #[test]
+    fn the_sweep_thresholds_are_built_in_whatever_is_stored() {
+        // Arrange
+        let home = crate::testing::scratch_root("worktree-thresholds-fixed");
+        let root = crate::common::paths::playbook_root_from(&home);
+        for key in [
+            "worktreeCleanup.staleAfterDays",
+            "worktreeCleanup.conflictGracePeriodDays",
+        ] {
+            crate::config::store::put(
+                &root,
+                crate::config::write::Tier::Global,
+                None,
+                key,
+                &serde_json::json!(3),
+            )
+            .unwrap();
+        }
+
+        // Act
+        let policy = resolve_policy(&home, None).unwrap();
+
+        // Assert
+        assert!(policy.enabled);
+        assert_eq!(STALE_AFTER_DAYS, 30);
+        assert_eq!(CONFLICT_GRACE_PERIOD_DAYS, 90);
     }
 }
