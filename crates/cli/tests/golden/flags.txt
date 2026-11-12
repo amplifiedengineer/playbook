@@ -640,7 +640,7 @@ arg playbook commit run id=auto long=auto short=- value_names=AUTO possible=true
 arg playbook commit run id=no_signoff long=no-signoff short=- value_names=NO_SIGNOFF possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
 arg playbook commit run id=no_type_check long=no-type-check short=- value_names=NO_TYPE_CHECK possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
 arg playbook commit run id=no_prose_check long=no-prose-check short=- value_names=NO_PROSE_CHECK possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
-command playbook review subcommands=prepare,suggest,checks,size,triage aliases=- groups=Review[-]
+command playbook review subcommands=prepare,suggest,checks,lenses,size,triage aliases=- groups=Review[-]
 command playbook review prepare subcommands=- aliases=- groups=Prepare[kind,args,auto]
 arg playbook review prepare id=kind long=- short=- value_names=KIND possible=quick,deep defaults=- aliases=- required=true hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
 arg playbook review prepare id=args long=- short=- value_names=ARGS possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
@@ -651,8 +651,13 @@ arg playbook review suggest id=scope long=scope short=- value_names=SCOPE possib
 arg playbook review suggest id=base long=base short=- value_names=BASE possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
 arg playbook review suggest id=dir long=dir short=- value_names=DIR possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
 arg playbook review suggest id=json long=json short=- value_names=JSON possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
-command playbook review checks subcommands=- aliases=- groups=Checks[dir]
+command playbook review checks subcommands=- aliases=- groups=Checks[dir,list]
 arg playbook review checks id=dir long=- short=- value_names=DIR possible=- defaults=- aliases=- required=true hidden=false global=false action=Set num_args=- parser=std::path::PathBuf conflicts=-
+arg playbook review checks id=list long=list short=- value_names=LIST possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
+command playbook review lenses subcommands=pick aliases=- groups=Lenses[-]
+command playbook review lenses pick subcommands=- aliases=- groups=Pick[base,json]
+arg playbook review lenses pick id=base long=base short=- value_names=BASE possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
+arg playbook review lenses pick id=json long=json short=- value_names=JSON possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
 command playbook review size subcommands=- aliases=- groups=Size[base,head,all_lenses,dir]
 arg playbook review size id=base long=base short=- value_names=BASE possible=- defaults=- aliases=- required=true hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
 arg playbook review size id=head long=head short=- value_names=HEAD possible=- defaults=HEAD aliases=- required=false hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
@@ -663,7 +668,7 @@ command playbook review triage merge subcommands=- aliases=- groups=Merge[lenses
 arg playbook review triage merge id=lenses long=lenses short=- value_names=LENSES possible=- defaults=- aliases=- required=true hidden=false global=false action=Append num_args=- parser=alloc::string::String conflicts=-
 arg playbook review triage merge id=tiers long=tiers short=- value_names=TIERS possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
 arg playbook review triage merge id=forced long=force short=- value_names=FORCED possible=- defaults=- aliases=- required=false hidden=false global=false action=Append num_args=- parser=alloc::string::String conflicts=-
-command playbook segment subcommands=branch,size,unit aliases=- groups=Segment[-]
+command playbook segment subcommands=branch,size,verify,unit aliases=- groups=Segment[-]
 command playbook segment branch subcommands=- aliases=- groups=Branch[-],SegmentNaming[kind,plan_slug,n,title,default_branch,dir]
 arg playbook segment branch id=kind long=type short=- value_names=KIND possible=- defaults=- aliases=- required=true hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
 arg playbook segment branch id=plan_slug long=plan-slug short=- value_names=PLAN_SLUG possible=- defaults=- aliases=- required=true hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
@@ -677,6 +682,12 @@ arg playbook segment branch id=land long=land short=- value_names=LAND possible=
 command playbook segment size subcommands=- aliases=- groups=Size[base,dir]
 arg playbook segment size id=base long=base short=- value_names=BASE possible=- defaults=- aliases=- required=true hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
 arg playbook segment size id=dir long=dir short=- value_names=DIR possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=std::path::PathBuf conflicts=-
+command playbook segment verify subcommands=- aliases=- groups=Verify[branch,files,default_branch,dir,json]
+arg playbook segment verify id=branch long=branch short=- value_names=BRANCH possible=- defaults=- aliases=- required=true hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
+arg playbook segment verify id=files long=files short=- value_names=FILES possible=- defaults=- aliases=- required=true hidden=false global=false action=Append num_args=1.. parser=alloc::string::String conflicts=-
+arg playbook segment verify id=default_branch long=default-branch short=- value_names=DEFAULT_BRANCH possible=- defaults=main aliases=- required=false hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
+arg playbook segment verify id=dir long=dir short=- value_names=DIR possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=std::path::PathBuf conflicts=-
+arg playbook segment verify id=json long=json short=- value_names=JSON possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
 command playbook segment unit subcommands=start,integrate,resume aliases=- groups=Unit[-]
 command playbook segment unit start subcommands=- aliases=- groups=Start[wu,base,path,dir,json]
 arg playbook segment unit start id=wu long=- short=- value_names=WU possible=- defaults=- aliases=- required=true hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-

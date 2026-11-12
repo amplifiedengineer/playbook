@@ -11,6 +11,7 @@ use std::process::Command;
 
 pub mod checks;
 pub mod lens;
+pub mod lenses;
 pub mod size;
 pub mod suggest;
 

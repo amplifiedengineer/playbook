@@ -13,9 +13,10 @@ use playbook::{
     DepsCommand, DocCommand, DoctorCommand, EvalCommand, GateCommand, GlossaryCommand,
     HandoffCommand, LearnCommand, ManifestCommand, MemoryClaudeCommand, MemoryCommand, ModeArg,
     ModeCommand, PlanCommand, PlanGraphCommand, PlanLedgerCommand, PlanWaveCommand, PluginCommand,
-    PrCommand, PrReviewCommand, ProseCommand, ReviewCommand, ReviewTriageCommand,
-    ReviewWorktreeCommand, SanitizeCommand, SegmentCommand, SegmentTopology, SegmentUnitCommand,
-    SessionsCommand, SettingsCommand, SkillsCommand, ToolsCommand, WorktreeCommand,
+    PrCommand, PrReviewCommand, ProseCommand, ReviewCommand, ReviewLensesCommand,
+    ReviewTriageCommand, ReviewWorktreeCommand, SanitizeCommand, SegmentCommand, SegmentTopology,
+    SegmentUnitCommand, SessionsCommand, SettingsCommand, SkillsCommand, ToolsCommand,
+    WorktreeCommand,
 };
 use std::io::{IsTerminal, Read, Write};
 
@@ -1222,6 +1223,19 @@ fn real_main() {
                 SegmentCommand::Size { base, dir } => {
                     playbook::segment::size(&dir.unwrap_or_else(|| ".".into()), &base)
                 }
+                SegmentCommand::Verify {
+                    branch,
+                    files,
+                    default_branch,
+                    dir,
+                    json,
+                } => std::process::exit(playbook::segment::run_verify(
+                    &dir.unwrap_or_else(|| ".".into()),
+                    &branch,
+                    &files,
+                    &default_branch,
+                    json,
+                )),
                 SegmentCommand::Unit { sub } => {
                     let json = sub.json();
                     let report = segment_unit(sub);
@@ -2328,7 +2342,15 @@ fn real_main() {
                     }
                 }
             }
-            ReviewCommand::Checks { dir } => println!("{}", review::checks::run_checks(&dir)),
+            ReviewCommand::Checks { dir, list: true } => {
+                println!("{}", review::checks::list_checks(&dir));
+            }
+            ReviewCommand::Checks { dir, list: false } => {
+                println!("{}", review::checks::run_checks(&dir));
+            }
+            ReviewCommand::Lenses {
+                sub: ReviewLensesCommand::Pick { base, json },
+            } => std::process::exit(review::lenses::run(base.as_deref(), json)),
             ReviewCommand::Size {
                 base,
                 head,

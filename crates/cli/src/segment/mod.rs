@@ -12,6 +12,9 @@ pub mod unit;
 use crate::review::size::parse_numstat;
 use std::path::Path;
 
+/// The exit code and envelope code of a failed or differing verify.
+const VERIFY_FAILED: i32 = 1;
+
 /// Longest the title part of a branch name gets.
 const SLUG_MAX: usize = 40;
 
@@ -133,6 +136,61 @@ fn measure(dir: &Path, base: &str, head: &str) -> Result<(u64, u64), String> {
 pub fn size(dir: &Path, base: &str) -> Result<String, String> {
     let (lines, files) = measure(dir, base, "HEAD")?;
     Ok(format!("lines={lines} files={files}"))
+}
+
+/// The listed files that differ between `origin/<default>` (fetched first)
+/// and `branch`. Empty means the branch's content landed.
+pub fn verify(
+    dir: &Path,
+    branch: &str,
+    files: &[String],
+    default_branch: &str,
+) -> Result<Vec<String>, String> {
+    for (kind, value) in [("branch", branch), ("default branch", default_branch)] {
+        crate::pr::shared::reject_option_like(kind, value)?;
+    }
+    git(dir, &["fetch", "origin", default_branch])?;
+    if !ref_exists(dir, branch) {
+        return Err(format!("branch {branch} not found"));
+    }
+    let remote = format!("origin/{default_branch}");
+    let mut args = vec!["diff", "--name-only", &remote, branch, "--"];
+    args.extend(files.iter().map(String::as_str));
+    Ok(git(dir, &args)?.lines().map(str::to_string).collect())
+}
+
+/// Print the verdict of `verify` and return the exit code: 0 on a match, 1 on
+/// a difference or an error. With `json` the code rides the envelope and the
+/// exit code is always 0.
+pub fn run_verify(
+    dir: &Path,
+    branch: &str,
+    files: &[String],
+    default_branch: &str,
+    json: bool,
+) -> i32 {
+    let result = verify(dir, branch, files, default_branch);
+    let (code, error) = match &result {
+        Ok(differing) if differing.is_empty() => (0, String::new()),
+        Ok(differing) => (VERIFY_FAILED, format!("{} files differ", differing.len())),
+        Err(error) => (VERIFY_FAILED, error.clone()),
+    };
+    if json {
+        let fields = match &result {
+            Ok(differing) => {
+                serde_json::json!({"matches": differing.is_empty(), "differing": differing})
+            }
+            Err(_) => serde_json::Value::Null,
+        };
+        println!("{}", crate::json::envelope::wrap(code, &error, fields));
+        return 0;
+    }
+    match result {
+        Ok(differing) if differing.is_empty() => println!("match=true"),
+        Ok(differing) => println!("match=false differing={}", differing.join(",")),
+        Err(error) => eprintln!("error: {error}"),
+    }
+    code
 }
 
 #[cfg(test)]

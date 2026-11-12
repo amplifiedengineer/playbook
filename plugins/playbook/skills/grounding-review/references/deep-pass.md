@@ -131,7 +131,7 @@ Right after Step 1, read `skills/grounding-review/references/stack-review.md` in
 
 - `--all` → every core + conditional reviewer.
 - `--preset <name>` → that preset's set.
-- otherwise (default) → all core reviewers, plus each conditional reviewer whose trigger appears in the diff from Step 1 (grep the diff for migration dirs, schema files, feature flags, new modules, ADR files, >300 changed lines, etc.). Report which reviewers you selected and why.
+- otherwise (default) → all core reviewers, plus each conditional reviewer the diff triggers. Intent: review-lenses-pick. If the session's tool map lists it, run it with `--base <PR base>` (`lens: trigger` lines, or `NONE`); else grep the diff for the table's triggers. Say which you picked and why.
 
 ## Step 2b: Run checks in the worktree (best-effort, worktree mode only)
 

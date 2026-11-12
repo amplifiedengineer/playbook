@@ -157,6 +157,13 @@ pub const TOOLS: &[Tool] = &[
     ),
     t("review-checks", "review", "checks", "", "review checks ."),
     t(
+        "review-lenses-pick",
+        "review lenses",
+        "pick",
+        "",
+        "review lenses pick --base main",
+    ),
+    t(
         "review-size",
         "review",
         "size",
@@ -204,6 +211,13 @@ pub const TOOLS: &[Tool] = &[
         "start",
         "",
         "segment unit start WU-1 --base abc --path wt",
+    ),
+    t(
+        "segment-verify",
+        "segment",
+        "verify",
+        "",
+        "segment verify --branch feat/x --files a.rs",
     ),
     t(
         "gate-record",
