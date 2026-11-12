@@ -3338,4 +3338,104 @@ pub enum SegmentCommand {
         #[arg(long)]
         dir: Option<PathBuf>,
     },
+    /// Run one Work Unit of a parallel wave in its own worktree
+    Unit {
+        #[command(subcommand)]
+        sub: SegmentUnitCommand,
+    },
+}
+
+/// `playbook segment unit` subcommands.
+#[derive(Debug, clap::Subcommand)]
+pub enum SegmentUnitCommand {
+    /// Add a Work Unit's worktree at its base commit
+    ///
+    /// Runs `git worktree add --detach` at `--base` and prints
+    /// `worktree=<path> base=<sha>`. A worktree already at the path is
+    /// reported, not recreated.
+    ///
+    /// Example: `playbook segment unit start WU-3 --base abc1234 --path ../wt/plan/wu-3`
+    Start {
+        /// Id of the Work Unit
+        wu: String,
+        /// Commit the unit starts from: the Segment branch tip
+        #[arg(long)]
+        base: String,
+        /// Where to create the worktree
+        #[arg(long)]
+        path: PathBuf,
+        /// Repo directory to run in. Defaults to the current directory
+        #[arg(long)]
+        dir: Option<PathBuf>,
+        /// Print the report as the shared JSON envelope
+        #[arg(long)]
+        json: bool,
+    },
+    /// Squash a unit's checkpoints onto the Segment branch
+    ///
+    /// Soft resets the worktree to `--base`, commits only `--files` with the
+    /// signing and sign-off the `commit run` path uses, cherry-picks that
+    /// commit onto `--branch` (the checkout in `--dir` must be on it) and
+    /// removes the worktree. Prints `integrated=<sha> branch=<branch>`. On a
+    /// cherry-pick conflict it restores the checkout, keeps the worktree,
+    /// writes a `.playbook-conflict-stop` marker there and exits 1.
+    ///
+    /// Example: `playbook segment unit integrate WU-3 --base abc1234 --path ../wt/plan/wu-3 --branch feat/plan-s1-core -m "feat(core): add the parser" --files docs/a.md docs/b.md`
+    Integrate {
+        /// Id of the Work Unit
+        wu: String,
+        /// Commit the unit started from
+        #[arg(long)]
+        base: String,
+        /// Worktree of the unit
+        #[arg(long)]
+        path: PathBuf,
+        /// Segment branch to cherry-pick onto
+        #[arg(long)]
+        branch: String,
+        /// Commit message of the squashed commit
+        #[arg(short, long)]
+        message: String,
+        /// Files of the unit; nothing else is committed
+        #[arg(long, num_args = 1.., required = true)]
+        files: Vec<String>,
+        /// Checkout of the Segment branch. Defaults to the current directory
+        #[arg(long)]
+        dir: Option<PathBuf>,
+        /// Print the report as the shared JSON envelope
+        #[arg(long)]
+        json: bool,
+    },
+    /// Say which TDD step comes next for a unit
+    ///
+    /// Reads the `wip(<wu>): red|green|refactor - <scenario>` commits between
+    /// `--base` and HEAD of `--dir`. Prints `last=<step> scenario=<id>
+    /// next=<step>`, or `last=none next=red` with no checkpoint. After a
+    /// refactor, `next=red` starts the following scenario.
+    ///
+    /// Example: `playbook segment unit resume WU-3 --base abc1234 --dir ../wt/plan/wu-3`
+    Resume {
+        /// Id of the Work Unit
+        wu: String,
+        /// Commit the unit started from
+        #[arg(long)]
+        base: String,
+        /// Worktree of the unit. Defaults to the current directory
+        #[arg(long)]
+        dir: Option<PathBuf>,
+        /// Print the report as the shared JSON envelope
+        #[arg(long)]
+        json: bool,
+    },
+}
+
+impl SegmentUnitCommand {
+    /// Whether the call asked for the JSON envelope.
+    pub fn json(&self) -> bool {
+        match self {
+            Self::Start { json, .. } | Self::Integrate { json, .. } | Self::Resume { json, .. } => {
+                *json
+            }
+        }
+    }
 }

@@ -7,6 +7,8 @@
 //! branch names and the base choice are tested code, not paragraphs the
 //! model re-derives each run.
 
+pub mod unit;
+
 use crate::review::size::parse_numstat;
 use std::path::Path;
 

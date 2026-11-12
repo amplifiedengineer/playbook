@@ -85,6 +85,26 @@ pub fn signoff_wanted(
     true
 }
 
+/// The `git commit` flags that sign off and sign: `--signoff` when
+/// [`signoff_wanted`], `--gpg-sign` when a signing key is configured.
+pub(crate) fn signing_flags(
+    dir: &Path,
+    message: &str,
+    no_signoff: bool,
+    config_signoff: bool,
+) -> Vec<&'static str> {
+    let mut flags = Vec::new();
+    if signoff_wanted(dir, message, no_signoff, config_signoff, |a| {
+        git_text(dir, a)
+    }) {
+        flags.push("--signoff");
+    }
+    if git_success(dir, &["config", "--get", "user.signingkey"]) {
+        flags.push("--gpg-sign");
+    }
+    flags
+}
+
 #[cfg(unix)]
 fn is_executable(p: &Path) -> bool {
     use std::os::unix::fs::PermissionsExt;
@@ -234,14 +254,11 @@ pub fn run(
     if opts.amend {
         args.push("--amend".into());
     }
-    if signoff_wanted(dir, &message, opts.no_signoff, config_signoff, |a| {
-        git_text(dir, a)
-    }) {
-        args.push("--signoff".into());
-    }
-    if git_success(dir, &["config", "--get", "user.signingkey"]) {
-        args.push("--gpg-sign".into());
-    }
+    args.extend(
+        signing_flags(dir, &message, opts.no_signoff, config_signoff)
+            .into_iter()
+            .map(String::from),
+    );
     args.push("--file".into());
     args.push(message_file.to_string_lossy().into_owned());
     let argv: Vec<&str> = args.iter().map(String::as_str).collect();

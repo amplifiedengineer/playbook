@@ -14,8 +14,8 @@ use playbook::{
     HandoffCommand, LearnCommand, ManifestCommand, MemoryClaudeCommand, MemoryCommand, ModeArg,
     ModeCommand, PlanCommand, PluginCommand, PrCommand, PrReviewCommand, ProseCommand,
     ReviewCommand, ReviewTriageCommand, ReviewWorktreeCommand, SanitizeCommand, SegmentCommand,
-    SegmentTopology, SessionsCommand, SettingsCommand, SkillsCommand, ToolsCommand,
-    WorktreeCommand,
+    SegmentTopology, SegmentUnitCommand, SessionsCommand, SettingsCommand, SkillsCommand,
+    ToolsCommand, WorktreeCommand,
 };
 use std::io::{IsTerminal, Read, Write};
 
@@ -1221,6 +1221,15 @@ fn real_main() {
                 }
                 SegmentCommand::Size { base, dir } => {
                     playbook::segment::size(&dir.unwrap_or_else(|| ".".into()), &base)
+                }
+                SegmentCommand::Unit { sub } => {
+                    let json = sub.json();
+                    let report = segment_unit(sub);
+                    if json {
+                        println!("{}", playbook::segment::unit::to_envelope(&report));
+                        return;
+                    }
+                    report.map(|r| r.render())
                 }
             };
             match result {
@@ -3173,6 +3182,47 @@ fn commit_drafted(dir: &std::path::Path, opts: commit::all::Options, json: bool,
             eprintln!("{err}");
             std::process::exit(1);
         }
+    }
+}
+
+/// Runs one `segment unit` verb and returns what it reports.
+fn segment_unit(sub: SegmentUnitCommand) -> Result<playbook::segment::unit::Report, String> {
+    use playbook::segment::unit;
+    let here = |dir: Option<std::path::PathBuf>| dir.unwrap_or_else(|| ".".into());
+    match sub {
+        SegmentUnitCommand::Start {
+            wu: _,
+            base,
+            path,
+            dir,
+            json: _,
+        } => unit::start(&here(dir), &base, &path),
+        SegmentUnitCommand::Integrate {
+            wu: _,
+            base,
+            path,
+            branch,
+            message,
+            files,
+            dir,
+            json: _,
+        } => unit::integrate(
+            &here(dir),
+            &unit::IntegrateArgs {
+                base: &base,
+                path: &path,
+                files: &files,
+                branch: &branch,
+                message: &message,
+                config_signoff: commit_signoff_on(),
+            },
+        ),
+        SegmentUnitCommand::Resume {
+            wu,
+            base,
+            dir,
+            json: _,
+        } => unit::resume(&here(dir), &wu, &base),
     }
 }
 

@@ -323,6 +323,10 @@ pub(crate) const META: &[Meta] = &[
     free("segment").for_agents(),
     free("segment branch"),
     ro("segment size"),
+    free("segment unit"),
+    free("segment unit integrate"),
+    ro("segment unit resume"),
+    free("segment unit start"),
     ro("sessions")
         .purpose("List recent sessions with their branch, PR, state and cost")
         .for_users(),
