@@ -830,10 +830,10 @@ fn effort_rows(env: &Env) -> Vec<Row> {
 fn config_rows(env: &Env) -> Vec<Row> {
     let slug = env.repo_slug.as_deref();
     [
-        "autoReview.enabled",
-        "autoReview.type",
-        "autoReview.fix",
-        "autoMerge.enabled",
+        "pr.review.enabled",
+        "pr.review.type",
+        "pr.review.fix",
+        "pr.merge.enabled",
         "commit.signOff",
         "pr.draft",
     ]

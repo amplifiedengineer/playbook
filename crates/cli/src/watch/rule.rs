@@ -53,7 +53,7 @@ pub enum Do {
     /// you to submit. Never runs on its own.
     ReviewPr,
     /// Merges a pull request that is green and has a human approval, when
-    /// `autoMerge.enabled` is on. Never runs on its own.
+    /// `pr.merge.enabled` is on. Never runs on its own.
     MergeWhenGreen,
 }
 

@@ -32,7 +32,7 @@ Flags combine (`-Au`). After a rebase or amend it pushes with `--force-with-leas
 
 ## Review
 
-`/playbook:review` is the one command to use. When the PR sits in a stack it first asks whether to review this PR only or the whole stack. It then picks a quick or a deep review: a flag wins, then the `autoReview.type` setting, then a triage of the diff. It prints the depth and the reason in one line. In ask mode you can type the other depth before it runs.
+`/playbook:review` is the one command to use. When the PR sits in a stack it first asks whether to review this PR only or the whole stack. It then picks a quick or a deep review: a flag wins, then the `pr.review.type` setting, then a triage of the diff. It prints the depth and the reason in one line. In ask mode you can type the other depth before it runs.
 
 ```bash
 /playbook:review                # the PR for the current branch
@@ -139,16 +139,16 @@ Six keys shape the PR flow and the commit trailer. Read one with `playbook confi
 
 | Key | Default | What it does |
 |---|---|---|
-| `autoReview.enabled` | `true` | `playbook:finish-pull-request` reviews the PR before it goes ready. |
-| `autoReview.type` | `auto` | Which review it runs: `deep`, `quick`, or `auto`. `auto` runs `playbook pr review-triage`, which asks a small model three times and picks `quick` only when all three agree; any disagreement or failure runs `deep`. |
-| `autoReview.fix` | `false` | After the self-review, fixes every finding that survived the review's verification, pushes the fixes to the PR branch, and re-runs the scoped checks. |
-| `autoMerge.enabled` | `false` | After the review and fixes, marks the PR ready, waits until every check on the PR head is green, runs `gh pr merge <n> --auto`, then re-reads the PR and reports whether it merged, is queued, was rejected, or was closed. |
+| `pr.review.enabled` | `true` | `playbook:finish-pull-request` reviews the PR before it goes ready. |
+| `pr.review.type` | `auto` | Which review it runs: `deep`, `quick`, or `auto`. `auto` runs `playbook pr review-triage`, which asks a small model three times and picks `quick` only when all three agree; any disagreement or failure runs `deep`. |
+| `pr.review.fix` | `false` | After the self-review, fixes every finding that survived the review's verification, pushes the fixes to the PR branch, and re-runs the scoped checks. |
+| `pr.merge.enabled` | `false` | After the review and fixes, marks the PR ready, waits until every check on the PR head is green, runs `gh pr merge <n> --auto`, then re-reads the PR and reports whether it merged, is queued, was rejected, or was closed. |
 | `commit.signOff` | `true` | Commits made through `/playbook:commit` carry a `Signed-off-by` trailer. |
 | `pr.draft` | `true` | `/playbook:pr-create` opens the PR as a draft. Set it to `false` to open PRs ready for review. |
 
 ```bash
-playbook config set --global autoReview.fix true
-playbook config set --global autoMerge.enabled true
+playbook config set --global pr.review.fix true
+playbook config set --global pr.merge.enabled true
 playbook config set --global pr.draft false
 ```
 
@@ -161,7 +161,7 @@ The merge step is cautious on purpose.
 - It runs `gh pr merge <n> --auto --match-head-commit <sha>`, so a commit pushed during the wait is never merged unseen. With no method flag, a merge queue picks how the PR lands. If `gh` asks for a method, it retries with the one the repo allows, preferring squash. It never passes `--admin` or `--delete-branch`.
 - It then reads the PR and reports one of: merged, queued, rejected, or closed.
 
-A stacked PR whose base is another open PR is not merged before its base. In auto mode, a PR that no review covered is marked ready but never merged, even with `autoMerge.enabled` on. The settings work the same in `ask` and `auto` mode and ask no question, because setting the key is your opt-in.
+A stacked PR whose base is another open PR is not merged before its base. In auto mode, a PR that no review covered is marked ready but never merged, even with `pr.merge.enabled` on. The settings work the same in `ask` and `auto` mode and ask no question, because setting the key is your opt-in.
 
 `commit.signOff` stands down when the message already has the trailer, when you pass `--no-signoff`, or when the repo's `prepare-commit-msg` or `commit-msg` hook writes the trailer itself. A hook that only checks for it does not count. It does not control cryptographic signing: commits are signed whenever your git config has a `user.signingkey` (`--gpg-sign`), using the key and format from that config.
 

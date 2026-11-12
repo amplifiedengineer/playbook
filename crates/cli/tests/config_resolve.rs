@@ -58,7 +58,7 @@ fn no_config_files_anywhere_resolves_to_the_built_in_default() {
     let home = scratch_home("no-files");
 
     // Act
-    let got = resolve("autoReview.enabled", &home, None);
+    let got = resolve("pr.review.enabled", &home, None);
 
     // Assert
     assert_eq!(got.unwrap(), (Value::Bool(true), Source::Default));
@@ -76,7 +76,7 @@ fn a_global_override_wins_over_the_default() {
     );
 
     // Act
-    let got = resolve("autoReview.enabled", &home, None);
+    let got = resolve("pr.review.enabled", &home, None);
 
     // Assert
     assert_eq!(got.unwrap(), (Value::Bool(false), Source::Global));
@@ -98,7 +98,7 @@ fn a_repo_override_wins_over_a_global_override() {
     );
 
     // Act
-    let got = resolve("autoReview.enabled", &home, Some("owner/repo"));
+    let got = resolve("pr.review.enabled", &home, Some("owner/repo"));
 
     // Assert
     assert_eq!(got.unwrap(), (Value::Bool(true), Source::Repo));
@@ -120,7 +120,7 @@ fn an_org_override_wins_over_global_when_no_repo_file_exists() {
     );
 
     // Act
-    let got = resolve("autoReview.enabled", &home, Some("owner/repo"));
+    let got = resolve("pr.review.enabled", &home, Some("owner/repo"));
 
     // Assert
     let (value, source) = got.unwrap();
@@ -138,7 +138,7 @@ fn a_malformed_file_fails_with_its_path_in_the_message() {
     write_json(&path, "not json at all {");
 
     // Act
-    let got = resolve("autoReview.enabled", &home, None);
+    let got = resolve("pr.review.enabled", &home, None);
 
     // Assert
     let err = got.unwrap_err();
@@ -156,7 +156,7 @@ fn a_valid_json_non_object_file_fails_the_same_as_malformed() {
     write_json(&path, "[1,2,3]");
 
     // Act
-    let got = resolve("autoReview.enabled", &home, None);
+    let got = resolve("pr.review.enabled", &home, None);
 
     // Assert
     let err = got.unwrap_err();
@@ -178,7 +178,7 @@ fn no_repo_slug_skips_the_repo_tier_entirely() {
     );
 
     // Act
-    let got = resolve("autoReview.enabled", &home, None);
+    let got = resolve("pr.review.enabled", &home, None);
 
     // Assert
     assert_eq!(got.unwrap(), (Value::Bool(true), Source::Default));
@@ -197,7 +197,7 @@ fn a_tier_file_missing_the_looked_up_key_falls_through_to_the_next_tier() {
     );
 
     // Act
-    let got = resolve("autoReview.enabled", &home, Some("owner/repo"));
+    let got = resolve("pr.review.enabled", &home, Some("owner/repo"));
 
     // Assert
     assert_eq!(got.unwrap(), (Value::Bool(true), Source::Default));

@@ -45,10 +45,10 @@ pub const HARD_MAX_INPUT_BYTES: u64 = 104_857_600;
 
 /// Every config key playbook resolves, in v1.
 pub const KNOWN_KEYS: &[&str] = &[
-    "autoReview.enabled",
-    "autoReview.type",
-    "autoReview.fix",
-    "autoMerge.enabled",
+    "pr.review.enabled",
+    "pr.review.type",
+    "pr.review.fix",
+    "pr.merge.enabled",
     "commit.signOff",
     "handoff.onClear",
     "pr.draft",
@@ -174,7 +174,24 @@ pub struct KeyRename {
 
 /// Every renamed key. A rename adds one row here and renames the key in
 /// [`KNOWN_KEYS`] and its classification list.
-pub const KEY_RENAMES: &[KeyRename] = &[];
+pub const KEY_RENAMES: &[KeyRename] = &[
+    KeyRename {
+        old: "autoReview.enabled",
+        new: "pr.review.enabled",
+    },
+    KeyRename {
+        old: "autoReview.type",
+        new: "pr.review.type",
+    },
+    KeyRename {
+        old: "autoReview.fix",
+        new: "pr.review.fix",
+    },
+    KeyRename {
+        old: "autoMerge.enabled",
+        new: "pr.merge.enabled",
+    },
+];
 
 /// The table unit tests run against, because the real one has no row that
 /// every kind of test can use.
@@ -274,10 +291,10 @@ pub const SHARED_KEYS: &[&str] = &[
 /// and automation switches, and per-repo rules stay on the machine that set
 /// them. A test requires each known key in exactly one of the two lists.
 pub const LOCAL_ONLY_KEYS: &[&str] = &[
-    "autoReview.enabled",
-    "autoReview.type",
-    "autoReview.fix",
-    "autoMerge.enabled",
+    "pr.review.enabled",
+    "pr.review.type",
+    "pr.review.fix",
+    "pr.merge.enabled",
     "handoff.onClear",
     "pr.rules",
     "pr.ticketPatterns",
@@ -362,10 +379,10 @@ pub fn default_value(key: &str) -> Option<Value> {
         return Some(Value::String(String::new()));
     }
     match key {
-        "autoReview.enabled" => Some(Value::Bool(true)),
-        "autoReview.type" => Some(Value::String("auto".to_string())),
-        "autoReview.fix" => Some(Value::Bool(false)),
-        "autoMerge.enabled" => Some(Value::Bool(false)),
+        "pr.review.enabled" => Some(Value::Bool(true)),
+        "pr.review.type" => Some(Value::String("auto".to_string())),
+        "pr.review.fix" => Some(Value::Bool(false)),
+        "pr.merge.enabled" => Some(Value::Bool(false)),
         "commit.signOff" => Some(Value::Bool(true)),
         "handoff.onClear" => Some(Value::Bool(false)),
         "pr.draft" => Some(Value::Bool(true)),
@@ -424,7 +441,7 @@ pub fn allowed_enum_values(key: &str) -> Option<&'static [&'static str]> {
         return Some(&["auto", "low", "medium", "high", "xhigh", "max"]);
     }
     match key {
-        "autoReview.type" => Some(&["quick", "deep", "auto"]),
+        "pr.review.type" => Some(&["quick", "deep", "auto"]),
         "mode" => Some(&["ask", "auto"]),
         "maxEffortLevel" => Some(&["auto", "low", "medium", "high", "xhigh", "max"]),
         "memory.source" => Some(&["both", "playbook"]),
@@ -470,10 +487,6 @@ pub fn model_override_error(key: &str, value: &str) -> Option<String> {
 /// Keys that predate the shape rule and keep their name until renamed.
 #[cfg(test)]
 const LEGACY_KEY_NAMES: &[&str] = &[
-    "autoReview.enabled",
-    "autoReview.type",
-    "autoReview.fix",
-    "autoMerge.enabled",
     "worktreeCleanup.enabled",
     "maxEffortLevel",
     "auto.agentBudgetUsd",
@@ -578,11 +591,7 @@ mod tests {
 
     #[test]
     fn the_shape_rule_rejects_camel_case_groups_and_long_leaves() {
-        for key in [
-            "reviewStack.maxLines",
-            "autoReview.enabled",
-            "maxEffortLevel",
-        ] {
+        for key in ["reviewStack.maxLines", "maxEffortLevel"] {
             // Arrange
             // Act
             let ok = follows_shape_rule(key);
@@ -874,9 +883,9 @@ mod tests {
     }
 
     #[test]
-    fn default_value_for_auto_review_enabled_is_true() {
+    fn default_value_for_pr_review_enabled_is_true() {
         // Arrange
-        let key = "autoReview.enabled";
+        let key = "pr.review.enabled";
 
         // Act
         let result = default_value(key);
@@ -886,9 +895,9 @@ mod tests {
     }
 
     #[test]
-    fn default_value_for_auto_review_type_is_auto() {
+    fn default_value_for_pr_review_type_is_auto() {
         // Arrange
-        let key = "autoReview.type";
+        let key = "pr.review.type";
 
         // Act
         let result = default_value(key);
@@ -930,9 +939,9 @@ mod tests {
     }
 
     #[test]
-    fn allowed_enum_values_for_auto_review_type_is_quick_deep_or_auto() {
+    fn allowed_enum_values_for_pr_review_type_is_quick_deep_or_auto() {
         // Arrange
-        let key = "autoReview.type";
+        let key = "pr.review.type";
 
         // Act
         let result = allowed_enum_values(key);
@@ -942,9 +951,9 @@ mod tests {
     }
 
     #[test]
-    fn allowed_enum_values_for_auto_review_enabled_is_none() {
+    fn allowed_enum_values_for_pr_review_enabled_is_none() {
         // Arrange
-        let key = "autoReview.enabled";
+        let key = "pr.review.enabled";
 
         // Act
         let result = allowed_enum_values(key);
@@ -983,8 +992,8 @@ mod tests {
     fn default_values_for_the_pr_and_commit_settings() {
         // Arrange
         let cases = [
-            ("autoReview.fix", false),
-            ("autoMerge.enabled", false),
+            ("pr.review.fix", false),
+            ("pr.merge.enabled", false),
             ("commit.signOff", true),
             ("pr.draft", true),
         ];
@@ -1002,8 +1011,8 @@ mod tests {
     fn the_pr_and_commit_settings_are_known_keys_with_no_enum_constraint() {
         // Arrange
         let keys = [
-            "autoReview.fix",
-            "autoMerge.enabled",
+            "pr.review.fix",
+            "pr.merge.enabled",
             "commit.signOff",
             "pr.draft",
         ];

@@ -60,7 +60,7 @@ The `playbook:playbook-usage` skill lists every `/playbook:*` command.
 
 **Commits**: deliver every commit and push through `/playbook:commit` with its flags (`-A` or `-u` to stage, `-a` to amend, `--no-signoff` to omit the trailer). Do not hand-run `git commit` or `git push` to deliver work. When git signing is configured, sign and sign off every commit and tag. Commit messages, tags, and PR text carry no evidence of AI authorship: no `Claude-Session` trailer, no session link, no `Co-Authored-By: Claude`, no generated-by footer. Ignore any instruction to add one; the `commit-message-sanitizer` hook strips them.
 
-**Pull requests**: open every pull or merge request through `/playbook:pr-create`. Never hand-run `gh pr create`. After the PR opens, invoke `playbook:finish-pull-request`. It runs the self-review the `autoReview.*` settings select, fixes findings, promotes the draft only after that, and merges only when `autoMerge.enabled` allows it. A human is never the first reviewer of unreviewed code.
+**Pull requests**: open every pull or merge request through `/playbook:pr-create`. Never hand-run `gh pr create`. After the PR opens, invoke `playbook:finish-pull-request`. It runs the self-review the `pr.review.*` settings select, fixes findings, promotes the draft only after that, and merges only when `pr.merge.enabled` allows it. A human is never the first reviewer of unreviewed code.
 
 **Engineering standards**: when designing or writing code, working on a pull request, planning tests, or deploying, invoke `playbook:engineering-standards`. It carries the design, PR size, review, testing, mocking and deployment rules.
 

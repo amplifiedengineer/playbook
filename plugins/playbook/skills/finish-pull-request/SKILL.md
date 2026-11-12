@@ -17,8 +17,8 @@ If `playbook pr status` or `playbook pr land` is not in the session tool map, re
 Run `playbook pr status <n> --json` (add `--flag auto` or `--flag ask` if the session started with one, and `--dir <worktree>` for a worktree). It always exits 0. Read `ok` first: when false, report `error` and stop. Otherwise it gives:
 
 - `mode`: `ask` or `auto`.
-- `settings`: `autoReview.fix` and `autoMerge.enabled`, each with `value` and `error`. An error on either means `false`.
-- `review`: `skip`, `quick` or `deep`, already decided from `autoReview.enabled`, `autoReview.type` and the triage. Never lighten it.
+- `settings`: `pr.review.fix` and `pr.merge.enabled`, each with `value` and `error`. An error on either means `false`.
+- `review`: `skip`, `quick` or `deep`, already decided from `pr.review.enabled`, `pr.review.type` and the triage. Never lighten it.
 - `pr`: `number`, `url`, `isDraft`, `head`, `base`.
 
 ## 2. Review
@@ -32,13 +32,13 @@ In auto mode, skip the self-review below when `/playbook:implement` opened this 
 
 Check the PR text: the body follows the short template, and the title and commits carry the ticket key in the scope. Fix a title or body miss with `gh pr edit`. A commit miss is reworded only in ask mode with `git push --force-with-lease`; in auto mode report it.
 
-Fix the review findings. With `autoReview.fix` true, fix every finding that survived the sweep and commit by invoking `/playbook:commit` (worktree root and branch in its prompt). A push updates the draft.
+Fix the review findings. With `pr.review.fix` true, fix every finding that survived the sweep and commit by invoking `/playbook:commit` (worktree root and branch in its prompt). A push updates the draft.
 
 ## 4. Promote and land
 
-If the PR is a draft and (`--ready` was passed or `autoMerge.enabled` is true), run `gh pr ready <n>`. If `autoMerge.enabled` is not true, stop here and leave the PR as it is.
+If the PR is a draft and (`--ready` was passed or `pr.merge.enabled` is true), run `gh pr ready <n>`. If `pr.merge.enabled` is not true, stop here and leave the PR as it is.
 
-If `autoMerge.enabled` is true, merge only when a review covered the code (no review means no merge: say so and stop). Then run `playbook pr land <n>` as its own Bash call with `timeout` 600000. It waits for checks, arms auto-merge pinned to the head, and confirms the result. Read the `LAND=<verdict>` line (exit 0 merged, 3 a gate, 6 failed or closed, 7 still waiting, 8 not queued):
+If `pr.merge.enabled` is true, merge only when a review covered the code (no review means no merge: say so and stop). Then run `playbook pr land <n>` as its own Bash call with `timeout` 600000. It waits for checks, arms auto-merge pinned to the head, and confirms the result. Read the `LAND=<verdict>` line (exit 0 merged, 3 a gate, 6 failed or closed, 7 still waiting, 8 not queued):
 
 - `MERGED`: merged.
 - `STILL_WAITING`: run it again with `--settle 0`, up to five more times, then report it as still waiting.

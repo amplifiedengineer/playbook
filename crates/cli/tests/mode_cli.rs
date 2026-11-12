@@ -321,7 +321,7 @@ fn other_config_keys_survive_mode_auto_then_mode_ask() {
     assert!(ask.status.success(), "stderr: {}", stderr_of(&ask));
     let written = stored_repo(&home);
     assert_eq!(written["mode"], "ask");
-    assert_eq!(written["autoReview.enabled"], false);
+    assert_eq!(written["pr.review.enabled"], false);
     assert_eq!(written["fix.maxFiles"], 7);
 }
 

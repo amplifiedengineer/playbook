@@ -5,8 +5,8 @@
 //! choice the finish flow needs, read in one call.
 //!
 //! The review choice follows the rules the finish skill applies today: `skip`
-//! only when `autoReview.enabled` reads `false`; a read error on
-//! `autoReview.enabled` or `autoReview.type` gives `deep`; `type=auto` runs
+//! only when `pr.review.enabled` reads `false`; a read error on
+//! `pr.review.enabled` or `pr.review.type` gives `deep`; `type=auto` runs
 //! the triage and maps any triage failure to `deep`.
 
 use crate::config;
@@ -14,10 +14,10 @@ use crate::json::envelope;
 use crate::pr::triage;
 use serde_json::{json, Value};
 
-pub const AUTO_REVIEW_ENABLED: &str = "autoReview.enabled";
-pub const AUTO_REVIEW_TYPE: &str = "autoReview.type";
-pub const AUTO_REVIEW_FIX: &str = "autoReview.fix";
-pub const AUTO_MERGE_ENABLED: &str = "autoMerge.enabled";
+pub const AUTO_REVIEW_ENABLED: &str = "pr.review.enabled";
+pub const AUTO_REVIEW_TYPE: &str = "pr.review.type";
+pub const AUTO_REVIEW_FIX: &str = "pr.review.fix";
+pub const AUTO_MERGE_ENABLED: &str = "pr.merge.enabled";
 
 /// The review type that asks the triage to choose.
 const TYPE_AUTO: &str = "auto";
@@ -199,6 +199,19 @@ fn pr_object(raw: &str, stacked_on: Option<u64>) -> Result<Value, String> {
     }))
 }
 
+/// The `settings` object: each setting under its name and, until 1.0.0,
+/// under the names it had in 0.42.0, so a reader of the old names keeps working.
+fn settings_json<const N: usize>(settings: [(&str, &Setting); N]) -> Value {
+    let mut out = serde_json::Map::new();
+    for (key, setting) in settings {
+        let old = config::keys::old_names(key).map(str::to_string);
+        for name in std::iter::once(key.to_string()).chain(old) {
+            out.insert(name, setting.to_json());
+        }
+    }
+    Value::Object(out)
+}
+
 /// Reads everything the finish flow needs for PR `pr`. `mode` is the
 /// `mode` object, resolved by the caller. A stacked lookup that fails leaves
 /// `stacked_on` null: the land step checks the base itself.
@@ -236,12 +249,12 @@ pub fn collect(
     Ok(json!({
         "pr": pr_json,
         "mode": mode,
-        "settings": {
-            AUTO_REVIEW_ENABLED: enabled.to_json(),
-            AUTO_REVIEW_TYPE: kind.to_json(),
-            AUTO_REVIEW_FIX: fix.to_json(),
-            AUTO_MERGE_ENABLED: merge.to_json(),
-        },
+        "settings": settings_json([
+            (AUTO_REVIEW_ENABLED, &enabled),
+            (AUTO_REVIEW_TYPE, &kind),
+            (AUTO_REVIEW_FIX, &fix),
+            (AUTO_MERGE_ENABLED, &merge),
+        ]),
         "review": choice.as_str(),
         "review_reason": reason,
     }))

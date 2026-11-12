@@ -128,12 +128,12 @@ fn get_with_nothing_configured_prints_default_labeled_as_default() {
     let home = scratch_dir("get-default-home");
 
     // Act
-    let out = run_playbook(&repo, &home, &["config", "get", "autoReview.enabled"]);
+    let out = run_playbook(&repo, &home, &["config", "get", "pr.review.enabled"]);
 
     // Assert
     assert!(out.status.success(), "stderr: {}", stderr_of(&out));
     let stdout = stdout_of(&out);
-    assert!(stdout.contains("autoReview.enabled"), "{stdout}");
+    assert!(stdout.contains("pr.review.enabled"), "{stdout}");
     assert!(stdout.contains("true"), "{stdout}");
     assert!(stdout.contains("(source: default)"), "{stdout}");
 }
@@ -146,12 +146,12 @@ fn set_without_flags_writes_repo_tier_and_get_reflects_it() {
     let seed = run_playbook(
         &repo,
         &home,
-        &["config", "set", "autoReview.enabled", "false"],
+        &["config", "set", "pr.review.enabled", "false"],
     );
     assert!(seed.status.success(), "stderr: {}", stderr_of(&seed));
 
     // Act
-    let out = run_playbook(&repo, &home, &["config", "get", "autoReview.enabled"]);
+    let out = run_playbook(&repo, &home, &["config", "get", "pr.review.enabled"]);
 
     // Assert
     assert!(out.status.success(), "stderr: {}", stderr_of(&out));
@@ -219,13 +219,13 @@ fn set_with_global_flag_writes_the_global_tier_file() {
     let out = run_playbook(
         &repo,
         &home,
-        &["config", "set", "autoReview.type", "quick", "--global"],
+        &["config", "set", "pr.review.type", "quick", "--global"],
     );
 
     // Assert
     assert!(out.status.success(), "stderr: {}", stderr_of(&out));
     assert_eq!(
-        stored(&home)["global"]["autoReview.type"],
+        stored(&home)["global"]["pr.review.type"],
         Value::String("quick".into())
     );
     assert!(
@@ -247,13 +247,13 @@ fn get_prints_a_string_value_unquoted_not_as_raw_json() {
     let home = scratch_dir("get-string-unquoted-home");
 
     // Act
-    let out = run_playbook(&repo, &home, &["config", "get", "autoReview.type"]);
+    let out = run_playbook(&repo, &home, &["config", "get", "pr.review.type"]);
 
     // Assert
     let stdout = stdout_of(&out);
     assert!(out.status.success(), "stderr: {}", stderr_of(&out));
     assert!(
-        stdout.contains("autoReview.type: auto (source: default)"),
+        stdout.contains("pr.review.type: auto (source: default)"),
         "{stdout}"
     );
     assert!(!stdout.contains("\"auto\""), "{stdout}");
@@ -272,7 +272,7 @@ fn set_with_both_org_and_global_flags_exits_non_zero_and_writes_nothing() {
         &[
             "config",
             "set",
-            "autoReview.enabled",
+            "pr.review.enabled",
             "false",
             "--org",
             "--global",
@@ -299,8 +299,8 @@ fn get_with_a_typo_d_key_exits_non_zero_naming_the_valid_keys() {
     assert!(!out.status.success());
     let stderr = stderr_of(&out);
     assert!(stderr.contains("unknown config key"), "{stderr}");
-    assert!(stderr.contains("autoReview.enabled"), "{stderr}");
-    assert!(stderr.contains("autoReview.type"), "{stderr}");
+    assert!(stderr.contains("pr.review.enabled"), "{stderr}");
+    assert!(stderr.contains("pr.review.type"), "{stderr}");
 }
 
 #[test]
@@ -313,7 +313,7 @@ fn set_with_an_unparseable_bool_value_exits_non_zero_and_writes_nothing() {
     let out = run_playbook(
         &repo,
         &home,
-        &["config", "set", "autoReview.enabled", "notabool"],
+        &["config", "set", "pr.review.enabled", "notabool"],
     );
 
     // Assert
@@ -332,11 +332,7 @@ fn set_with_an_out_of_enum_value_exits_non_zero_and_writes_nothing() {
     let home = scratch_dir("set-out-of-enum-home");
 
     // Act
-    let out = run_playbook(
-        &repo,
-        &home,
-        &["config", "set", "autoReview.type", "medium"],
-    );
+    let out = run_playbook(&repo, &home, &["config", "set", "pr.review.type", "medium"]);
 
     // Assert
     assert!(!out.status.success());
@@ -359,8 +355,8 @@ fn list_shows_known_keys_with_value_and_source_tier() {
     // Assert
     assert!(out.status.success(), "stderr: {}", stderr_of(&out));
     let stdout = stdout_of(&out);
-    assert!(stdout.contains("autoReview.enabled"), "{stdout}");
-    assert!(stdout.contains("autoReview.type"), "{stdout}");
+    assert!(stdout.contains("pr.review.enabled"), "{stdout}");
+    assert!(stdout.contains("pr.review.type"), "{stdout}");
     assert!(stdout.contains("(source: default)"), "{stdout}");
     assert!(stdout.contains("worktreeCleanup.enabled"), "{stdout}");
     assert!(stdout.contains("worktreeCleanup.enabled: true"), "{stdout}");
@@ -400,7 +396,7 @@ fn get_outside_any_git_repo_still_works_falling_through_to_default() {
     let home = scratch_dir("get-no-git-home");
 
     // Act
-    let out = run_playbook(&cwd, &home, &["config", "get", "autoReview.enabled"]);
+    let out = run_playbook(&cwd, &home, &["config", "get", "pr.review.enabled"]);
 
     // Assert
     assert!(out.status.success(), "stderr: {}", stderr_of(&out));
@@ -434,7 +430,7 @@ fn set_outside_any_git_repo_with_default_repo_tier_fails_clearly_not_a_crash() {
     let out = run_playbook(
         &cwd,
         &home,
-        &["config", "set", "autoReview.enabled", "false"],
+        &["config", "set", "pr.review.enabled", "false"],
     );
 
     // Assert
@@ -661,8 +657,8 @@ fn the_pr_and_commit_settings_default_then_follow_a_global_set() {
     let repo = seeded_repo("pr-settings");
     let home = scratch_dir("pr-settings-home");
     let rows = [
-        ("autoReview.fix", "false", "true"),
-        ("autoMerge.enabled", "false", "true"),
+        ("pr.review.fix", "false", "true"),
+        ("pr.merge.enabled", "false", "true"),
         ("commit.signOff", "true", "false"),
         ("pr.draft", "true", "false"),
     ];
@@ -730,7 +726,7 @@ fn set_accepts_auto_for_the_review_type() {
     let home = scratch_dir("set-review-auto-home");
 
     // Act
-    let out = run_playbook(&repo, &home, &["config", "set", "autoReview.type", "auto"]);
+    let out = run_playbook(&repo, &home, &["config", "set", "pr.review.type", "auto"]);
 
     // Assert
     assert!(out.status.success(), "stderr: {}", stderr_of(&out));

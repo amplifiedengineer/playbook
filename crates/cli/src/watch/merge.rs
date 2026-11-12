@@ -4,7 +4,7 @@
 //! The `merge_when_green` action: merges a pull request once it is green, has
 //! a human approval of the current head, no open change request or review
 //! request, and comes from an author you allowed, and only when
-//! `autoMerge.enabled` is on. Merging is on the list of things that are unsafe
+//! `pr.merge.enabled` is on. Merging is on the list of things that are unsafe
 //! unattended, so the action stays at `propose`.
 
 use super::clock::Clock;

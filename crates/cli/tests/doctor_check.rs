@@ -863,7 +863,7 @@ fn the_table_lists_review_config_and_text_mode_ends_with_a_verdict() {
     let all: Vec<&Value> = rows.iter().collect();
     let t = text(&all);
     assert!(
-        t.contains("autoReview.enabled: true (source: default)"),
+        t.contains("pr.review.enabled: true (source: default)"),
         "{t}"
     );
     assert!(t.contains("pr.draft:"), "{t}");

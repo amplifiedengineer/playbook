@@ -100,7 +100,7 @@ them.
 
 These never fail the check and carry no fix hint:
 
-- The effective `autoReview.*`, `autoMerge.enabled`, `commit.signOff` and
+- The effective `pr.review.*`, `pr.merge.enabled`, `commit.signOff` and
   `pr.draft` values, each as `key: value (source: tier)`.
 - Stale worktrees the binary's sweep dry run reports (read the
   convention from the path: `.claude/worktrees/agent-*` is the Agent tool,

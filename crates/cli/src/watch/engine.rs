@@ -214,7 +214,7 @@ pub struct Engine<'a, W, C> {
     pub allowed: &'a [String],
     /// The defaults from `fix.maxFiles` and `fix.maxLines`.
     pub fix: DiffCaps,
-    /// `autoMerge.enabled`.
+    /// `pr.merge.enabled`.
     pub auto_merge: bool,
     /// The caps from `watch.limits.*`.
     pub caps: GlobalCaps,

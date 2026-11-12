@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! Playbook's own tiered (repo < org < global < default) configuration
-//! system for keys such as `autoReview.enabled` and `autoReview.type`.
+//! system for keys such as `pr.review.enabled` and `pr.review.type`.
 //!
 //! Distinct from `common::config_hash` (drift detection on Claude Code's own
 //! `settings.json`) and `settings::keys` (the `settings.shared.json` seed

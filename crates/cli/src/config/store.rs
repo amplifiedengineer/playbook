@@ -561,7 +561,8 @@ fn legacy_files(root: &Path) -> Vec<LegacyFile> {
     out
 }
 
-/// Every non-object value in `node` with its dotted path.
+/// Every non-object value in `node` with its dotted path, an old key name
+/// already mapped to its new one.
 fn flatten_leaves(node: &Value, prefix: &str, out: &mut Vec<(String, Value)>) {
     match node.as_object() {
         Some(obj) => {
@@ -574,7 +575,9 @@ fn flatten_leaves(node: &Value, prefix: &str, out: &mut Vec<(String, Value)>) {
                 flatten_leaves(v, &key, out);
             }
         }
-        None if !prefix.is_empty() => out.push((prefix.to_string(), node.clone())),
+        None if !prefix.is_empty() => {
+            out.push((keys::canonical_key(prefix).to_string(), node.clone()));
+        }
         None => {}
     }
 }
@@ -1007,7 +1010,7 @@ mod tests {
         let r = root("store-import");
         write_json(
             &r.join("config.json"),
-            r#"{"mode":"auto","autoReview":{"type":"deep"}}"#,
+            r#"{"mode":"auto","legacy":{"draftPr":false}}"#,
         );
         write_json(
             &r.join("orgs/acme/config.json"),
@@ -1022,8 +1025,12 @@ mod tests {
             r#"{"mode":"ask"}"#,
         );
 
-        let got = lookup(&r, "autoReview.type", None).unwrap();
-        assert_eq!(got.global, Some(json!("deep")));
+        let got = lookup(&r, "pr.draft", None).unwrap();
+        assert_eq!(
+            got.global,
+            Some(json!(false)),
+            "an old name imports as the new one"
+        );
         assert_eq!(
             lookup(&r, "pr.draft", Some("acme/x")).unwrap().org,
             Some(json!(false))

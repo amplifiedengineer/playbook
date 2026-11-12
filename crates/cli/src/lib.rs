@@ -621,7 +621,7 @@ pub enum Command {
     /// Settings come from tiers, highest first: repo, org, global, then the
     /// built-in default. `get` and `list` show which tier supplied a value.
     ///
-    /// Example: `playbook config set autoReview.enabled true`
+    /// Example: `playbook config set pr.review.enabled true`
     Config {
         #[command(subcommand)]
         sub: ConfigCommand,
@@ -2178,9 +2178,9 @@ pub enum GateCommand {
 pub enum ConfigCommand {
     /// Show a setting's value and which tier it came from
     ///
-    /// Example: `playbook config get autoReview.enabled`
+    /// Example: `playbook config get pr.review.enabled`
     Get {
-        /// Dotted setting name, such as `autoReview.enabled`
+        /// Dotted setting name, such as `pr.review.enabled`
         key: String,
     },
     /// Change a setting
@@ -2189,9 +2189,9 @@ pub enum ConfigCommand {
     /// per-user `update.*` keys go to the global tier, and `--org` is
     /// refused for them.
     ///
-    /// Example: `playbook config set autoReview.enabled true`
+    /// Example: `playbook config set pr.review.enabled true`
     Set {
-        /// Dotted setting name, such as `autoReview.enabled`
+        /// Dotted setting name, such as `pr.review.enabled`
         key: String,
         /// New value; it is read as the type the setting expects
         value: String,

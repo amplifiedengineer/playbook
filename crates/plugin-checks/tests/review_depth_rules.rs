@@ -96,8 +96,8 @@ fn problems(file: &str, depth_text: &str) -> Vec<String> {
         .filter(|r| r.phrases.iter().any(|p| !depth_text.contains(p)))
         .map(|r| format!("missing rule: {}", r.label))
         .collect();
-    if file.contains("autoReview.enabled") {
-        out.push("review.md must not name autoReview.enabled".to_owned());
+    if file.contains("pr.review.enabled") {
+        out.push("review.md must not name pr.review.enabled".to_owned());
     }
     let at: Vec<Option<usize>> = REASON_ORDER.iter().map(|p| depth_text.find(p)).collect();
     if at.iter().any(Option::is_none) || !at.windows(2).all(|w| w[0] < w[1]) {
@@ -136,7 +136,7 @@ fn a_file_missing_one_depth_rule_fails_naming_that_rule() {
             failures.push(format!("{}: not reported, got {found:?}", rule.label));
         }
     }
-    let enabled = format!("{real}\nautoReview.enabled\n");
+    let enabled = format!("{real}\npr.review.enabled\n");
     let twice = format!("{real}\n`Depth: <depth> (<reason>)`\n");
     let reordered = real.replace("`signal:` line", "`zzz`");
 
@@ -144,7 +144,7 @@ fn a_file_missing_one_depth_rule_fails_naming_that_rule() {
     assert!(failures.is_empty(), "{failures:#?}");
     assert!(problems(&enabled, &depth_steps(&enabled))
         .iter()
-        .any(|p| p.contains("autoReview.enabled")));
+        .any(|p| p.contains("pr.review.enabled")));
     assert!(problems(&twice, &depth_steps(&twice))
         .iter()
         .any(|p| p.contains("exactly once")));
@@ -238,7 +238,7 @@ fn review_depth_rule_matches_the_finish_decision() {
     // Arrange
     let files = constant_files();
     let review = depth_steps(&real_review());
-    let other_key = "const AUTO_REVIEW_TYPE: &str = \"autoReview.mode\";\n\
+    let other_key = "const AUTO_REVIEW_TYPE: &str = \"pr.review.mode\";\n\
                      const TYPE_AUTO: &str = \"auto\";\n\
                      const TYPE_QUICK: &str = \"quick\";\n\
                      const TYPE_DEEP: &str = \"deep\";\n";

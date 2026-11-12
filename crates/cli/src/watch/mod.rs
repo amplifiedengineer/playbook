@@ -113,7 +113,7 @@ pub struct Settings {
     pub allowed_authors: Vec<String>,
     /// `fix.maxFiles` and `fix.maxLines`, the most a change may touch.
     pub fix: action::DiffCaps,
-    /// `autoMerge.enabled`: whether watch may merge a pull request.
+    /// `pr.merge.enabled`: whether watch may merge a pull request.
     pub auto_merge: bool,
 }
 
@@ -147,7 +147,7 @@ impl Settings {
                 .unwrap_or(DEFAULT_TOKEN_ENV)
                 .to_string(),
             allowed_authors: strings("watch.allowedAuthors")?,
-            auto_merge: get("autoMerge.enabled")?.as_bool().unwrap_or(false),
+            auto_merge: get("pr.merge.enabled")?.as_bool().unwrap_or(false),
             fix: action::DiffCaps {
                 files: get("fix.maxFiles")?.as_i64().unwrap_or(3),
                 lines: get("fix.maxLines")?.as_i64().unwrap_or(500),

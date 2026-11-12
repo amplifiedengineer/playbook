@@ -97,7 +97,7 @@ pub const TOOLS: &[Tool] = &[
         "config",
         "get",
         "KEY",
-        "config get autoReview.enabled",
+        "config get pr.review.enabled",
     ),
     t("list-plans", "plans", "", "--json", "plans --json"),
     t(

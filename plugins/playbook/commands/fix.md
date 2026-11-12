@@ -78,7 +78,7 @@ In auto mode never force-push. If the push is rejected, stop and report it in th
 
 Invoke the `/playbook:pr-create` skill with the Skill tool. When you work in a git worktree, put its absolute root (`git rev-parse --show-toplevel`) and branch (`git branch --show-current`) in the prompt of this and of every `/playbook:commit` call, as "Worktree root: <path>, branch: <name>". Do not run `gh pr create` yourself. Open one pull request for the fix. Link the issue when there is one.
 
-When it returns the PR URL, invoke the `playbook:finish-pull-request` skill with the Skill tool for that PR. It runs the self-review the `autoReview.*` settings select, fixes findings, promotes the draft, and merges only when `autoMerge.enabled` allows it. The pr-create command does not run the review, so this step is needed. In auto mode no self-review runs for a fix PR and it is not merged; say so in the report.
+When it returns the PR URL, invoke the `playbook:finish-pull-request` skill with the Skill tool for that PR. It runs the self-review the `pr.review.*` settings select, fixes findings, promotes the draft, and merges only when `pr.merge.enabled` allows it. The pr-create command does not run the review, so this step is needed. In auto mode no self-review runs for a fix PR and it is not merged; say so in the report.
 
 ## Step 7: Report
 

@@ -72,7 +72,7 @@ fn json_of(o: &Output) -> Value {
 fn quick_type_on_a_draft_pr_reports_the_pr_and_the_review() {
     let s = Sandbox::new("quick");
     s.gh_draft_pr();
-    s.config("autoReview.type", "quick");
+    s.config("pr.review.type", "quick");
     let o = s.run(&["pr", "status", "7", "--json"]);
     assert_eq!(o.status.code(), Some(0));
     let v = json_of(&o);
@@ -81,7 +81,61 @@ fn quick_type_on_a_draft_pr_reports_the_pr_and_the_review() {
     assert_eq!(v["review"], "quick");
     assert_eq!(v["pr"]["isDraft"], true);
     assert_eq!(v["pr"]["head"], HEAD_OID);
-    assert_eq!(v["settings"]["autoReview.type"]["source"], "global");
+    assert_eq!(v["settings"]["pr.review.type"]["source"], "global");
+}
+
+/// The first release that shipped `settings` keyed by the old names.
+const OLD_NAME_TYPE: &str = "autoReview.type";
+const OLD_NAME_FIX: &str = "autoReview.fix";
+const OLD_NAME_MERGE: &str = "autoMerge.enabled";
+
+#[test]
+fn settings_carry_the_new_and_the_old_names_with_the_same_value() {
+    // Arrange
+    let s = Sandbox::new("both-names");
+    s.gh_draft_pr();
+    s.config("pr.review.type", "quick");
+    s.config("pr.merge.enabled", "true");
+
+    // Act
+    let v = json_of(&s.run(&["pr", "status", "7", "--json"]));
+
+    // Assert
+    assert_eq!(v["settings"]["pr.review.type"]["value"], "quick");
+    assert_eq!(
+        v["settings"][OLD_NAME_TYPE],
+        v["settings"]["pr.review.type"]
+    );
+    assert_eq!(v["settings"]["pr.merge.enabled"]["value"], true);
+    assert_eq!(
+        v["settings"][OLD_NAME_MERGE],
+        v["settings"]["pr.merge.enabled"]
+    );
+    assert_eq!(v["settings"][OLD_NAME_FIX], v["settings"]["pr.review.fix"]);
+}
+
+#[test]
+fn an_old_stored_row_still_drives_pr_status() {
+    // Arrange
+    let s = Sandbox::new("old-row");
+    s.gh_draft_pr();
+    let root = s.root.join("home/.config/playbook");
+    playbook::config::store::put(
+        &root,
+        playbook::config::write::Tier::Global,
+        None,
+        OLD_NAME_TYPE,
+        &serde_json::json!("quick"),
+    )
+    .unwrap();
+
+    // Act
+    let v = json_of(&s.run(&["pr", "status", "7", "--json"]));
+
+    // Assert
+    assert_eq!(v["review"], "quick");
+    assert_eq!(v["settings"]["pr.review.type"]["value"], "quick");
+    assert_eq!(v["settings"]["pr.review.type"]["source"], "global");
 }
 
 #[test]

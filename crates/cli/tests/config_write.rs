@@ -57,7 +57,7 @@ fn writing_to_an_absent_tier_creates_the_database_and_the_row() {
     // Act
     let result = set(
         Tier::Repo,
-        "autoReview.enabled",
+        "pr.review.enabled",
         &json!(false),
         &home,
         Some("owner/repo"),
@@ -67,7 +67,7 @@ fn writing_to_an_absent_tier_creates_the_database_and_the_row() {
     assert!(result.is_ok());
     assert_eq!(
         stored(&home)["repos"]["owner/repo"],
-        json!({"autoReview.enabled": false})
+        json!({"pr.review.enabled": false})
     );
 
     let _ = fs::remove_dir_all(&home);
@@ -79,7 +79,7 @@ fn set_keeps_the_other_keys_of_the_same_tier() {
     let home = scratch_home("merge");
     set(
         Tier::Repo,
-        "autoReview.type",
+        "pr.review.type",
         &json!("quick"),
         &home,
         Some("owner/repo"),
@@ -89,7 +89,7 @@ fn set_keeps_the_other_keys_of_the_same_tier() {
     // Act
     let result = set(
         Tier::Repo,
-        "autoReview.enabled",
+        "pr.review.enabled",
         &json!(true),
         &home,
         Some("owner/repo"),
@@ -99,7 +99,7 @@ fn set_keeps_the_other_keys_of_the_same_tier() {
     assert!(result.is_ok());
     assert_eq!(
         stored(&home)["repos"]["owner/repo"],
-        json!({"autoReview.type": "quick", "autoReview.enabled": true})
+        json!({"pr.review.type": "quick", "pr.review.enabled": true})
     );
 
     let _ = fs::remove_dir_all(&home);
@@ -122,7 +122,7 @@ fn an_unknown_key_is_rejected_and_writes_nothing() {
     // Assert
     let err = result.unwrap_err();
     assert!(matches!(&err, ConfigError::UnknownKey(k) if k == "notAKnownKey"));
-    assert!(err.to_string().contains("autoReview.enabled"));
+    assert!(err.to_string().contains("pr.review.enabled"));
     assert!(!db(&home).exists());
 }
 
@@ -134,7 +134,7 @@ fn a_wrong_typed_value_is_rejected_and_writes_nothing() {
     // Act
     let result = set(
         Tier::Repo,
-        "autoReview.enabled",
+        "pr.review.enabled",
         &json!("not-a-bool"),
         &home,
         Some("owner/repo"),
@@ -153,7 +153,7 @@ fn an_out_of_enum_value_is_rejected_and_writes_nothing() {
     // Act
     let result = set(
         Tier::Repo,
-        "autoReview.type",
+        "pr.review.type",
         &json!("medium"),
         &home,
         Some("owner/repo"),
@@ -173,7 +173,7 @@ fn repo_tier_with_no_repo_slug_is_rejected_and_writes_nothing() {
     let home = scratch_home("no-repo-slug");
 
     // Act
-    let result = set(Tier::Repo, "autoReview.enabled", &json!(true), &home, None);
+    let result = set(Tier::Repo, "pr.review.enabled", &json!(true), &home, None);
 
     // Assert
     assert!(matches!(
@@ -196,7 +196,7 @@ fn an_uncreatable_directory_is_rejected_with_a_path_naming_error() {
     // Act
     let result = set(
         Tier::Repo,
-        "autoReview.enabled",
+        "pr.review.enabled",
         &json!(true),
         &home,
         Some("owner/repo"),
@@ -224,7 +224,7 @@ fn a_non_object_existing_tier_file_is_rejected_rather_than_overwritten() {
     // Act
     let result = set(
         Tier::Repo,
-        "autoReview.enabled",
+        "pr.review.enabled",
         &json!(true),
         &home,
         Some("owner/repo"),
@@ -254,7 +254,7 @@ fn twenty_concurrent_writers_keep_every_key() {
                     let enabled = i % 4 == 0;
                     set(
                         Tier::Repo,
-                        "autoReview.enabled",
+                        "pr.review.enabled",
                         &json!(enabled),
                         &home,
                         Some("owner/repo"),
@@ -263,7 +263,7 @@ fn twenty_concurrent_writers_keep_every_key() {
                     let kind = if i % 4 == 1 { "quick" } else { "deep" };
                     set(
                         Tier::Repo,
-                        "autoReview.type",
+                        "pr.review.type",
                         &json!(kind),
                         &home,
                         Some("owner/repo"),
@@ -279,10 +279,10 @@ fn twenty_concurrent_writers_keep_every_key() {
     // Assert: SQLite serializes the writers, so both keys are present and
     // hold a value some thread actually wrote.
     let content = stored(&home)["repos"]["owner/repo"].clone();
-    content["autoReview.enabled"]
+    content["pr.review.enabled"]
         .as_bool()
         .expect("enabled should be a bool");
-    let kind = content["autoReview.type"]
+    let kind = content["pr.review.type"]
         .as_str()
         .expect("type should be a string");
     assert!(kind == "quick" || kind == "deep");
@@ -415,8 +415,8 @@ fn zero_is_still_accepted_for_the_other_numeric_keys() {
 }
 
 const BOOL_SETTINGS: [&str; 4] = [
-    "autoReview.fix",
-    "autoMerge.enabled",
+    "pr.review.fix",
+    "pr.merge.enabled",
     "commit.signOff",
     "pr.draft",
 ];

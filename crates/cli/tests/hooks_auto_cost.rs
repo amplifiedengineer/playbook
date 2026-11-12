@@ -1919,7 +1919,7 @@ fn read_only_mode_and_config_commands_and_near_misses_are_not_denied() {
         "playbook config get auto.budgetUsd",
         "playbook config list",
         "playbook config set other.key x",
-        "playbook config set autoReview.enabled false",
+        "playbook config set pr.review.enabled false",
         "playbook config set model x",
         "playbook config set modes x",
         "playbook config set fixes.maxFiles 1",

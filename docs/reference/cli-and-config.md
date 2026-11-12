@@ -14,10 +14,10 @@ Set a key with `playbook config set <key> <value>` and read it with `playbook co
 
 | Key | Default | Allowed values |
 | :- | :- | :- |
-| `autoReview.enabled` | `true` | `true`, `false` |
-| `autoReview.type` | `auto` | `quick`, `deep`, `auto` |
-| `autoReview.fix` | `false` | `true`, `false` |
-| `autoMerge.enabled` | `false` | `true`, `false` |
+| `pr.review.enabled` | `true` | `true`, `false` |
+| `pr.review.type` | `auto` | `quick`, `deep`, `auto` |
+| `pr.review.fix` | `false` | `true`, `false` |
+| `pr.merge.enabled` | `false` | `true`, `false` |
 | `commit.signOff` | `true` | `true`, `false` |
 | `handoff.onClear` | `false` | `true`, `false` |
 | `pr.draft` | `true` | `true`, `false` |
@@ -385,7 +385,7 @@ Read and change playbook settings in any tier
 
 Settings come from tiers, highest first: repo, org, global, then the built-in default. `get` and `list` show which tier supplied a value.
 
-Example: `playbook config set autoReview.enabled true`
+Example: `playbook config set pr.review.enabled true`
 
 Subcommands: `apply-proposal`, `export`, `get`, `import`, `list`, `set`
 
@@ -411,9 +411,9 @@ Example: `playbook config export > playbook-config.json`
 
 Show a setting's value and which tier it came from
 
-Example: `playbook config get autoReview.enabled`
+Example: `playbook config get pr.review.enabled`
 
-- `<KEY>`: Dotted setting name, such as `autoReview.enabled`
+- `<KEY>`: Dotted setting name, such as `pr.review.enabled`
 
 ### `playbook config import`
 
@@ -435,9 +435,9 @@ Change a setting
 
 Writes to the repo tier unless you pass `--org` or `--global`. The per-user `update.*` keys go to the global tier, and `--org` is refused for them.
 
-Example: `playbook config set autoReview.enabled true`
+Example: `playbook config set pr.review.enabled true`
 
-- `<KEY>`: Dotted setting name, such as `autoReview.enabled`
+- `<KEY>`: Dotted setting name, such as `pr.review.enabled`
 - `<VALUE>`: New value; it is read as the type the setting expects
 - `--org`: Write to the org tier instead of the repo tier
 - `--global`: Write to the global tier instead of the repo tier

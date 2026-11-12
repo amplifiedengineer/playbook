@@ -37,3 +37,25 @@ fn legacy_flow_lives_in_a_reference() {
     assert!(l.contains("pr-land-wait"));
     assert!(l.contains("Never `--admin`"));
 }
+
+const OLD_KEY_PREFIXES: &[&str] = &["autoReview.", "autoMerge."];
+const NEW_KEYS: &[&str] = &["pr.review.fix", "pr.merge.enabled"];
+
+#[test]
+fn the_skill_and_its_legacy_reference_name_the_pr_flow_keys_by_their_new_names() {
+    for rel in ["SKILL.md", "references/legacy-land.md"] {
+        // Arrange
+        let text = read(rel);
+
+        // Act
+        let old: Vec<&&str> = OLD_KEY_PREFIXES
+            .iter()
+            .filter(|p| text.contains(**p))
+            .collect();
+        let missing: Vec<&&str> = NEW_KEYS.iter().filter(|k| !text.contains(**k)).collect();
+
+        // Assert
+        assert!(old.is_empty(), "{rel} still names {old:?}");
+        assert!(missing.is_empty(), "{rel} lacks {missing:?}");
+    }
+}
