@@ -77,8 +77,13 @@ jobs:
           set -uo pipefail
           bin="$PWD/target/debug/playbook"
 
-          # The first PR that adds the command has a base without it.
-          if ! "$bin" sanitize pr-text --help >/dev/null 2>&1; then
+          # The base commit may still know the command as `pr-text`. The first
+          # PR that adds the command has a base without either name.
+          if "$bin" sanitize pr --help >/dev/null 2>&1; then
+            pr_text_cmd=pr
+          elif "$bin" sanitize pr-text --help >/dev/null 2>&1; then
+            pr_text_cmd=pr-text
+          else
             echo "::notice title=commit-message-guard::the base commit has no sanitize command yet, so nothing was checked"
             exit 0
           fi
@@ -91,7 +96,7 @@ jobs:
           changed=0
           edit=(gh pr edit "$PR_NUMBER" --repo "$GITHUB_REPOSITORY")
           for part in title body; do
-            "$bin" sanitize pr-text "$work/$part.txt" --check 2> "$work/$part.report"
+            "$bin" sanitize "$pr_text_cmd" "$work/$part.txt" --check 2> "$work/$part.report"
             status=$?
             if [ "$status" -eq 2 ]; then
               # Exit 1 means something would be removed; 2 means the file could not be read.
@@ -99,7 +104,7 @@ jobs:
             elif [ "$status" -ne 0 ]; then
               # The report names a line and a shape, never the text.
               sed "s/^/PR $part: /" "$work/$part.report"
-              "$bin" sanitize pr-text "$work/$part.txt" 2> /dev/null
+              "$bin" sanitize "$pr_text_cmd" "$work/$part.txt" 2> /dev/null
               if [ "$part" = title ] && [ -z "$(cat "$work/title.txt")" ]; then
                 echo "::warning title=commit-message-guard::the PR title is only attribution, so it was left as it is; rename it"
               elif [ "$part" = title ]; then

@@ -106,7 +106,7 @@ A tagged handoff with no marker belongs to a session still running and is left a
 **`commit-message-sanitizer`** (PreToolUse):
 
 - Removes AI attribution (a `Claude-Session:` line, a claude.ai link, a "Generated with" footer, an AI credit trailer or `--author`) from the message of a commit, tag, merge or PR. It never blocks: it returns the same command with the message cleaned and no permission decision.
-- A message kept in a file is never rewritten on disk. The cleaned text is read from `-F -` or a heredoc. A recognised `git commit` also gets `-s` unless the message already has a sign-off, `commit.signOff` is false, or the repo's own hook adds it. Signing (`-S`) is left to git config. The same rule backs `playbook sanitize commit-msg <file>`.
+- A message kept in a file is never rewritten on disk. The cleaned text is read from `-F -` or a heredoc. A recognised `git commit` also gets `-s` unless the message already has a sign-off, `commit.signOff` is false, or the repo's own hook adds it. Signing (`-S`) is left to git config. The same rule backs `playbook sanitize commit <file>`.
 - It also lints the prose of those messages, of PR text, and of `gh pr comment`, `gh pr review` and `gh issue` text against the writing-style phrase and structure table, and adds the findings to the model's context. `hooks.proseLint.mode` set to `block` denies the call on a hard finding. `playbook prose check` runs the same table on files. It also warns on passive voice, a soft finding that never fails `--strict`. When a file `<file>.facts` sits beside the checked file, it checks that every number, identifier, path and reference in the text appears in the facts, and it checks the text against the length limit of the `kind:` named on the first line of the facts file. Best effort, not a security boundary.
 
 **`policy-guard`.** When off it allows every call. When on, it denies:
@@ -186,7 +186,7 @@ It reads the command text, so heredoc scripts, script files and paths built at r
 `playbook setup` does not install a git hook, because a repo may already manage its hooks (a `core.hooksPath`, husky, lefthook) and a second hook would clobber or be clobbered by them. To get the same cleanup for commits made outside an agent, add one line to the repo's own `commit-msg` hook:
 
 ```sh
-playbook sanitize commit-msg "$1"
+playbook sanitize commit "$1"
 ```
 
 It rewrites the message file in place and always exits 0, even when the file cannot be read or written, so it never blocks a commit. With `--check` it reports instead: exit 1 for something it would remove or a missing `Signed-off-by` line, exit 2 when the file cannot be read, so CI can tell them apart.

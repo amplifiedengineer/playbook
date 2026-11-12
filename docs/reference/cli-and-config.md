@@ -1280,22 +1280,22 @@ Remove AI attribution lines from message text
 
 For callers that are not an agent hook, such as a git `commit-msg` hook or CI. Each subcommand rewrites FILE in place unless `--check` is given, and prints one line per removed line to stderr: its number and the shape of the attribution, never its text. Without `--check` the exit code is always 0, even when FILE cannot be read or written.
 
-Subcommands: `commit-msg`, `pr-text`
+Subcommands: `commit`, `pr`
 
-### `playbook sanitize commit-msg`
+### `playbook sanitize commit`
 
 Clean a commit message file, such as git's `.git/COMMIT_EDITMSG`
 
-Example: `playbook sanitize commit-msg .git/COMMIT_EDITMSG`
+Example: `playbook sanitize commit .git/COMMIT_EDITMSG`
 
 - `<FILE>`: File holding the message
 - `--check`: Report what would be removed, without writing. Exits 1 if anything would be removed, and 2 if FILE cannot be read
 
-### `playbook sanitize pr-text`
+### `playbook sanitize pr`
 
 Clean a PR title or body saved to a file
 
-Example: `playbook sanitize pr-text /tmp/body.md`
+Example: `playbook sanitize pr /tmp/body.md`
 
 - `<FILE>`: File holding the text
 - `--check`: Report what would be removed, without writing. Exits 1 if anything would be removed, and 2 if FILE cannot be read
@@ -1860,7 +1860,7 @@ With no verb it runs in the foreground until you stop it, polling every `watch.p
 
 Example: `playbook watch once`
 
-Subcommands: `approve`, `dry-run`, `install-service`, `log`, `once`, `pause`, `reject`, `resume`, `retry`, `status`, `uninstall-service`
+Subcommands: `approve`, `log`, `once`, `pause`, `reject`, `resume`, `retry`, `service`, `status`
 
 ### `playbook watch approve`
 
@@ -1871,22 +1871,6 @@ Runs the action now. When another watch process is running it only marks the ite
 Example: `playbook watch approve 3`
 
 - `<ID>`: Proposal number printed by `watch once`
-
-### `playbook watch dry-run`
-
-Show the rules and what a poll would propose, and change nothing
-
-Example: `playbook watch dry-run`
-
-- `--since <SINCE>`: Look at events from this UTC time, for example 2026-11-01T00:00:00Z
-
-### `playbook watch install-service`
-
-Install a timer that runs `watch once` every 60 seconds
-
-A launchd agent on macOS and a systemd user timer on Linux. No process stays running between polls. The timer finds the GitHub token through `gh auth token`, so run `gh auth login` first.
-
-Example: `playbook watch install-service`
 
 ### `playbook watch log`
 
@@ -1902,11 +1886,12 @@ Example: `playbook watch log --rule triage --outcome done`
 
 Poll every repo once and run the items you approved
 
-A repo watched for the first time starts from now, so turning watch mode on never replays old issues. Prints `watch already running` and exits when another watch process holds the lock.
+A repo watched for the first time starts from now, so turning watch mode on never replays old issues. Prints `watch already running` and exits when another watch process holds the lock. With `--dry-run` it shows the rules and what a poll would propose, and changes nothing.
 
 Example: `playbook watch once --since 2026-11-01T00:00:00Z`
 
 - `--since <SINCE>`: Replay events from this UTC time, for example 2026-11-01T00:00:00Z
+- `--dry-run`: Show the rules and what a poll would propose, and change nothing
 
 ### `playbook watch pause`
 
@@ -1938,6 +1923,30 @@ Example: `playbook watch retry 3`
 
 - `<ID>`: Number of the dead item, shown by `watch status`
 
+### `playbook watch service`
+
+Install or remove the timer that runs `watch once`
+
+Subcommands: `install`, `uninstall`
+
+### `playbook watch service install`
+
+Install a timer that runs `watch once` every 60 seconds
+
+A launchd agent on macOS and a systemd user timer on Linux. No process stays running between polls. The timer finds the GitHub token through `gh auth token`, so run `gh auth login` first.
+
+Example: `playbook watch service install`
+
+### `playbook watch service uninstall`
+
+Remove the timer that `service install` made
+
+The audit log stays unless you ask for it to go.
+
+Example: `playbook watch service uninstall --delete-log`
+
+- `--delete-log`: Also delete the audit log
+
 ### `playbook watch status`
 
 Show whether watch runs, the queue, the limits and the dead list
@@ -1945,16 +1954,6 @@ Show whether watch runs, the queue, the limits and the dead list
 Example: `playbook watch status --json`
 
 - `--json`: Print the status as JSON
-
-### `playbook watch uninstall-service`
-
-Remove the timer that `install-service` made
-
-The audit log stays unless you ask for it to go.
-
-Example: `playbook watch uninstall-service --delete-log`
-
-- `--delete-log`: Also delete the audit log
 
 ### `playbook worktree`
 

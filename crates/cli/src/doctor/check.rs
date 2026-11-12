@@ -1115,7 +1115,7 @@ fn attribution_on_row(state: &crate::init::attribution::State, held: &[&str]) ->
     }
 }
 
-/// The row for the timer `watch install-service` made: shown only when the
+/// The row for the timer `watch service install` made: shown only when the
 /// timer is installed, and a warning while watch mode is off, because the
 /// timer then polls nothing.
 fn watch_service_row(home: &Path) -> Option<Row> {

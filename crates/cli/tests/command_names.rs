@@ -11,15 +11,7 @@ use std::path::Path;
 const MAX_DEPTH: usize = 4;
 
 /// Hyphenated command paths that exist today. Do not add to this list.
-const LEGACY_HYPHENATED: &[&str] = &[
-    "pr ci-wait",
-    "pr land-wait",
-    "sanitize commit-msg",
-    "sanitize pr-text",
-    "watch dry-run",
-    "watch install-service",
-    "watch uninstall-service",
-];
+const LEGACY_HYPHENATED: &[&str] = &["pr ci-wait", "pr land-wait"];
 
 /// Paths under `cmd` (root excluded) that end in a hyphenated segment outside
 /// `legacy`, or sit deeper than `MAX_DEPTH`.
@@ -142,7 +134,7 @@ fn legacy_list_has_no_stale_entries() {
 
     // Assert
     assert!(found.is_empty(), "stale legacy entries: {found:?}");
-    assert_eq!(LEGACY_HYPHENATED.len(), 7);
+    assert_eq!(LEGACY_HYPHENATED.len(), 2);
 }
 
 /// Helpers users never run.

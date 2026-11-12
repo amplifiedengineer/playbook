@@ -210,10 +210,87 @@ fn the_memory_cc_and_doctor_commands_are_alias_rows() {
     }
 }
 
+/// The sanitize and watch rows this table must carry, as (old, new, extra).
+const SANITIZE_WATCH_ROWS: [(&str, &str, &[&str]); 5] = [
+    ("sanitize commit-msg", "sanitize commit", &[]),
+    ("sanitize pr-text", "sanitize pr", &[]),
+    ("watch dry-run", "watch once", &["--dry-run"]),
+    ("watch install-service", "watch service install", &[]),
+    ("watch uninstall-service", "watch service uninstall", &[]),
+];
+
+#[test]
+fn the_sanitize_and_watch_commands_are_alias_rows() {
+    // Arrange
+    let table = playbook::renames::COMMAND_RENAMES;
+
+    for (old, new, extra) in SANITIZE_WATCH_ROWS {
+        // Act
+        let row = table.iter().find(|row| row.old == old);
+
+        // Assert
+        let row = row.unwrap_or_else(|| panic!("`{old}` has no alias row"));
+        assert_eq!(row.new, new);
+        assert_eq!(row.extra, extra);
+    }
+}
+
+#[test]
+fn the_nested_watch_commands_parse() {
+    for words in [
+        &[
+            "watch",
+            "once",
+            "--dry-run",
+            "--since",
+            "2026-11-01T00:00:00Z",
+        ][..],
+        &["watch", "service", "install"],
+        &["watch", "service", "uninstall", "--delete-log"],
+    ] {
+        // Arrange
+        let args = argv(&words.join(" "), &[]);
+
+        // Act
+        let parsed = Cli::try_parse_from(&args);
+
+        // Assert
+        assert!(parsed.is_ok(), "{words:?}: {parsed:?}");
+    }
+}
+
+const ATTRIBUTION_LINE: &str = "Co-Authored-By: Claude <noreply@anthropic.com>";
+
+#[test]
+fn old_and_new_sanitize_names_strip_an_attribution_line() {
+    for (name, text) in [
+        ("sanitize commit", "feat: x\n\nbody\n\n"),
+        ("sanitize commit-msg", "feat: x\n\nbody\n\n"),
+        ("sanitize pr", "A summary.\n\n"),
+        ("sanitize pr-text", "A summary.\n\n"),
+    ] {
+        // Arrange
+        let root = scratch("sanitize");
+        let file = root.join("message.txt");
+        std::fs::write(&file, format!("{text}{ATTRIBUTION_LINE}\n")).unwrap();
+        let file_arg = file.to_string_lossy().into_owned();
+
+        // Act
+        let output = run(&argv(name, &[&file_arg]), "sanitize");
+
+        // Assert
+        assert_eq!(output.status.code(), Some(0), "{name}");
+        let after = std::fs::read_to_string(&file).unwrap();
+        assert!(!after.contains("Claude"), "{name}: {after}");
+        assert!(after.starts_with(text.trim_end()), "{name}: {after}");
+    }
+}
+
 /// Arguments a row needs to run offline. Most rows need none.
 fn sample_tail(old: &str) -> &'static [&'static str] {
     match old {
         "review triage-merge" => &["--lenses", "a"],
+        "sanitize commit-msg" | "sanitize pr-text" => &["missing.txt"],
         _ => &[],
     }
 }

@@ -301,11 +301,10 @@ command playbook sessions list subcommands=- aliases=- groups=List[json]
 arg playbook sessions list id=json long=json short=- value_names=JSON possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
 command playbook sessions sweep subcommands=- aliases=- groups=Sweep[dry_run]
 arg playbook sessions sweep id=dry_run long=dry-run short=- value_names=DRY_RUN possible=true,false defaults=- aliases=- required=true hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
-command playbook watch subcommands=once,dry-run,approve,reject,status,pause,resume,retry,log,install-service,uninstall-service aliases=- groups=Watch[-]
-command playbook watch once subcommands=- aliases=- groups=Once[since]
+command playbook watch subcommands=once,approve,reject,status,pause,resume,retry,log,service aliases=- groups=Watch[-]
+command playbook watch once subcommands=- aliases=- groups=Once[since,dry_run]
 arg playbook watch once id=since long=since short=- value_names=SINCE possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
-command playbook watch dry-run subcommands=- aliases=- groups=DryRun[since]
-arg playbook watch dry-run id=since long=since short=- value_names=SINCE possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
+arg playbook watch once id=dry_run long=dry-run short=- value_names=DRY_RUN possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
 command playbook watch approve subcommands=- aliases=- groups=Approve[id]
 arg playbook watch approve id=id long=- short=- value_names=ID possible=- defaults=- aliases=- required=true hidden=false global=false action=Set num_args=- parser=i64 conflicts=-
 command playbook watch reject subcommands=- aliases=- groups=Reject[id]
@@ -320,9 +319,10 @@ command playbook watch log subcommands=- aliases=- groups=Log[rule,outcome,json]
 arg playbook watch log id=rule long=rule short=- value_names=RULE possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
 arg playbook watch log id=outcome long=outcome short=- value_names=OUTCOME possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
 arg playbook watch log id=json long=json short=- value_names=JSON possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
-command playbook watch install-service subcommands=- aliases=- groups=-
-command playbook watch uninstall-service subcommands=- aliases=- groups=UninstallService[delete_log]
-arg playbook watch uninstall-service id=delete_log long=delete-log short=- value_names=DELETE_LOG possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
+command playbook watch service subcommands=install,uninstall aliases=- groups=Service[-]
+command playbook watch service install subcommands=- aliases=- groups=-
+command playbook watch service uninstall subcommands=- aliases=- groups=Uninstall[delete_log]
+arg playbook watch service uninstall id=delete_log long=delete-log short=- value_names=DELETE_LOG possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
 command playbook eval subcommands=triage,bench aliases=- groups=Eval[-]
 command playbook eval triage subcommands=- aliases=- groups=Triage[fixtures,prompt]
 arg playbook eval triage id=fixtures long=- short=- value_names=FIXTURES possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=std::path::PathBuf conflicts=-
@@ -532,13 +532,13 @@ command playbook code context subcommands=- aliases=- groups=Context[query,max_t
 arg playbook code context id=query long=- short=- value_names=QUERY possible=- defaults=- aliases=- required=true hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
 arg playbook code context id=max_tokens long=max-tokens short=- value_names=MAX_TOKENS possible=- defaults=4000 aliases=- required=false hidden=false global=false action=Set num_args=- parser=u32 conflicts=-
 arg playbook code context id=json long=json short=- value_names=JSON possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
-command playbook sanitize subcommands=commit-msg,pr-text aliases=- groups=Sanitize[-]
-command playbook sanitize commit-msg subcommands=- aliases=- groups=CommitMsg[file,check]
-arg playbook sanitize commit-msg id=file long=- short=- value_names=FILE possible=- defaults=- aliases=- required=true hidden=false global=false action=Set num_args=- parser=std::path::PathBuf conflicts=-
-arg playbook sanitize commit-msg id=check long=check short=- value_names=CHECK possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
-command playbook sanitize pr-text subcommands=- aliases=- groups=PrText[file,check]
-arg playbook sanitize pr-text id=file long=- short=- value_names=FILE possible=- defaults=- aliases=- required=true hidden=false global=false action=Set num_args=- parser=std::path::PathBuf conflicts=-
-arg playbook sanitize pr-text id=check long=check short=- value_names=CHECK possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
+command playbook sanitize subcommands=commit,pr aliases=- groups=Sanitize[-]
+command playbook sanitize commit subcommands=- aliases=- groups=Commit[file,check]
+arg playbook sanitize commit id=file long=- short=- value_names=FILE possible=- defaults=- aliases=- required=true hidden=false global=false action=Set num_args=- parser=std::path::PathBuf conflicts=-
+arg playbook sanitize commit id=check long=check short=- value_names=CHECK possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
+command playbook sanitize pr subcommands=- aliases=- groups=Pr[file,check]
+arg playbook sanitize pr id=file long=- short=- value_names=FILE possible=- defaults=- aliases=- required=true hidden=false global=false action=Set num_args=- parser=std::path::PathBuf conflicts=-
+arg playbook sanitize pr id=check long=check short=- value_names=CHECK possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
 command playbook ci subcommands=- aliases=- groups=Ci[json,strict,dir]
 arg playbook ci id=json long=json short=- value_names=JSON possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
 arg playbook ci id=strict long=strict short=- value_names=STRICT possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-

@@ -1160,10 +1160,8 @@ fn real_main() {
         },
         Command::Sanitize { sub } => {
             let (kind, file, check) = match sub {
-                SanitizeCommand::CommitMsg { file, check } => {
-                    (sanitize::Kind::CommitMsg, file, check)
-                }
-                SanitizeCommand::PrText { file, check } => (sanitize::Kind::PrText, file, check),
+                SanitizeCommand::Commit { file, check } => (sanitize::Kind::CommitMsg, file, check),
+                SanitizeCommand::Pr { file, check } => (sanitize::Kind::PrText, file, check),
             };
             match sanitize::run(kind, &file, check) {
                 Ok(lines) => {

@@ -1433,8 +1433,8 @@ pub enum AgentsCommand {
 pub enum SanitizeCommand {
     /// Clean a commit message file, such as git's `.git/COMMIT_EDITMSG`
     ///
-    /// Example: `playbook sanitize commit-msg .git/COMMIT_EDITMSG`
-    CommitMsg {
+    /// Example: `playbook sanitize commit .git/COMMIT_EDITMSG`
+    Commit {
         /// File holding the message
         file: PathBuf,
         /// Report what would be removed, without writing. Exits 1 if anything would be removed, and 2 if FILE cannot be read
@@ -1443,8 +1443,8 @@ pub enum SanitizeCommand {
     },
     /// Clean a PR title or body saved to a file
     ///
-    /// Example: `playbook sanitize pr-text /tmp/body.md`
-    PrText {
+    /// Example: `playbook sanitize pr /tmp/body.md`
+    Pr {
         /// File holding the text
         file: PathBuf,
         /// Report what would be removed, without writing. Exits 1 if anything would be removed, and 2 if FILE cannot be read
@@ -2619,21 +2619,17 @@ pub enum WatchCommand {
     ///
     /// A repo watched for the first time starts from now, so turning watch
     /// mode on never replays old issues. Prints `watch already running` and
-    /// exits when another watch process holds the lock.
+    /// exits when another watch process holds the lock. With `--dry-run` it
+    /// shows the rules and what a poll would propose, and changes nothing.
     ///
     /// Example: `playbook watch once --since 2026-11-01T00:00:00Z`
     Once {
         /// Replay events from this UTC time, for example 2026-11-01T00:00:00Z
         #[arg(long)]
         since: Option<String>,
-    },
-    /// Show the rules and what a poll would propose, and change nothing
-    ///
-    /// Example: `playbook watch dry-run`
-    DryRun {
-        /// Look at events from this UTC time, for example 2026-11-01T00:00:00Z
+        /// Show the rules and what a poll would propose, and change nothing
         #[arg(long)]
-        since: Option<String>,
+        dry_run: bool,
     },
     /// Carry out a proposal
     ///
@@ -2691,20 +2687,30 @@ pub enum WatchCommand {
         #[arg(long)]
         json: bool,
     },
+    /// Install or remove the timer that runs `watch once`
+    Service {
+        #[command(subcommand)]
+        sub: WatchServiceCommand,
+    },
+}
+
+/// `playbook watch service` subcommands.
+#[derive(Subcommand, Debug)]
+pub enum WatchServiceCommand {
     /// Install a timer that runs `watch once` every 60 seconds
     ///
     /// A launchd agent on macOS and a systemd user timer on Linux. No process
     /// stays running between polls. The timer finds the GitHub token through
     /// `gh auth token`, so run `gh auth login` first.
     ///
-    /// Example: `playbook watch install-service`
-    InstallService,
-    /// Remove the timer that `install-service` made
+    /// Example: `playbook watch service install`
+    Install,
+    /// Remove the timer that `service install` made
     ///
     /// The audit log stays unless you ask for it to go.
     ///
-    /// Example: `playbook watch uninstall-service --delete-log`
-    UninstallService {
+    /// Example: `playbook watch service uninstall --delete-log`
+    Uninstall {
         /// Also delete the audit log
         #[arg(long)]
         delete_log: bool,
