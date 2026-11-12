@@ -21,6 +21,21 @@ pub const COMMAND_RENAMES: &[Rename] = &[Rename {
     extra: &[],
 }];
 
+/// Hidden legacy commands that keep their own code and output but print the
+/// deprecation line: the argv is not rewritten.
+pub const LEGACY_NOTICES: &[Rename] = &[
+    Rename {
+        old: "pr ci-wait",
+        new: "pr merge",
+        extra: &[],
+    },
+    Rename {
+        old: "pr land-wait",
+        new: "pr merge",
+        extra: &[],
+    },
+];
+
 /// The release that removes the old names.
 pub const ALIAS_REMOVAL: &str = "1.0.0";
 
@@ -77,6 +92,12 @@ pub fn rewrite(args: &[OsString], table: &[Rename]) -> (Vec<OsString>, Option<St
     out.extend(row.extra.iter().map(OsString::from));
     out.extend_from_slice(&args[start + old_len..]);
     (out, Some(deprecation_line(row.old, row.new)))
+}
+
+/// The deprecation line for a leading command path in `args` that `table`
+/// lists, or `None`.
+pub fn notice_for(args: &[OsString], table: &[Rename]) -> Option<String> {
+    rewrite(args, table).1
 }
 
 /// The line `main` prints, or `None` when `--json` is among `args` or

@@ -239,7 +239,7 @@ pub fn read_land_line(pr: &str) -> String {
 
 /// The `gh` arguments of a merge: `--auto`, or `--admin --squash`. A
 /// `match_head` commit makes `gh` refuse when the PR head has moved.
-fn merge_args<'a>(pr: &'a str, admin: bool, match_head: Option<&'a str>) -> Vec<&'a str> {
+pub fn merge_args<'a>(pr: &'a str, admin: bool, match_head: Option<&'a str>) -> Vec<&'a str> {
     let mut args = vec!["pr", "merge", pr];
     if admin {
         args.extend(["--admin", "--squash"]);
@@ -252,10 +252,9 @@ fn merge_args<'a>(pr: &'a str, admin: bool, match_head: Option<&'a str>) -> Vec<
     args
 }
 
-/// `gh pr merge` with `--auto`, or `--admin --squash`. Returns the two lines
-/// the command file reads: `<label>_rc=<code>` then gh's combined output.
-pub fn merge(pr: &str, admin: bool, match_head: Option<&str>) -> String {
-    let label = if admin { "admin" } else { "merge" };
+/// `gh pr merge` with `--auto`, or `--admin --squash`: the exit code and gh's
+/// combined output.
+pub fn merge(pr: &str, admin: bool, match_head: Option<&str>) -> (i32, String) {
     let args = merge_args(pr, admin, match_head);
     let mut cmd = Command::new("gh");
     cmd.args(&args);
@@ -263,14 +262,16 @@ pub fn merge(pr: &str, admin: bool, match_head: Option<&str>) -> String {
         Some(out) => {
             let mut text = String::from_utf8_lossy(&out.stdout).into_owned();
             text.push_str(&String::from_utf8_lossy(&out.stderr));
-            format!(
-                "{label}_rc={}\n{}",
-                out.status.code().unwrap_or(-1),
-                text.trim_end()
-            )
+            (out.status.code().unwrap_or(-1), text.trim_end().to_string())
         }
-        None => format!("{label}_rc=-1\ngh did not finish (missing, or timed out)"),
+        None => (-1, "gh did not finish (missing, or timed out)".to_string()),
     }
+}
+
+/// The two lines the command file reads: `<label>_rc=<code>` then the output.
+pub fn merge_text(admin: bool, code: i32, output: &str) -> String {
+    let label = if admin { "admin" } else { "merge" };
+    format!("{label}_rc={code}\n{output}")
 }
 
 #[cfg(test)]

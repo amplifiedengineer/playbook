@@ -144,19 +144,11 @@
     "required": false
   },
   {
-    "intent": "pr-ci-wait",
-    "required": false
-  },
-  {
     "intent": "pr-comments",
     "required": false
   },
   {
     "intent": "pr-create",
-    "required": false
-  },
-  {
-    "intent": "pr-land-wait",
     "required": false
   },
   {

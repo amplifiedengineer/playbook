@@ -118,7 +118,7 @@ pub mod usage_host;
 pub mod watch;
 pub mod worktree;
 
-use clap::{Parser, Subcommand, ValueEnum};
+use clap::{ArgGroup, Parser, Subcommand, ValueEnum};
 pub use code::cli::CodeCommand;
 use std::path::PathBuf;
 pub use usage::command::UsageCommand;
@@ -1643,12 +1643,14 @@ pub enum PrCommand {
         #[arg(default_value = "")]
         args: String,
     },
-    /// Wait for a PR's required checks to finish
+    /// Wait for a PR's required checks to finish (deprecated)
     ///
     /// Prints a `checks total=.. pending=.. fail=.. cancel=..` line per read,
     /// then `CI_VERDICT=` one of NONE, FAIL, CANCELLED, PASS or TIMEOUT.
+    /// Hidden from the command list and removed in 1.0.0: use `pr merge`.
     ///
     /// Example: `playbook pr ci-wait 12 --timeout 600`
+    #[command(hide = true)]
     CiWait {
         /// PR number
         pr: String,
@@ -1665,13 +1667,15 @@ pub enum PrCommand {
         #[arg(long, default_value_t = 0)]
         settle: u64,
     },
-    /// Wait for a PR to merge or hit a gate
+    /// Wait for a PR to merge or hit a gate (deprecated)
     ///
     /// Prints a status line per read (state, merge state, review, auto-merge),
     /// then `LAND_VERDICT=` one of MERGED, REVIEW_GATE, CHANGES_REQUESTED,
-    /// RESTATE or TIMEOUT.
+    /// RESTATE or TIMEOUT. Hidden from the command list and removed in 1.0.0:
+    /// use `pr merge`.
     ///
     /// Example: `playbook pr land-wait 12`
+    #[command(hide = true)]
     LandWait {
         /// PR number
         pr: String,
@@ -1682,8 +1686,9 @@ pub enum PrCommand {
         #[arg(long, default_value_t = 20)]
         interval: u64,
     },
-    /// Wait for checks, arm auto-merge, and wait for the merge
+    /// Wait for checks, arm auto-merge, and wait for the merge (deprecated)
     ///
+    /// Hidden from the command list and removed in 1.0.0: use `pr merge`.
     /// Prints `LAND=<verdict>` and a JSON report. Exit codes: 0 merged, 3 a gate
     /// (draft, waiting on a base PR, head moved, review required, changes
     /// requested, needs a rebase), 6 a check failed or the PR closed, 7 still
@@ -1691,6 +1696,7 @@ pub enum PrCommand {
     /// uses `--admin` and never deletes the branch.
     ///
     /// Example: `playbook pr land 12`
+    #[command(hide = true)]
     Land {
         /// PR number
         pr: String,
@@ -1707,21 +1713,48 @@ pub enum PrCommand {
         #[arg(long)]
         dir: Option<String>,
     },
-    /// Merge a PR with auto-merge, or as an admin squash
+    /// Merge a PR: wait for checks, arm auto-merge, wait for the merge
     ///
-    /// Prints `merge_rc=<code>` (or `admin_rc=`) and then what `gh` said.
-    /// Always exits 0, so the caller reads the code.
+    /// Prints `MERGE=<verdict> reason=<why>` and then the report. Verdicts:
+    /// MERGED, ARMED, GATE, FAILED, CLOSED, TIMEOUT, NOT_QUEUED. Exit codes: 0
+    /// merged or armed, 3 a gate (draft, waiting on a base PR, head moved,
+    /// review required, changes requested, needs a rebase), 5 `gh` failed, 6 the
+    /// PR closed or a check failed, 7 still waiting (call again with
+    /// `--settle 0`), 8 auto-merge did not queue. With `--json` it prints the
+    /// envelope with `verdict`, `reason` and `next` (done, wait, rebase, fix-ci
+    /// or ask) and exits 0. `--no-wait` and `--admin` skip the checks and the
+    /// wait: they print `merge_rc=<code>` (or `admin_rc=`) and what `gh` said,
+    /// and exit 0. Never deletes the branch.
     ///
-    /// Example: `playbook pr merge 12 --admin`
+    /// Example: `playbook pr merge 12`
+    #[command(group(ArgGroup::new("direct").args(["no_wait", "admin"]).multiple(true)))]
     Merge {
         /// PR number
         pr: String,
+        /// Arm auto-merge now and return, without waiting for checks or the merge
+        #[arg(long)]
+        no_wait: bool,
         /// Squash with admin rights instead of arming auto-merge
         #[arg(long)]
         admin: bool,
-        /// Refuse the merge unless the PR head is this commit
-        #[arg(long)]
+        /// With --no-wait or --admin, refuse unless the PR head is this commit
+        #[arg(long, requires = "direct")]
         match_head: Option<String>,
+        /// Give up after this many seconds in total
+        #[arg(long, default_value_t = 480)]
+        timeout: u64,
+        /// Seconds between reads
+        #[arg(long, default_value_t = 20)]
+        interval: u64,
+        /// Seconds to wait for the first checks to appear (use 0 on a repeat call)
+        #[arg(long, default_value_t = 120)]
+        settle: u64,
+        /// Work in this directory instead of the current one
+        #[arg(long)]
+        dir: Option<String>,
+        /// Print the envelope with verdict, reason and next, and exit 0
+        #[arg(long)]
+        json: bool,
     },
 }
 

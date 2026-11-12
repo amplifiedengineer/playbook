@@ -1049,7 +1049,7 @@ pub fn run(opts: &Options) -> Result<Report, Failure> {
                 .push("auto-merge needs a ready PR; pass --ready".into());
             return Ok(report);
         }
-        pr::enable_auto_merge(&sys, number).map_err(|e| fail(exit::FAILED, e))?;
+        pr::enable_auto_merge(&sys, number, &head).map_err(|e| fail(exit::FAILED, e))?;
         let (state, queued) = pr::status(&sys, number).map_err(|e| fail(exit::FAILED, e))?;
         if state == "MERGED" {
             report.state = Some(state);

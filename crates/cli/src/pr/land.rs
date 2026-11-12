@@ -26,6 +26,21 @@ pub mod exit {
     pub const NOT_QUEUED: i32 = 8;
 }
 
+/// The verdict words of a land call.
+pub mod verdict {
+    pub const MERGED: &str = "MERGED";
+    pub const FAIL: &str = "FAIL";
+    pub const CLOSED: &str = "CLOSED";
+    pub const STILL_WAITING: &str = "STILL_WAITING";
+    pub const NOT_QUEUED: &str = "NOT_QUEUED";
+    pub const DRAFT: &str = "DRAFT";
+    pub const WAITING_ON_BASE: &str = "WAITING_ON_BASE";
+    pub const HEAD_MOVED: &str = "HEAD_MOVED";
+    pub const REVIEW_GATE: &str = "REVIEW_GATE";
+    pub const CHANGES_REQUESTED: &str = "CHANGES_REQUESTED";
+    pub const RESTATE: &str = "RESTATE";
+}
+
 /// The merge methods a repo allows.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct Methods {
@@ -103,13 +118,21 @@ pub struct Report {
     pub exit_code: i32,
 }
 
+/// Values `gh` reports that the flow reads.
+const STATE_MERGED: &str = "MERGED";
+const STATE_CLOSED: &str = "CLOSED";
+const STATE_DIRTY: &str = "DIRTY";
+const STATE_BEHIND: &str = "BEHIND";
+const REVIEW_REQUIRED: &str = "REVIEW_REQUIRED";
+const CHANGES_REQUESTED: &str = "CHANGES_REQUESTED";
+
 /// The exit code of a verdict.
 pub fn exit_code(verdict: &str) -> i32 {
     match verdict {
-        "MERGED" => exit::MERGED,
-        "FAIL" | "CLOSED" => exit::CHECKS,
-        "STILL_WAITING" => exit::WAITING,
-        "NOT_QUEUED" => exit::NOT_QUEUED,
+        verdict::MERGED => exit::MERGED,
+        verdict::FAIL | verdict::CLOSED => exit::CHECKS,
+        verdict::STILL_WAITING => exit::WAITING,
+        verdict::NOT_QUEUED => exit::NOT_QUEUED,
         _ => exit::REFUSED,
     }
 }
@@ -145,12 +168,12 @@ fn summarize(json: &str) -> (ChecksReport, bool) {
 fn gate(view: &Value) -> Option<&'static str> {
     let review = text(view, "reviewDecision");
     let merge_state = text(view, "mergeStateStatus");
-    if review == "REVIEW_REQUIRED" {
-        Some("REVIEW_GATE")
-    } else if review == "CHANGES_REQUESTED" {
-        Some("CHANGES_REQUESTED")
-    } else if merge_state == "DIRTY" || merge_state == "BEHIND" {
-        Some("RESTATE")
+    if review == REVIEW_REQUIRED {
+        Some(verdict::REVIEW_GATE)
+    } else if review == CHANGES_REQUESTED {
+        Some(verdict::CHANGES_REQUESTED)
+    } else if merge_state == STATE_DIRTY || merge_state == STATE_BEHIND {
+        Some(verdict::RESTATE)
     } else {
         None
     }
@@ -179,65 +202,102 @@ pub fn land(
         next: String::new(),
         exit_code: 0,
     };
-    let verdict = run(gh, pr, opts, now, sleep, &mut r);
+    let mut wait = Wait {
+        opts,
+        now,
+        sleep,
+        polls: 0,
+    };
+    let verdict = run(gh, pr, &mut wait, &mut r);
     r.verdict = verdict.into();
     r.exit_code = exit_code(verdict);
-    r.elapsed_s = now().as_secs();
-    if verdict == "STILL_WAITING" {
+    r.elapsed_s = (wait.now)().as_secs();
+    if verdict == verdict::STILL_WAITING {
         r.next = format!("playbook pr land {pr} --settle 0");
     }
     r
 }
 
-fn run(
+/// The clock, the sleeper and the poll count shared by the waiting steps.
+struct Wait<'a> {
+    opts: &'a Opts,
+    now: &'a mut dyn FnMut() -> Duration,
+    sleep: &'a mut dyn FnMut(Duration),
+    polls: usize,
+}
+
+impl Wait<'_> {
+    fn out_of_time(&mut self) -> bool {
+        match self.opts.max_polls {
+            Some(max) => self.polls >= max,
+            None => (self.now)() >= self.opts.timeout,
+        }
+    }
+
+    fn pause(&mut self) {
+        (self.sleep)(self.opts.interval);
+    }
+}
+
+fn record(r: &mut Report, view: &Value) {
+    r.state = text(view, "state");
+    r.merge_state = text(view, "mergeStateStatus");
+    r.review_decision = text(view, "reviewDecision");
+}
+
+/// The steps in order: gate on the checked head, arm, wait for the merge. A
+/// step that stops the flow returns its verdict as the error.
+fn run(gh: &dyn LandGh, pr: &str, wait: &mut Wait, r: &mut Report) -> &'static str {
+    let head = match gate_on_checks(gh, pr, wait, r) {
+        Ok(head) => head,
+        Err(verdict) => return verdict,
+    };
+    if let Err(verdict) = arm(gh, pr, &head, r) {
+        return verdict;
+    }
+    await_merge(gh, pr, &head, wait, r)
+}
+
+/// Checks the PR can merge and returns the head that was checked: it is open,
+/// not a draft, not stacked on another open PR, its required checks pass, the
+/// head did not move, and no review or branch gate holds it.
+fn gate_on_checks(
     gh: &dyn LandGh,
     pr: &str,
-    opts: &Opts,
-    now: &mut dyn FnMut() -> Duration,
-    sleep: &mut dyn FnMut(Duration),
+    wait: &mut Wait,
     r: &mut Report,
-) -> &'static str {
+) -> Result<String, &'static str> {
     let Some(view) = gh.pr_view(pr) else {
         r.merge_output = "could not read the PR".into();
-        return "FAIL";
-    };
-    let record = |r: &mut Report, v: &Value| {
-        r.state = text(v, "state");
-        r.merge_state = text(v, "mergeStateStatus");
-        r.review_decision = text(v, "reviewDecision");
+        return Err(verdict::FAIL);
     };
     record(r, &view);
     match r.state.as_str() {
-        "MERGED" => return "MERGED",
-        "CLOSED" => return "CLOSED",
+        STATE_MERGED => return Err(verdict::MERGED),
+        STATE_CLOSED => return Err(verdict::CLOSED),
         _ => {}
     }
     if view.get("isDraft").and_then(Value::as_bool) == Some(true) {
-        return "DRAFT";
+        return Err(verdict::DRAFT);
     }
     let base = text(&view, "baseRefName");
     if gh.open_heads().contains(&base) {
-        return "WAITING_ON_BASE";
+        return Err(verdict::WAITING_ON_BASE);
     }
     let head = text(&view, "headRefOid");
     r.head = head.clone();
 
-    let mut polls = 0usize;
-    let out_of_time = |polls: usize, now: &mut dyn FnMut() -> Duration| {
-        opts.max_polls.map_or(now() >= opts.timeout, |m| polls >= m)
-    };
-
-    // Checks. The first read may find none because a fresh push has not
+    // The first read may find no checks because a fresh push has not
     // registered its runs yet: wait once for them, on the first call only.
-    let mut settled = opts.settle.is_zero();
+    let mut settled = wait.opts.settle.is_zero();
     loop {
-        polls += 1;
+        wait.polls += 1;
         let Some(checks) = gh.pr_checks(pr) else {
             // A failed read is not "no checks": try again until the time is up.
-            if out_of_time(polls, now) {
-                return "STILL_WAITING";
+            if wait.out_of_time() {
+                return Err(verdict::STILL_WAITING);
             }
-            sleep(opts.interval);
+            wait.pause();
             continue;
         };
         let (summary, done) = summarize(&checks);
@@ -245,96 +305,107 @@ fn run(
         r.checks = summary;
         if empty && !settled {
             settled = true;
-            sleep(opts.settle);
+            (wait.sleep)(wait.opts.settle);
             continue;
         }
         if done {
             break;
         }
-        if out_of_time(polls, now) {
-            return "STILL_WAITING";
+        if wait.out_of_time() {
+            return Err(verdict::STILL_WAITING);
         }
-        sleep(opts.interval);
+        wait.pause();
     }
     if r.checks.fail > 0 {
-        return "FAIL";
+        return Err(verdict::FAIL);
     }
 
-    // The head must be the one that was checked.
     let Some(view) = gh.pr_view(pr) else {
-        return "STILL_WAITING";
+        return Err(verdict::STILL_WAITING);
     };
     record(r, &view);
     if text(&view, "headRefOid") != head {
-        return "HEAD_MOVED";
+        return Err(verdict::HEAD_MOVED);
     }
-    if let Some(g) = gate(&view) {
-        return g;
+    match gate(&view) {
+        Some(held) => Err(held),
+        None => Ok(head),
     }
+}
 
-    // Arm auto-merge pinned to the head, no method flag.
-    let (code, output) = gh.pr_merge(pr, &["--auto", "--match-head-commit", &head]);
-    let (code, output, method) = if code != 0 && output.to_lowercase().contains("merge method") {
-        match gh.repo_merge_methods() {
-            Some(m) => {
-                let flag = if m.squash {
-                    Some("--squash")
-                } else if m.merge {
-                    Some("--merge")
-                } else if m.rebase {
-                    Some("--rebase")
-                } else {
-                    None
-                };
-                match flag {
-                    Some(flag) => {
-                        let (c, o) =
-                            gh.pr_merge(pr, &["--auto", flag, "--match-head-commit", &head]);
-                        (c, o, flag.trim_start_matches("--").to_string())
-                    }
-                    None => (code, output, String::new()),
-                }
-            }
-            None => (code, output, String::new()),
-        }
+/// The merge method flags in the order they are tried.
+fn method_flag(methods: Methods) -> Option<&'static str> {
+    if methods.squash {
+        Some("--squash")
+    } else if methods.merge {
+        Some("--merge")
+    } else if methods.rebase {
+        Some("--rebase")
     } else {
-        (code, output, "auto".to_string())
+        None
+    }
+}
+
+/// Arms auto-merge pinned to `head`, with no method flag first. A repo that
+/// asks for a method gets the first one it allows.
+fn arm(gh: &dyn LandGh, pr: &str, head: &str, r: &mut Report) -> Result<(), &'static str> {
+    let (code, output) = gh.pr_merge(pr, &["--auto", "--match-head-commit", head]);
+    let asks_for_method = code != 0 && output.to_lowercase().contains("merge method");
+    let flag = asks_for_method
+        .then(|| gh.repo_merge_methods().and_then(method_flag))
+        .flatten();
+    let (code, output, method) = match flag {
+        Some(flag) => {
+            let (c, o) = gh.pr_merge(pr, &["--auto", flag, "--match-head-commit", head]);
+            (c, o, flag.trim_start_matches("--").to_string())
+        }
+        None if asks_for_method => (code, output, String::new()),
+        None => (code, output, "auto".to_string()),
     };
     r.merge_output = output;
     if code != 0 {
-        return "NOT_QUEUED";
+        return Err(verdict::NOT_QUEUED);
     }
     r.armed = true;
     r.method = method;
+    Ok(())
+}
 
-    // Wait for the merge.
+/// Polls until the PR merges, closes, moves its head or hits a gate.
+fn await_merge(
+    gh: &dyn LandGh,
+    pr: &str,
+    head: &str,
+    wait: &mut Wait,
+    r: &mut Report,
+) -> &'static str {
     loop {
         let Some(view) = gh.pr_view(pr) else {
             // One failed read while armed is not a failed PR: read again.
-            polls += 1;
-            if out_of_time(polls, now) {
-                return "STILL_WAITING";
+            wait.polls += 1;
+            if wait.out_of_time() {
+                return verdict::STILL_WAITING;
             }
-            sleep(opts.interval);
+            wait.pause();
             continue;
         };
         record(r, &view);
         match r.state.as_str() {
-            "MERGED" => return "MERGED",
-            "CLOSED" => return "CLOSED",
+            STATE_MERGED => return verdict::MERGED,
+            STATE_CLOSED => return verdict::CLOSED,
             _ => {}
         }
         if text(&view, "headRefOid") != head {
-            return "HEAD_MOVED";
+            return verdict::HEAD_MOVED;
         }
-        if let Some(g) = gate(&view) {
-            return g;
+        if let Some(held) = gate(&view) {
+            return held;
         }
-        polls += 1;
-        if out_of_time(polls, now) {
-            return "STILL_WAITING";
+        wait.polls += 1;
+        if wait.out_of_time() {
+            return verdict::STILL_WAITING;
         }
-        sleep(opts.interval);
+        wait.pause();
     }
 }
 
@@ -438,6 +509,18 @@ impl LandGh for RealGh {
             .filter_map(|e| e.get("headRefName")?.as_str().map(String::from))
             .collect()
     }
+}
+
+/// Runs the land flow against the real `gh` and the wall clock.
+pub fn land_real(dir: Option<std::path::PathBuf>, pr: &str, opts: &Opts) -> Report {
+    let start = std::time::Instant::now();
+    land(
+        &RealGh { dir },
+        pr,
+        opts,
+        &mut || start.elapsed(),
+        &mut std::thread::sleep,
+    )
 }
 
 /// The output of a call: `LAND=<verdict>` and then the report as JSON.

@@ -115,7 +115,7 @@ fn ci_wait_reads_required_checks_by_default_and_all_on_request() {
 fn merge_passes_the_head_commit_to_gh() {
     let s = Sandbox::new("match-head");
     s.gh(r#"echo "$@""#);
-    let t = out(&s.run(&["pr", "merge", "7", "--match-head", "abc123"]));
+    let t = out(&s.run(&["pr", "merge", "7", "--no-wait", "--match-head", "abc123"]));
     assert!(
         t.contains("pr merge 7 --auto --match-head-commit abc123"),
         "{t}"
@@ -156,7 +156,7 @@ fn land_wait_names_each_gate() {
 fn merge_prints_the_exit_code_and_gh_output_and_exits_zero() {
     let s = Sandbox::new("merge");
     s.gh(r#"echo "queued"; echo "warn" >&2; exit 1"#);
-    let o = s.run(&["pr", "merge", "7"]);
+    let o = s.run(&["pr", "merge", "7", "--no-wait"]);
     assert!(o.status.success());
     let t = out(&o);
     assert!(t.starts_with("merge_rc=1\n"), "{t}");

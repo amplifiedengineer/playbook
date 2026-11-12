@@ -10,7 +10,7 @@ Run this in the main session or in an agent that holds the `Agent` tool, right a
 
 Inputs: the PR number, its branch, whether `--ready` was passed, and an optional worktree path. With a worktree, run git as `git -C <worktree>`, pass the PR number to every tool, and never leave the worktree. If an input is missing, read it with `gh pr view`.
 
-If `playbook pr status` or `playbook pr land` is not in the session tool map, read `references/legacy-land.md` and follow it instead of this file.
+If `playbook pr status` or `playbook pr merge` is not in the session tool map, read `references/legacy-land.md` and follow it instead of this file.
 
 ## 1. Read the context
 
@@ -38,11 +38,10 @@ Fix the review findings. With `pr.review.fix` true, fix every finding that survi
 
 If the PR is a draft and (`--ready` was passed or `pr.merge.enabled` is true), run `gh pr ready <n>`. If `pr.merge.enabled` is not true, stop here and leave the PR as it is.
 
-If `pr.merge.enabled` is true, merge only when a review covered the code (no review means no merge: say so and stop). Then run `playbook pr land <n>` as its own Bash call with `timeout` 600000. It waits for checks, arms auto-merge pinned to the head, and confirms the result. Read the `LAND=<verdict>` line (exit 0 merged, 3 a gate, 6 failed or closed, 7 still waiting, 8 not queued):
+If `pr.merge.enabled` is true, merge only when a review covered the code (no review means no merge: say so and stop). Then run `playbook pr merge <n>` as its own Bash call with `timeout` 600000. It waits for checks, arms auto-merge pinned to the head, and confirms the result. Read the `MERGE=<verdict>` line (exit 0 merged, 3 a gate, 5 gh failed, 6 failed or closed, 7 still waiting, 8 not queued):
 
 - `MERGED`: merged.
-- `STILL_WAITING`: run it again with `--settle 0`, up to five more times, then report it as still waiting.
-- `WAITING_ON_BASE`: the base PR has not merged. Report it and stop.
-- `FAIL`, `CLOSED`, `DRAFT`, `HEAD_MOVED`, `REVIEW_GATE`, `CHANGES_REQUESTED`, `RESTATE`, `NOT_QUEUED`: report the verdict and what it printed, and stop.
+- `TIMEOUT`: run it again with `--settle 0`, up to five more times, then report it as still waiting.
+- `GATE`, `FAILED`, `CLOSED`, `NOT_QUEUED`: report the verdict and its `reason`, and stop. A `reason` of the base being another open PR means that PR has not merged yet.
 
 Never call a PR merged unless the verdict is `MERGED`. Never use `--admin` or `--delete-branch`.

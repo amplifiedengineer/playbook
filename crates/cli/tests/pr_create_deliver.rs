@@ -204,5 +204,12 @@ fn auto_merge_arms_the_pr_after_it_is_ready() {
         "{}",
         String::from_utf8_lossy(&out.stderr)
     );
+    let head = rig.git(&["rev-parse", "HEAD"]);
     assert!(rig.gh_log().contains(ARMED_CALL), "{}", rig.gh_log());
+    assert!(
+        rig.gh_log()
+            .contains(&format!("{ARMED_CALL} --match-head-commit {head}")),
+        "{}",
+        rig.gh_log()
+    );
 }

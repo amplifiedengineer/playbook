@@ -2,7 +2,7 @@
 
 Read by `/playbook:implement` Step 10, only when the run uses `--boundary=land`. The step headings and decision rows below keep the names `commands/implement.md` refers to.
 
-Landing now runs through `playbook pr land <n>`: it waits for checks, arms auto-merge pinned to the head and confirms the result. Use it in place of the manual gate, merge and confirm steps below when it is in the tool map, and keep the `--delete-branch` and `--admin` rules.
+Landing now runs through `playbook pr merge <n>`: it waits for checks, arms auto-merge pinned to the head and confirms the result. Use it in place of the manual gate, merge and confirm steps below when it is in the tool map, and keep the `--delete-branch` and `--admin` rules.
 ## Contents
 
 - Step 10: Land the Segment (promote, gate on CI, merge, confirm, fix tiers, park)
@@ -24,7 +24,7 @@ gh pr ready "$BRANCH"
 
 **Skip `playbook:finish-pull-request` here (it runs `/playbook:review --self --deep`), and pass no `--ready` to `/playbook:pr-create`.** That step exists to guarantee a human is never the first reviewer of unreviewed code; Steps 8 and 9 above already satisfied that invariant for this Segment, more strongly, with a 5-lens swarm whose reviewers ran in fresh contexts that never saw the implementation. Reviewers are dispatched subagents, so they are fresh by construction. Record in the ledger which review satisfied the gate: `review: implement-step9 (5 lenses, <n> findings fixed)`.
 
-**2. Gate on required checks.** Poll with a deadline; never `--watch` unbounded. Intent: pr-ci-wait. If the session's tool map (printed at session start) lists it, use that command with `"$PR" --settle 120 --timeout 300 --interval 30` and the Bash `timeout` set to 600000. Otherwise do this: wait 120 seconds, then read `gh pr checks "$PR" --required --json name,bucket` every 30 seconds for up to 300 seconds, each read its own Bash call. Ignore the exit code of `gh pr checks` (it is non-zero while checks are pending or failing) and read the JSON; a "no required checks reported" error counts as an empty list. `CI_VERDICT` is `NONE` for an empty list, `FAIL` when any bucket is `fail`, `CANCELLED` when none is `pending` and any is `cancel`, `PASS` when none is `pending`, and `TIMEOUT` when time runs out.
+**2. Gate on required checks.** Poll with a deadline; never `--watch` unbounded. Wait 120 seconds, then read `gh pr checks "$PR" --required --json name,bucket` every 30 seconds for up to 300 seconds, each read its own Bash call. Ignore the exit code of `gh pr checks` (it is non-zero while checks are pending or failing) and read the JSON; a "no required checks reported" error counts as an empty list. `CI_VERDICT` is `NONE` for an empty list, `FAIL` when any bucket is `fail`, `CANCELLED` when none is `pending` and any is `cancel`, `PASS` when none is `pending`, and `TIMEOUT` when time runs out.
 
 On `CI_VERDICT=TIMEOUT` repeat it up to 5 times, then park the Segment. Waiting on required checks only (the default, no `--all`) is deliberate: the merge gate is what the repo enforces, not every check that exists. A failing NON-required check does not block the merge, but MUST be reported as a follow-up rather than silently dropped. `CI_VERDICT=NONE` (the repo requires no checks) is a legitimate pass; record it as `NONE`, never as `PASS`, so the ledger does not claim a gate that never ran. `CI_VERDICT=TIMEOUT` parks the Segment; do not merge a PR whose checks never finished.
 
@@ -72,7 +72,7 @@ Route in this order, first match wins:
 7. `reviewDecision == "CHANGES_REQUESTED"` -> **park unconditionally** (step 7). A human looked and objected; that is categorically different from nobody having looked yet, and it MUST NOT be bypassed even where `--admin` would succeed.
 8. Otherwise -> step 6.
 
-**6. Attempt the merge, then re-read.** Intent: pr-merge. If the session's tool map lists it, use that command with `"$PR"`; it prints `merge_rc=<code>` and what `gh` said. Otherwise do this:
+**6. Attempt the merge, then re-read.** Intent: pr-merge. If the session's tool map lists it, use that command with `"$PR" --no-wait`; it prints `merge_rc=<code>` and what `gh` said. Otherwise do this:
 
 ```bash
 gh pr merge "$PR" --auto
@@ -80,7 +80,7 @@ gh pr merge "$PR" --auto
 
 No strategy flag: where a merge queue is required it sets the strategy, and passing one only adds a stderr warning. If the merge output says auto-merge is not allowed for this repository, fall back to a synchronous `gh pr merge "$PR" --squash` (checks are already green by step 2); that is a repo-settings difference, not a permissions block, and it is discovered by attempting, not by reading `.allow_auto_merge` first.
 
-Then poll to a terminal state, re-reading rather than believing the exit code. Intent: pr-land-wait. If the session's tool map lists it, use that command with `"$PR" --timeout 540 --interval 15`. Otherwise do this: every 15 seconds for up to 540 seconds, read `gh pr view "$PR" --json state,mergeStateStatus,reviewDecision,autoMergeRequest`. `LAND_VERDICT` is `MERGED` when the state is `MERGED`, `REVIEW_GATE` on `REVIEW_REQUIRED`, `CHANGES_REQUESTED` on that review, `RESTATE` when the merge state is `DIRTY` or `BEHIND`, and `TIMEOUT` when time runs out.
+Then poll to a terminal state, re-reading rather than believing the exit code. Every 15 seconds for up to 540 seconds, read `gh pr view "$PR" --json state,mergeStateStatus,reviewDecision,autoMergeRequest`. `LAND_VERDICT` is `MERGED` when the state is `MERGED`, `REVIEW_GATE` on `REVIEW_REQUIRED`, `CHANGES_REQUESTED` on that review, `RESTATE` when the merge state is `DIRTY` or `BEHIND`, and `TIMEOUT` when time runs out.
 
 `RESTATE` returns to step 5. `TIMEOUT` with everything green falls through to the admin escalation below; a merge queue can hold a PR for its full batching window, so a deadline shorter than that window would escalate needlessly.
 

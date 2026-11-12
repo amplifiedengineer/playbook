@@ -209,6 +209,12 @@ fn real_main() {
     {
         eprintln!("{line}");
     }
+    let legacy = playbook::renames::notice_for(&args, playbook::renames::LEGACY_NOTICES);
+    if let Some(line) =
+        playbook::renames::printable_notice(&args, legacy, std::io::stderr().is_terminal())
+    {
+        eprintln!("{line}");
+    }
     // The first-run step (ADR 0034 decision 13): heal once after an upgrade,
     // before most commands. Hot paths returned above or skip it.
     playbook::heal::on_start(&cli.command);
@@ -1325,14 +1331,7 @@ fn real_main() {
                             .ok()
                             .and_then(|v| v.parse().ok()),
                     };
-                    let gh = pr::land::RealGh {
-                        dir: dir.map(std::path::PathBuf::from),
-                    };
-                    let start = std::time::Instant::now();
-                    let report =
-                        pr::land::land(&gh, &pr, &opts, &mut || start.elapsed(), &mut |d| {
-                            std::thread::sleep(d)
-                        });
+                    let report = pr::land::land_real(dir.map(std::path::PathBuf::from), &pr, &opts);
                     println!("{}", pr::land::render(&report));
                     std::process::exit(report.exit_code);
                 }
@@ -1577,9 +1576,41 @@ fn real_main() {
                 }
                 PrCommand::Merge {
                     pr,
+                    no_wait,
                     admin,
                     match_head,
-                } => println!("{}", pr::wait::merge(&pr, admin, match_head.as_deref())),
+                    timeout,
+                    interval,
+                    settle,
+                    dir,
+                    json,
+                } => {
+                    let direct = no_wait || admin;
+                    let merged = if direct {
+                        enter_dir("pr merge", dir.as_deref());
+                        let (rc, output) = pr::wait::merge(&pr, admin, match_head.as_deref());
+                        if !json {
+                            println!("{}", pr::wait::merge_text(admin, rc, &output));
+                            std::process::exit(0);
+                        }
+                        pr::merge::from_direct(&pr, admin, rc, &output)
+                    } else {
+                        let opts = pr::land::Opts {
+                            timeout: std::time::Duration::from_secs(timeout),
+                            interval: std::time::Duration::from_secs(interval),
+                            settle: std::time::Duration::from_secs(settle),
+                            max_polls: None,
+                        };
+                        let dir = dir.map(std::path::PathBuf::from);
+                        pr::merge::from_land(&pr::land::land_real(dir, &pr, &opts))
+                    };
+                    if json {
+                        println!("{}", merged.envelope());
+                    } else {
+                        println!("{}", merged.render());
+                        std::process::exit(merged.outcome.code);
+                    }
+                }
                 PrCommand::Status {
                     pr,
                     json,

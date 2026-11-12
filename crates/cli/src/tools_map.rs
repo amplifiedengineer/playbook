@@ -124,8 +124,6 @@ pub const TOOLS: &[Tool] = &[
         "pr reply --pr 1 --thread t --body-file f",
     ),
     t("pr-stack", "pr", "stack", "", "pr stack"),
-    t("pr-ci-wait", "pr", "ci-wait", "", "pr ci-wait 1"),
-    t("pr-land-wait", "pr", "land-wait", "", "pr land-wait 1"),
     t("pr-merge", "pr", "merge", "", "pr merge 1"),
     t("pr-status", "pr", "status", "", "pr status 1 --json"),
     t(

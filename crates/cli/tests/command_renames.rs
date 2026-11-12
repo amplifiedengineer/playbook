@@ -9,7 +9,7 @@ use playbook::Cli;
 
 /// Hidden legacy commands, each removed in 1.0.0. Add a row only when a
 /// command with a changed contract moves to a new name.
-const LEGACY_COMMANDS: &[&str] = &["commit all"];
+const LEGACY_COMMANDS: &[&str] = &["commit all", "pr land", "pr ci-wait", "pr land-wait"];
 
 fn find<'a>(root: &'a Command, path: &str) -> Option<&'a Command> {
     path.split(' ')
@@ -81,4 +81,44 @@ fn deliver_is_an_alias_row_for_pr_create() {
             DELIVER_NEW
         ))
     );
+}
+
+#[test]
+fn the_wait_commands_print_a_deprecation_line_naming_pr_merge() {
+    for old in ["pr ci-wait", "pr land-wait"] {
+        // Arrange
+        let mut words = vec!["playbook"];
+        words.extend(old.split(' '));
+        words.push("7");
+        let args: Vec<std::ffi::OsString> = words.iter().map(std::ffi::OsString::from).collect();
+
+        // Act
+        let line = playbook::renames::notice_for(&args, playbook::renames::LEGACY_NOTICES);
+
+        // Assert
+        assert_eq!(
+            line,
+            Some(playbook::renames::deprecation_line(old, "pr merge"))
+        );
+    }
+}
+
+#[test]
+fn the_wait_commands_notice_is_silent_with_json_or_off_a_terminal() {
+    // Arrange
+    let line = Some(playbook::renames::deprecation_line(
+        "pr ci-wait",
+        "pr merge",
+    ));
+    let plain: Vec<std::ffi::OsString> = vec!["playbook".into(), "pr".into()];
+    let json: Vec<std::ffi::OsString> = vec!["playbook".into(), "--json".into()];
+
+    // Act
+    let on_terminal = playbook::renames::printable_notice(&plain, line.clone(), true);
+    let with_json = playbook::renames::printable_notice(&json, line.clone(), true);
+    let piped = playbook::renames::printable_notice(&plain, line.clone(), false);
+
+    // Assert
+    assert_eq!(on_terminal, line);
+    assert_eq!((with_json, piped), (None, None));
 }

@@ -20,7 +20,7 @@ fn read(rel: &str) -> String {
 fn skill_uses_finish_and_land() {
     let s = read("SKILL.md");
     assert!(s.contains("playbook pr status"));
-    assert!(s.contains("playbook pr land"));
+    assert!(s.contains("playbook pr merge"));
     assert!(s.lines().count() <= 60, "skill grew past 60 lines");
 }
 
@@ -34,7 +34,7 @@ fn skill_never_allows_admin_or_branch_delete() {
 #[test]
 fn legacy_flow_lives_in_a_reference() {
     let l = read("references/legacy-land.md");
-    assert!(l.contains("pr-land-wait"));
+    assert!(l.contains("playbook pr merge"));
     assert!(l.contains("Never `--admin`"));
 }
 

@@ -1025,21 +1025,7 @@ These are the mechanical steps behind `/playbook:pr-create`.
 
 Example: `playbook pr prepare --base main`
 
-Subcommands: `ci-wait`, `comments`, `create`, `land`, `land-wait`, `merge`, `prepare`, `reply`, `review-triage`, `rules`, `stack`, `status`
-
-### `playbook pr ci-wait`
-
-Wait for a PR's required checks to finish
-
-Prints a `checks total=.. pending=.. fail=.. cancel=..` line per read, then `CI_VERDICT=` one of NONE, FAIL, CANCELLED, PASS or TIMEOUT.
-
-Example: `playbook pr ci-wait 12 --timeout 600`
-
-- `<PR>`: PR number
-- `--timeout <TIMEOUT>`: Give up after this many seconds
-- `--interval <INTERVAL>`: Seconds between reads
-- `--all`: Wait on every check, not only the required ones
-- `--settle <SETTLE>`: Wait this many seconds before the first read, so checks register
+Subcommands: `comments`, `create`, `merge`, `prepare`, `reply`, `review-triage`, `rules`, `stack`, `status`
 
 ### `playbook pr comments`
 
@@ -1079,43 +1065,23 @@ Example: `playbook pr create --dir ../wt -A --message "fix(x): y" --title "fix(x
 - `--branch <BRANCH>`: Refuse unless `--dir` is on this branch
 - `--auto`: Auto mode: never force a push; a branch that needs a force is parked
 
-### `playbook pr land`
+### `playbook pr merge`
 
-Wait for checks, arm auto-merge, and wait for the merge
+Merge a PR: wait for checks, arm auto-merge, wait for the merge
 
-Prints `LAND=<verdict>` and a JSON report. Exit codes: 0 merged, 3 a gate (draft, waiting on a base PR, head moved, review required, changes requested, needs a rebase), 6 a check failed or the PR closed, 7 still waiting (call again with `--settle 0`), 8 auto-merge did not queue. Never uses `--admin` and never deletes the branch.
+Prints `MERGE=<verdict> reason=<why>` and then the report. Verdicts: MERGED, ARMED, GATE, FAILED, CLOSED, TIMEOUT, NOT_QUEUED. Exit codes: 0 merged or armed, 3 a gate (draft, waiting on a base PR, head moved, review required, changes requested, needs a rebase), 5 `gh` failed, 6 the PR closed or a check failed, 7 still waiting (call again with `--settle 0`), 8 auto-merge did not queue. With `--json` it prints the envelope with `verdict`, `reason` and `next` (done, wait, rebase, fix-ci or ask) and exits 0. `--no-wait` and `--admin` skip the checks and the wait: they print `merge_rc=<code>` (or `admin_rc=`) and what `gh` said, and exit 0. Never deletes the branch.
 
-Example: `playbook pr land 12`
+Example: `playbook pr merge 12`
 
 - `<PR>`: PR number
+- `--no-wait`: Arm auto-merge now and return, without waiting for checks or the merge
+- `--admin`: Squash with admin rights instead of arming auto-merge
+- `--match-head <MATCH_HEAD>`: With --no-wait or --admin, refuse unless the PR head is this commit
 - `--timeout <TIMEOUT>`: Give up after this many seconds in total
 - `--interval <INTERVAL>`: Seconds between reads
 - `--settle <SETTLE>`: Seconds to wait for the first checks to appear (use 0 on a repeat call)
 - `--dir <DIR>`: Work in this directory instead of the current one
-
-### `playbook pr land-wait`
-
-Wait for a PR to merge or hit a gate
-
-Prints a status line per read (state, merge state, review, auto-merge), then `LAND_VERDICT=` one of MERGED, REVIEW_GATE, CHANGES_REQUESTED, RESTATE or TIMEOUT.
-
-Example: `playbook pr land-wait 12`
-
-- `<PR>`: PR number
-- `--timeout <TIMEOUT>`: Give up after this many seconds
-- `--interval <INTERVAL>`: Seconds between reads
-
-### `playbook pr merge`
-
-Merge a PR with auto-merge, or as an admin squash
-
-Prints `merge_rc=<code>` (or `admin_rc=`) and then what `gh` said. Always exits 0, so the caller reads the code.
-
-Example: `playbook pr merge 12 --admin`
-
-- `<PR>`: PR number
-- `--admin`: Squash with admin rights instead of arming auto-merge
-- `--match-head <MATCH_HEAD>`: Refuse the merge unless the PR head is this commit
+- `--json`: Print the envelope with verdict, reason and next, and exit 0
 
 ### `playbook pr prepare`
 

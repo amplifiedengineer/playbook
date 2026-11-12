@@ -188,10 +188,14 @@ pub fn set_ready(sys: &Sys, number: u64, ready: bool) -> Result<(), String> {
     }
 }
 
-/// Asks GitHub to merge PR `number` once its requirements pass.
-pub fn enable_auto_merge(sys: &Sys, number: u64) -> Result<(), String> {
+/// Asks GitHub to merge PR `number` once its requirements pass, only if its
+/// head is still `head` (no pin when `head` is empty).
+pub fn enable_auto_merge(sys: &Sys, number: u64, head: &str) -> Result<(), String> {
     let n = number.to_string();
-    let out = sys.gh(&["pr", "merge", &n, "--auto", "--squash"]);
+    let mut args = crate::pr::wait::merge_args(&n, false, Some(head).filter(|h| !h.is_empty()));
+    // Name the method, as before, so a non-interactive `gh` does not refuse.
+    args.push("--squash");
+    let out = sys.gh(&args[..]);
     if out.ok {
         Ok(())
     } else {

@@ -430,6 +430,8 @@ fn is_playbook_step(args: &[&str]) -> bool {
         ["pr", "create", rest @ ..] | ["deliver", rest @ ..] => !rest
             .iter()
             .any(|a| matches!(*a, "--ready" | "--auto-merge" | "--wait")),
+        // The read the delivery skills make after a budget stop.
+        ["pr", "status", pr, "--json"] => !pr.starts_with('-'),
         ["pr", "prepare" | "rules", ..]
         | ["commit", "prepare", ..]
         | ["worktree", "review", "teardown", ..]
@@ -535,6 +537,7 @@ mod tests {
             "playbook mode status --json --flag ask",
             "playbook worktree review teardown /tmp/wt",
             "playbook pr prepare --base main",
+            "playbook pr status 12 --json",
             "playbook mode status",
             "playbook mode status --json",
             "git status && git diff",
@@ -549,6 +552,11 @@ mod tests {
             "playbook deliver --ready",
             "playbook pr create --ready --auto-merge",
             "playbook pr create --wait",
+            "playbook pr merge 12",
+            "playbook pr merge 12 --no-wait",
+            "playbook pr land 12",
+            "playbook pr ci-wait 12",
+            "playbook pr land-wait 12",
             "playbook pr create --ready",
             "cargo build",
             "npm test",
