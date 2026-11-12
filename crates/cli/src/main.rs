@@ -425,31 +425,6 @@ fn real_main() {
                 }
             }
         }
-        Command::RunContext { command, args } => {
-            let ceiling = || {
-                let home = common::home_dir();
-                let claude_home = home.join(".claude");
-                let cwd = std::env::current_dir().unwrap_or_default();
-                let claude = effort::claude_cap(&claude_home, &cwd);
-                let root = playbook::plugin_root::find_here();
-                let resolved = effort::component::resolve_capped(
-                    effort::component::Kind::Command,
-                    command.as_deref().unwrap_or_default(),
-                    &home,
-                    claude.as_deref(),
-                    root.as_deref(),
-                    None,
-                );
-                resolved.to_json()["ceiling"].as_str().map(str::to_string)
-            };
-            match mode::context::run_context(&args, ceiling, command.is_some()) {
-                Ok(json) => println!("{json}"),
-                Err(err) => {
-                    eprintln!("{err}");
-                    std::process::exit(2);
-                }
-            }
-        }
         Command::Effort { level, json, .. } => {
             let home = common::home_dir();
             match level {
@@ -2787,10 +2762,47 @@ fn real_main() {
             match sub {
                 ModeCommand::Auto => exit_on_mode_error(mode::run_set(common::mode::Mode::Auto)),
                 ModeCommand::Ask => exit_on_mode_error(mode::run_set(common::mode::Mode::Ask)),
-                ModeCommand::Status { json, flag } => {
-                    println!("{}", mode::run_status(flag.map(to_mode), json));
+                ModeCommand::Status {
+                    json,
+                    flag,
+                    command,
+                    args,
+                } => {
+                    if json && (command.is_some() || !args.is_empty()) {
+                        print_run_context(command.as_deref(), &args);
+                    } else {
+                        println!("{}", mode::run_status(flag.map(to_mode), json));
+                    }
                 }
             }
+        }
+    }
+}
+
+/// Prints the run mode and, when `command` is named, its effort ceiling;
+/// exits 2 when `args` holds both `--auto` and `--ask`.
+fn print_run_context(command: Option<&str>, args: &str) {
+    let ceiling = || {
+        let home = common::home_dir();
+        let claude_home = home.join(".claude");
+        let cwd = std::env::current_dir().unwrap_or_default();
+        let claude = effort::claude_cap(&claude_home, &cwd);
+        let root = playbook::plugin_root::find_here();
+        let resolved = effort::component::resolve_capped(
+            effort::component::Kind::Command,
+            command.unwrap_or_default(),
+            &home,
+            claude.as_deref(),
+            root.as_deref(),
+            None,
+        );
+        resolved.to_json()["ceiling"].as_str().map(str::to_string)
+    };
+    match mode::context::run_context(args, ceiling, command.is_some()) {
+        Ok(json) => println!("{json}"),
+        Err(err) => {
+            eprintln!("{err}");
+            std::process::exit(2);
         }
     }
 }

@@ -79,7 +79,7 @@ Configure and support Claude Code from the command line.
 
 playbook installs hooks and a session launcher, shows the Agent Budget Dashboard, and helps with PRs, reviews, worktrees and session handoffs.
 
-Subcommands: `adr`, `agents`, `atlassian`, `cc`, `ccd`, `ci`, `code`, `commands`, `commit`, `completions`, `config`, `deps`, `doc`, `doctor`, `effort`, `eval`, `gate`, `gc`, `glossary`, `handoff`, `hooks`, `learn`, `manifest`, `memory`, `migrate`, `mode`, `path`, `plan`, `plans`, `plugin`, `pr`, `prose`, `review`, `route`, `run-context`, `sanitize`, `segment`, `sessions`, `settings`, `setup`, `skills`, `state`, `statusline`, `tools`, `trust`, `uninstall`, `upgrade`, `usage`, `version`, `watch`, `worktree`
+Subcommands: `adr`, `agents`, `atlassian`, `cc`, `ccd`, `ci`, `code`, `commands`, `commit`, `completions`, `config`, `deps`, `doc`, `doctor`, `effort`, `eval`, `gate`, `gc`, `glossary`, `handoff`, `hooks`, `learn`, `manifest`, `memory`, `migrate`, `mode`, `path`, `plan`, `plans`, `plugin`, `pr`, `prose`, `review`, `route`, `sanitize`, `segment`, `sessions`, `settings`, `setup`, `skills`, `state`, `statusline`, `tools`, `trust`, `uninstall`, `upgrade`, `usage`, `version`, `watch`, `worktree`
 
 ### `playbook adr`
 
@@ -909,8 +909,12 @@ Turn auto mode on for this repo
 
 Show the current mode and where it came from
 
+Example: `playbook mode status --json --command implement --args "--auto"`
+
 - `--json`: Print one JSON object instead of a line of text
 - `--flag <FLAG>`: Report as if a command ran with `--auto` or `--ask`, and warn when the hooks would disagree (one of `ask`, `auto`)
+- `--command <COMMAND>`: Add the effort ceiling for this command, such as `implement`, to the JSON
+- `--args <ARGS>`: Raw arguments of a command, as one string. Its `--auto` or `--ask` sets the mode
 
 ### `playbook path`
 
@@ -1267,17 +1271,6 @@ Example: `playbook route implement --tier medium --json`
 - `--tier <TIER>`: One of low, medium or high. Only `implement` reads it
 - `--failures <FAILURES>`: How many times this task already failed
 - `--json`: Print the decision as JSON
-
-### `playbook run-context`
-
-Read the run mode and effort ceiling
-
-Gives a command's Step 0 the mode and the ceiling in one call. Reads `--auto` and `--ask` from the command's arguments (exit 2 when both are present), and prints one JSON object: `mode`, `source`, `hook_mode`, `warning`, and `ceiling` when `--command` names the command. `ceiling` is the highest effort the user allows, or null.
-
-Example: `playbook run-context --command implement --args "--auto"`
-
-- `--command <COMMAND>`: Command name, such as `implement`. Adds the effort ceiling
-- `--args <ARGS>`: Raw arguments of the command, as one string
 
 ### `playbook sanitize`
 

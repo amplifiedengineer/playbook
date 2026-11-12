@@ -443,14 +443,16 @@ fn is_playbook_step(args: &[&str]) -> bool {
     }
 }
 
-/// The arguments after `mode status`: `--json` and `--flag auto|ask`, in any
-/// order, which is how the delivery skills read the run mode.
+/// The arguments after `mode status`: `--json`, `--flag auto|ask`, and
+/// `--command NAME` or `--args TEXT` with a value, in any order, which is how
+/// the skills read the run mode.
 fn is_status_probe(args: &[&str]) -> bool {
     let mut args = args.iter();
     while let Some(&arg) = args.next() {
         match arg {
             "--json" => {}
             "--flag" if matches!(args.next(), Some(&("auto" | "ask"))) => {}
+            "--command" | "--args" if args.next().is_some() => {}
             _ => return false,
         }
     }
@@ -537,6 +539,7 @@ mod tests {
             "git commit -m 'fix: x < y and y > z'",
             "playbook mode status --flag auto --json",
             "playbook mode status --json --flag ask",
+            "playbook mode status --json --command fix --args x",
             "playbook worktree review teardown /tmp/wt",
             "playbook pr prepare --base main",
             "playbook pr status 12 --json",

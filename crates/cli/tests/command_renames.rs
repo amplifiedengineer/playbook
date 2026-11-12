@@ -92,6 +92,35 @@ fn deliver_is_an_alias_row_for_pr_create() {
 }
 
 #[test]
+fn run_context_is_an_alias_row_for_mode_status_json() {
+    // Arrange
+    let args: Vec<std::ffi::OsString> = ["playbook", "run-context", "--command", "fix"]
+        .iter()
+        .map(std::ffi::OsString::from)
+        .collect();
+
+    // Act
+    let (out, line) = playbook::renames::rewrite(&args, playbook::renames::COMMAND_RENAMES);
+
+    // Assert
+    let out: Vec<String> = out
+        .iter()
+        .map(|a| a.to_string_lossy().into_owned())
+        .collect();
+    assert_eq!(
+        out,
+        ["playbook", "mode", "status", "--json", "--command", "fix"]
+    );
+    assert_eq!(
+        line,
+        Some(playbook::renames::deprecation_line(
+            "run-context",
+            "mode status"
+        ))
+    );
+}
+
+#[test]
 fn the_wait_commands_print_a_deprecation_line_naming_pr_merge() {
     for old in ["pr ci-wait", "pr land-wait"] {
         // Arrange
@@ -233,7 +262,8 @@ fn every_row_gives_the_same_stdout_and_exit_code_through_the_binary() {
 
         // Act
         let old = run(&argv(row.old, tail), "old");
-        let new = run(&argv(row.new, tail), "new");
+        let new_args: Vec<&str> = row.extra.iter().chain(tail).copied().collect();
+        let new = run(&argv(row.new, &new_args), "new");
 
         // Assert
         assert_eq!(old.status.code(), new.status.code(), "{}", row.old);

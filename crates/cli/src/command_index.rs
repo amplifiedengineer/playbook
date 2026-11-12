@@ -314,9 +314,6 @@ pub(crate) const META: &[Meta] = &[
     free("review triage"),
     ro("review triage merge"),
     ro("route").for_agents(),
-    ro("run-context")
-        .purpose("Read the run mode and effort ceiling for a command's Step 0")
-        .for_agents(),
     free("sanitize").for_agents(),
     free("sanitize commit-msg"),
     free("sanitize pr-text"),
@@ -937,7 +934,6 @@ mod tests {
     ];
     const AGENT: &[&str] = &[
         "doc",
-        "run-context",
         "state",
         "route",
         "statusline",

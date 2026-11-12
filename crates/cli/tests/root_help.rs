@@ -36,7 +36,6 @@ const USER: &[&str] = &[
 ];
 const AGENT: &[&str] = &[
     "doc",
-    "run-context",
     "state",
     "route",
     "statusline",

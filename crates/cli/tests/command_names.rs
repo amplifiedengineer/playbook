@@ -13,7 +13,6 @@ const MAX_DEPTH: usize = 4;
 const LEGACY_HYPHENATED: &[&str] = &[
     "pr ci-wait",
     "pr land-wait",
-    "run-context",
     "memory import-claude",
     "cc bust-cache",
     "sanitize commit-msg",
@@ -147,5 +146,5 @@ fn legacy_list_has_no_stale_entries() {
 
     // Assert
     assert!(found.is_empty(), "stale legacy entries: {found:?}");
-    assert_eq!(LEGACY_HYPHENATED.len(), 13);
+    assert_eq!(LEGACY_HYPHENATED.len(), 12);
 }

@@ -79,10 +79,10 @@ pub const TOOLS: &[Tool] = &[
     t("plugin-root", "path", "plugin-root", "", "path plugin-root"),
     t(
         "run-mode",
-        "run-context",
-        "",
-        "--command NAME --args \"$ARGUMENTS\"",
-        "run-context --command fix --args x",
+        "mode",
+        "status",
+        "--json --command NAME --args \"$ARGUMENTS\"",
+        "mode status --json --command fix --args x",
     ),
     t("mode-status", "mode", "status", "", "mode status"),
     t(
@@ -460,7 +460,10 @@ mod tests {
             "{text}"
         );
         assert!(text.contains("\npr prepare|create|rules"), "{text}");
-        assert!(text.contains("\nrun-context --command NAME"), "{text}");
+        assert!(
+            text.contains("\nmode status --json --command NAME"),
+            "{text}"
+        );
     }
 
     #[test]

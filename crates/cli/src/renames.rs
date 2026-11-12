@@ -22,6 +22,11 @@ pub const COMMAND_RENAMES: &[Rename] = &[
         extra: &[],
     },
     Rename {
+        old: "run-context",
+        new: "mode status",
+        extra: &["--json"],
+    },
+    Rename {
         old: "pr review-triage",
         new: "pr review triage",
         extra: &[],

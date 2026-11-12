@@ -508,7 +508,6 @@ fn table() -> Vec<Case> {
         case("migrate", &["migrate", "--dry-run"]).out("dry run: nothing was written").plain(),
         case("migrate", &["migrate", "--status", "--dry-run"]).code(2).err("cannot be used with").plain(),
         case( "doctor pending-migrations", &["doctor", "pending-migrations"], ).writes(),
-        case( "run-context", &["run-context", "--command", "implement", "--args", "--auto"], ).out("\"mode\":\"auto\""),
         // mode and settings
         case("mode status", &["mode", "status"]).out("mode: ask"),
         case("mode auto", &["mode", "auto"]).out("auto").grows(),

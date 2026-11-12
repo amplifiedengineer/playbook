@@ -1,11 +1,10 @@
 // SPDX-FileCopyrightText: 2026 Igor Santos
 // SPDX-License-Identifier: Apache-2.0
 
-//! `playbook run-context`: what a command's Step 0 needs in one call. It
-//! reads `--auto` and `--ask` from the command's arguments, resolves the run
-//! mode, and (when a command name is given) the effort ceiling for that
-//! command. Before this, every command did it in two calls plus a paragraph of
-//! prose about which flag to pass and what to do on a conflict.
+//! `playbook mode status --json --command NAME --args ARGS`: what a command's
+//! Step 0 needs in one call. It reads `--auto` and `--ask` from the command's
+//! arguments, resolves the run mode, and (when a command name is given) the
+//! effort ceiling for that command.
 
 use crate::common::mode::Mode;
 use serde_json::{json, Value};

@@ -144,15 +144,7 @@ const AREAS: &[(&str, &[&str])] = &[
     ),
     (
         "utilities.txt",
-        &[
-            "route",
-            "run-context",
-            "path",
-            "doc",
-            "tools",
-            "eval",
-            "statusline",
-        ],
+        &["route", "path", "doc", "tools", "eval", "statusline"],
     ),
 ];
 

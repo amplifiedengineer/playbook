@@ -589,23 +589,6 @@ pub enum Command {
         #[arg(long)]
         no_plugin: bool,
     },
-    /// Read the run mode and effort ceiling
-    ///
-    /// Gives a command's Step 0 the mode and the ceiling in one call. Reads
-    /// `--auto` and `--ask` from the command's arguments (exit 2 when both are
-    /// present), and prints one JSON object: `mode`, `source`, `hook_mode`,
-    /// `warning`, and `ceiling` when `--command` names the command. `ceiling`
-    /// is the highest effort the user allows, or null.
-    ///
-    /// Example: `playbook run-context --command implement --args "--auto"`
-    RunContext {
-        /// Command name, such as `implement`. Adds the effort ceiling
-        #[arg(long)]
-        command: Option<String>,
-        /// Raw arguments of the command, as one string
-        #[arg(long, default_value = "", allow_hyphen_values = true)]
-        args: String,
-    },
     /// Choose whether playbook asks questions or decides on its own
     ///
     /// `ask` is the default. `auto` lets commands pick the recommended option
@@ -1195,6 +1178,8 @@ pub enum ModeCommand {
     /// Turn auto mode off for this repo, so playbook asks again
     Ask,
     /// Show the current mode and where it came from
+    ///
+    /// Example: `playbook mode status --json --command implement --args "--auto"`
     Status {
         /// Print one JSON object instead of a line of text
         #[arg(long)]
@@ -1202,6 +1187,18 @@ pub enum ModeCommand {
         /// Report as if a command ran with `--auto` or `--ask`, and warn when the hooks would disagree
         #[arg(long, value_enum)]
         flag: Option<ModeArg>,
+        /// Add the effort ceiling for this command, such as `implement`, to the JSON
+        #[arg(long, requires = "json", conflicts_with = "flag")]
+        command: Option<String>,
+        /// Raw arguments of a command, as one string. Its `--auto` or `--ask` sets the mode
+        #[arg(
+            long,
+            requires = "json",
+            conflicts_with = "flag",
+            default_value = "",
+            allow_hyphen_values = true
+        )]
+        args: String,
     },
 }
 
