@@ -346,6 +346,34 @@ fn plan_list_and_plans_agree_on_a_plans_folder_fixture() {
     }
 }
 
+#[test]
+fn handoff_show_has_no_alias_row() {
+    // Arrange
+    let old = "handoff show";
+
+    // Act
+    let row = playbook::renames::COMMAND_RENAMES
+        .iter()
+        .find(|row| row.old == old);
+
+    // Assert
+    assert!(row.is_none(), "`{old}` is gone and keeps no alias");
+}
+
+#[test]
+fn handoff_load_is_listed_and_handoff_show_is_not() {
+    // Arrange
+    let root = Cli::command();
+
+    // Act
+    let handoff = find(&root, "handoff").expect("handoff group");
+    let names: Vec<&str> = handoff.get_subcommands().map(Command::get_name).collect();
+
+    // Assert
+    assert!(names.contains(&"load"), "{names:?}");
+    assert!(!names.contains(&"show"), "{names:?}");
+}
+
 const ATTRIBUTION_LINE: &str = "Co-Authored-By: Claude <noreply@anthropic.com>";
 
 #[test]

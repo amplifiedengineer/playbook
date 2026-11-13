@@ -38,16 +38,6 @@ pub(crate) const RENAMES: &[Rename] = &[
     },
     Rename {
         kind: Kind::Command,
-        old: "session-handoff",
-        new: "handoff-save",
-    },
-    Rename {
-        kind: Kind::Command,
-        old: "session-start",
-        new: "handoff-show",
-    },
-    Rename {
-        kind: Kind::Command,
         old: "learn-project",
         new: "learn",
     },

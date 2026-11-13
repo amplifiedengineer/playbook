@@ -9,7 +9,9 @@ Deprecated: a renamed command keeps its old name as a stub until 1.0.0. The stub
 | `/playbook:address-pr-comments` | `/playbook:pr-comments` | 1.0.0 |
 | `/playbook:quick-review` | Removed, use `/playbook:review --quick` | Removed, no stub |
 | `/playbook:deep-review` | Removed, use `/playbook:review --deep` | Removed, no stub |
-| `/playbook:session-handoff` | `/playbook:handoff-save` | 1.0.0 |
-| `/playbook:session-start` | `/playbook:handoff-show` | 1.0.0 |
+| `/playbook:handoff-save` | Removed, use `/playbook:handoff` | Removed, no stub |
+| `/playbook:handoff-show` | Removed, use `/playbook:handoff load` | Removed, no stub |
 | `/playbook:learn-project` | `/playbook:learn` | 1.0.0 |
 | `/playbook:repo-audit` | `/playbook:audit` | 1.0.0 |
+
+`/playbook:session-handoff` and `/playbook:session-start` are not renamed. They stay as aliases that run `/playbook:handoff` and `/playbook:handoff load`.

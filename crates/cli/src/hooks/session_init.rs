@@ -115,17 +115,11 @@ pub fn run(payload: &Payload) {
         plugin_update_lines(&home)
     };
     for line in heal_line(&home).into_iter().chain(plugin_lines) {
-        if !system_message.is_empty() {
-            system_message.push('\n');
-        }
-        system_message.push_str(&line);
+        push_message_line(&mut system_message, &line);
     }
     if !headless {
         if let Some(line) = missing_keys_line(&home) {
-            if !system_message.is_empty() {
-                system_message.push('\n');
-            }
-            system_message.push_str(line);
+            push_message_line(&mut system_message, line);
         }
     }
     append_auto_mode_note(&mut extra_context);
@@ -137,8 +131,8 @@ pub fn run(payload: &Payload) {
     if !headless {
         append_auto_learn_nudge(&mut extra_context, &repo_root);
     }
-    let injected = if headless {
-        0
+    let loaded = if headless {
+        Vec::new()
     } else {
         append_handoff_slice(
             &mut extra_context,
@@ -146,6 +140,9 @@ pub fn run(payload: &Payload) {
             &payload.field(".session_id"),
         )
     };
+    for line in &loaded {
+        push_message_line(&mut system_message, line);
+    }
     if !headless || crate::common::headless::headless_memory_enabled() {
         append_memory_context(&mut extra_context, &repo_root);
     }
@@ -153,10 +150,18 @@ pub fn run(payload: &Payload) {
         &payload.field(".source"),
         &payload.field(".session_id"),
         &crate::handoff::current_slug(),
-        injected,
+        loaded.len(),
     );
 
     emit(&system_message, &extra_context);
+}
+
+/// Adds `line` to the user-visible message on its own line.
+fn push_message_line(system_message: &mut String, line: &str) {
+    if !system_message.is_empty() {
+        system_message.push('\n');
+    }
+    system_message.push_str(line);
 }
 
 /// Runs the safe migrations when this binary is newer than the version
@@ -399,17 +404,20 @@ fn append_memory_context(extra_context: &mut String, repo_root: &str) {
 /// of `.source`.
 /// The shared `crate::handoff` module keys, loads, and archives them: up to
 /// three fresh ones are injected and tombstoned by gc, stale and
-/// over-cap ones are removed. Returns how many were injected. Never panics.
-fn append_handoff_slice(extra_context: &mut String, source: &str, session_id: &str) -> usize {
+/// over-cap ones are removed. Returns one `Loaded handoff:` line per injected
+/// handoff, for the user-visible message. Never panics.
+fn append_handoff_slice(extra_context: &mut String, source: &str, session_id: &str) -> Vec<String> {
     let slug = crate::handoff::current_slug();
     if slug.is_empty() {
-        return 0;
+        return Vec::new();
     }
     let taken = crate::handoff::take_in(&crate::handoff::root(), &slug, SystemTime::now());
     // Leave the memory block its share of the cap. The handoff files are
     // tombstoned by gc once taken, so a cut loses nothing.
     let budget = handoff_room(extra_context).max(MIN_HANDOFF_CHARS) / taken.contents.len().max(1);
-    for (i, contents) in taken.contents.iter().enumerate() {
+    let mut loaded = Vec::new();
+    for (i, (contents, path)) in taken.contents.iter().zip(&taken.paths).enumerate() {
+        loaded.push(crate::handoff::loaded_line(contents, path));
         let contents = &fit_handoff(contents, budget);
         let ctx = if taken.total > 1 {
             format!(
@@ -423,13 +431,13 @@ fn append_handoff_slice(extra_context: &mut String, source: &str, session_id: &s
         };
         push_context(extra_context, &ctx);
     }
-    let mut injected = taken.contents.len();
-    if source == "clear" {
-        injected += usize::from(append_cleared_handoff(extra_context, &slug));
-    } else if source == "compact" {
-        injected += usize::from(append_compacted_handoff(extra_context, &slug, session_id));
-    }
-    injected
+    let resumed = match source {
+        "clear" => append_cleared_handoff(extra_context, &slug),
+        "compact" => append_compacted_handoff(extra_context, &slug, session_id),
+        _ => None,
+    };
+    loaded.extend(resumed);
+    loaded
 }
 
 /// Ceiling for the summary of the handoff a context hygiene nudge asked for.
@@ -440,38 +448,37 @@ const CLEARED_HANDOFF_CAP_CHARS: usize = 3000;
 /// short summary with a pointer to the full file. Only that session's own
 /// handoff loads (see `crate::handoff::take_cleared_in`), so a parallel
 /// session in the same directory never receives it.
-fn append_cleared_handoff(extra_context: &mut String, slug: &str) -> bool {
-    let Some(cleared) =
-        crate::handoff::take_cleared_in(&crate::handoff::root(), slug, SystemTime::now())
-    else {
-        return false;
-    };
+fn append_cleared_handoff(extra_context: &mut String, slug: &str) -> Option<String> {
+    let cleared =
+        crate::handoff::take_cleared_in(&crate::handoff::root(), slug, SystemTime::now())?;
     push_resumed_handoff(
         extra_context,
         "You ran /clear after saving a handoff. Resume from it:",
         &cleared,
     );
-    true
+    Some(crate::handoff::loaded_line(&cleared.text, &cleared.path))
 }
 
 /// After `/compact`: the handoff this session saved before the compact. The
 /// session id survives a compact, so it picks the handoff tagged with it (see
 /// `crate::handoff::take_session_in`).
-fn append_compacted_handoff(extra_context: &mut String, slug: &str, session_id: &str) -> bool {
-    let Some(cleared) = crate::handoff::take_session_in(
+fn append_compacted_handoff(
+    extra_context: &mut String,
+    slug: &str,
+    session_id: &str,
+) -> Option<String> {
+    let cleared = crate::handoff::take_session_in(
         &crate::handoff::root(),
         slug,
         session_id,
         SystemTime::now(),
-    ) else {
-        return false;
-    };
+    )?;
     push_resumed_handoff(
         extra_context,
         "The conversation was compacted. This session saved a handoff first. Resume from it:",
         &cleared,
     );
-    true
+    Some(crate::handoff::loaded_line(&cleared.text, &cleared.path))
 }
 
 /// `lead`, the handoff cut to `CLEARED_HANDOFF_CAP_CHARS`, and a pointer to the
@@ -497,7 +504,7 @@ const MIN_HANDOFF_CHARS: usize = 3000;
 const BLOCK_SEPARATOR_CHARS: usize = 2;
 
 const HANDOFF_CUT_NOTE: &str =
-    "\n[handoff cut to fit the hook output cap; the full text is in the gc tombstone folder; run `playbook handoff show`]";
+    "\n[handoff cut to fit the hook output cap; the full text is in the gc tombstone folder; run `playbook handoff load`]";
 
 /// `text`, or its leading `budget` characters plus a note when longer.
 fn fit_handoff(text: &str, budget: usize) -> String {

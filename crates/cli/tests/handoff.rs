@@ -90,8 +90,8 @@ fn save_then_show_round_trips_without_consuming() {
     let env = Env::new("roundtrip");
 
     let (code, out, _) = env.run(&["handoff", "save"], "# Topic\nNEXT-STEP-ONE\n");
-    let (_, shown_once, _) = env.run(&["handoff", "show"], "");
-    let (_, shown_twice, _) = env.run(&["handoff", "show"], "");
+    let (_, shown_once, _) = env.run(&["handoff", "load"], "");
+    let (_, shown_twice, _) = env.run(&["handoff", "load"], "");
 
     assert_eq!(code, 0);
     assert!(out.starts_with("handoff saved: "), "{out}");
@@ -100,6 +100,21 @@ fn save_then_show_round_trips_without_consuming() {
         shown_twice.contains("NEXT-STEP-ONE"),
         "show must not consume: {shown_twice}"
     );
+}
+
+#[test]
+fn the_old_show_name_is_an_unknown_subcommand() {
+    // Arrange
+    let env = Env::new("show-gone");
+    env.run(&["handoff", "save"], "# Topic\nALIAS-STEP\n");
+
+    // Act
+    let (code, out, err) = env.run(&["handoff", "show"], "");
+
+    // Assert
+    assert_eq!(code, 2, "{err}");
+    assert!(out.is_empty(), "{out}");
+    assert!(err.contains("unrecognized subcommand 'show'"), "{err}");
 }
 
 #[test]
@@ -144,8 +159,8 @@ fn dir_works_from_an_unrelated_working_directory() {
         &["handoff", "save", "--dir", target],
         "# Topic\nVIA-DIR\n",
     );
-    let (_, shown, _) = env.run_in(&elsewhere, &["handoff", "show", "--dir", target], "");
-    let (_, here, _) = env.run(&["handoff", "show"], "");
+    let (_, shown, _) = env.run_in(&elsewhere, &["handoff", "load", "--dir", target], "");
+    let (_, here, _) = env.run(&["handoff", "load"], "");
 
     assert_eq!(code, 0);
     assert!(shown.contains("VIA-DIR"), "{shown}");
@@ -188,7 +203,7 @@ fn a_clear_start_injects_the_handoff_archives_it_and_logs_the_start() {
             .any(|e| e.file_name().to_string_lossy().ends_with(".md")),
         "the loaded handoff must leave the folder"
     );
-    let (_, shown, _) = env.run(&["handoff", "show"], "");
+    let (_, shown, _) = env.run(&["handoff", "load"], "");
     assert!(
         shown.contains("already loaded by the last session start"),
         "{shown}"
@@ -222,7 +237,7 @@ fn another_directorys_handoff_is_listed_by_show_but_never_injected() {
     env.run_in(&other, &["handoff", "save"], "# Other topic\nOTHER-ONLY\n");
 
     let stdout = env.session_start(&env.cwd, "clear");
-    let (_, shown, _) = env.run(&["handoff", "show"], "");
+    let (_, shown, _) = env.run(&["handoff", "load"], "");
 
     assert!(!stdout.contains("OTHER-ONLY"), "{stdout}");
     assert!(
@@ -256,7 +271,7 @@ fn status_shows_the_clear_event_and_the_counts() {
     assert_eq!(code, 0);
     assert!(out.contains("clear"), "{out}");
     assert!(out.contains("1 unread, 1 already loaded"), "{out}");
-    assert!(out.contains("/playbook:handoff-show"), "{out}");
+    assert!(out.contains("/playbook:handoff load"), "{out}");
 }
 
 #[cfg(unix)]
@@ -371,7 +386,7 @@ fn a_crossing_fires_once_with_a_short_message_naming_the_save_command() {
         "{msg}"
     );
     assert!(msg.contains("/clear"), "{msg}");
-    assert!(msg.contains("/playbook:handoff-show"), "{msg}");
+    assert!(msg.contains("/playbook:handoff load"), "{msg}");
     assert!(msg.contains("needs the SessionStart hook"), "{msg}");
     assert!(!msg.contains("to resume from the handoff"), "{msg}");
     assert_eq!(second.trim(), "", "must not fire again at the same level");
@@ -472,6 +487,28 @@ fn after_clear_the_sessions_own_handoff_loads_once_with_a_pointer() {
         "pointer names the archived file: {ctx}"
     );
     assert!(!again.contains("RESUME-ALPHA"), "consumed: {again}");
+}
+
+#[test]
+fn after_clear_the_loaded_line_names_the_archived_file() {
+    // Arrange
+    let env = Env::new("hy-visible");
+    env.save_for("sessV", "# Session Handoff - Resume the sync work\nBODY\n");
+    env.end_clear("sessV");
+    let payload = r#"{"hook_event_name":"SessionStart","source":"clear","session_id":"new-clear"}"#;
+
+    // Act
+    let (code, out, _) = env.run(&["hook", "session-init"], payload);
+
+    // Assert
+    assert_eq!(code, 0);
+    let value: serde_json::Value = serde_json::from_str(&out).unwrap();
+    let message = value["systemMessage"].as_str().unwrap_or_default();
+    let line = message
+        .lines()
+        .find(|l| l.starts_with("Loaded handoff: Resume the sync work ("))
+        .unwrap_or_else(|| panic!("no loaded line in: {message}"));
+    assert!(line.contains("/gc/tombstones/"), "{line}");
 }
 
 #[test]
@@ -687,7 +724,7 @@ fn a_repo_saves_its_handoff_under_the_repo_folder() {
     let env = repo_env("repo-folder");
 
     let (code, out, _) = env.run(&["handoff", "save"], "# Topic\nIN-THE-REPO-FOLDER\n");
-    let (_, shown, _) = env.run(&["handoff", "show"], "");
+    let (_, shown, _) = env.run(&["handoff", "load"], "");
 
     assert_eq!(code, 0);
     assert!(out.contains("repos/acme/widgets/handoff"), "{out}");
@@ -752,7 +789,7 @@ fn dir_resolves_the_folder_from_the_target_repo_not_the_current_one() {
         &["handoff", "save", "--dir", other.to_str().unwrap()],
         "# Topic\nFOR-GADGETS\n",
     );
-    let (_, shown, _) = env.run(&["handoff", "show", "--dir", other.to_str().unwrap()], "");
+    let (_, shown, _) = env.run(&["handoff", "load", "--dir", other.to_str().unwrap()], "");
 
     assert_eq!(code, 0);
     assert!(out.contains("repos/acme/gadgets/handoff"), "{out}");

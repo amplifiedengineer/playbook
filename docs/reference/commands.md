@@ -16,8 +16,8 @@ Every `/playbook:*` command in one table. For the binary's own commands, run `pl
 | `/playbook:pr-comments` | Walks unresolved review threads, fixes or drafts replies. |
 | `/playbook:learn` | Reads the repo, PRs and tickets, then writes distilled facts to memory. |
 | `/playbook:audit` | Read-only audit with severity-rated findings and a task plan. |
-| `/playbook:handoff-save` | Writes a handoff note (state, decisions, next steps, open questions) and saves it for the next session. Use it before `/clear` or when you stop. |
-| `/playbook:handoff-show` | Loads the last handoff for this directory. |
+| `/playbook:handoff` | Writes a handoff note (state, decisions, next steps, open questions) and saves it for the next session. Use it before `/clear` or when you stop. |
+| `/playbook:handoff load` | Loads the last handoff for this directory. `--all` loads every waiting one. |
 
 A command that was renamed or removed is listed in [Renamed and removed commands](../renamed.md).
 

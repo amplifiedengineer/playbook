@@ -6,7 +6,7 @@
 //! cache reads dominate the bill. Past [`THRESHOLD_TOKENS`] this injects
 //! one short message per crossing that tells the model to save a session
 //! handoff itself, then tell the user it is saved and how to continue
-//! (`/clear`, then `/playbook:handoff-show`). It never clears or compacts
+//! (`/clear`, then `/playbook:handoff load`). It never clears or compacts
 //! anything. The message does not promise an automatic resume: that happens
 //! only when the SessionStart hook is installed and Claude Code runs it.
 //!
@@ -74,9 +74,9 @@ pub fn run(payload: &Payload) {
 /// The nudge, kept under 400 characters.
 fn message(tokens: u64, session: &str) -> String {
     format!(
-        "Context is large (~{}K tokens). Run /playbook:handoff-save now and save it with \
+        "Context is large (~{}K tokens). Run /playbook:handoff now and save it with \
          `playbook handoff save --session {session}`. Then tell the user in one line: the \
-         handoff is saved; run /clear, then /playbook:handoff-show if it did not load on its \
+         handoff is saved; run /clear, then /playbook:handoff load if it did not load on its \
          own (the automatic load needs the SessionStart hook; check `playbook doctor check`).",
         tokens / 1000
     )

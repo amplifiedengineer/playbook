@@ -22,7 +22,7 @@ All run with `CI=true`, stdin from `/dev/null`, and an empty `HOME`.
 | `ci [--json] [--dir <path>]` | yes | runs the three checks above in one step: one line each, exit 1 if any fails; outside a playbook checkout every check is skipped and it exits 0 |
 | `gate record` and `gate check` | yes | need `--source <plan file>` and a git `origin` remote; no remote exits 1 with a clear message; an edited plan reads `STALE`; a missing phase reads `MISSING`, exit 1 |
 | `usage` | yes | no transcripts: exit 0, "No usage recorded yet" |
-| `handoff save`, `handoff show`, `handoff status` | yes | `save` reads stdin and refuses empty input |
+| `handoff save`, `handoff load`, `handoff status` | yes | `save` reads stdin and refuses empty input |
 | `trust <path>` | yes | always exit 0 |
 | `pr prepare --help` | yes | exit 0, so a caller can detect support |
 | `setup` | yes | no prompt; second run changes nothing; with no plugin root it wires hooks and skips the rest |
@@ -55,7 +55,7 @@ Other facts:
 ## Plugin and hooks under `-p`
 
 - `--plugin-dir <checkout>` loads playbook with no marketplace install. The binary finds plugin files through `playbook path plugin-root`, which prefers the installed plugin. Set `PLAYBOOK_PLUGIN_DIR=<checkout>/plugins/playbook` when a marketplace install is also present. `system/init` in `stream-json` listed it as `playbook@inline`, version 0.16.0, with 23 playbook slash commands.
-- `claude -p "/playbook:handoff-show"` ran the command: it called `playbook handoff show`, read the log, and checked git (4 turns, 14 cents).
+- `claude -p "/playbook:handoff load"` ran the command: it called `playbook handoff load`, read the log, and checked git (4 turns, 14 cents).
 - Hooks that fired: SessionStart (`session-init`, source `startup`), UserPromptSubmit (`auto-model-detect`, `memory-anchors`), PreToolUse (`preread-*`, `bg-await-guard`, `memory-anchors`), PostToolUse (`search-counter`, `post-edit-track`), Stop (`memory-capture`, `session-clean-exit`). The `statusLine` never renders.
 - Folder trust: runs happened in a fresh scratch directory with no trust entry, and the project hooks and plugin still ran. `playbook trust` is not needed for CI.
 
@@ -96,7 +96,7 @@ These commands read the mode first and take the recommended answer instead of as
 - `/playbook:commit` and `/playbook:pr-create`: run end to end.
 - `/playbook:review` reviews this PR only when the PR sits in a stack, takes its own recommendation for that scope, and passes `--auto` on to `/playbook:review --quick` or `/playbook:review --deep`. Those reviews still ask what to post unless the caller passes `--self` or `--no-post`.
 - `/playbook:learn`: runs as `--stage`, so candidates go to the staging area and nothing reaches the live memory store.
-- `/playbook:audit`, `/playbook:doctor`, and `/playbook:handoff-show`: behave the same in either mode.
+- `/playbook:audit`, `/playbook:doctor`, and `/playbook:handoff load`: behave the same in either mode.
 
 ### Refused in auto
 
@@ -126,7 +126,7 @@ In ask mode, these commands still ask a person:
 | `learn` | if the Jira or Confluence target is ambiguous |
 | `fix` | confirms before commit |
 
-These run without questions: `commit`, `pr-create`, `handoff-show`, `doctor`, `audit`.
+These run without questions: `commit`, `pr-create`, `handoff`, `doctor`, `audit`.
 
 ## GitHub Actions
 

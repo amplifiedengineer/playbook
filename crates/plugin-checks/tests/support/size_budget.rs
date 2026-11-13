@@ -25,8 +25,9 @@ pub(crate) const FALLBACK_PHRASE: &str = "Otherwise do this";
 /// calls `gh api` or `jq`. Each slimming PR adds its file.
 pub(crate) const SLIMMED: &[&str] = &[
     "commands/fix.md",
-    "commands/handoff-save.md",
-    "commands/handoff-show.md",
+    "commands/handoff.md",
+    "commands/session-handoff.md",
+    "commands/session-start.md",
     "commands/pr-comments.md",
     "commands/review.md",
     "skills/atlassian/SKILL.md",

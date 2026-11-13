@@ -37,7 +37,7 @@ description: Lists /playbook:* commands and when to use each, and points to the 
 | `/playbook:audit` | Assessing an unfamiliar or long-lived repo without changing it. Read-only, every claim cited to `file:line`. |
 | `/playbook:learn` | Building durable project knowledge in the memory store from git history, PRs, Jira and Confluence. |
 | `/playbook:doctor` | Checking the seven playbook layers after install or update, or when hooks seem not to run. |
-| `/playbook:handoff-show` | After `/clear`, when the saved handoff did not load. The `/playbook:handoff-save` command writes the handoff. |
+| `/playbook:handoff` | Saves a handoff before `/clear` or when you stop. `/playbook:handoff load` loads it after `/clear`, when the saved handoff did not load. `/playbook:session-handoff` and `/playbook:session-start` are aliases of the two. |
 | `/playbook:setup` | First install, or repairing the plugin's own settings. |
 
 ## Delivery pattern

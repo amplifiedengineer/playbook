@@ -279,7 +279,7 @@ pub const TOOLS: &[Tool] = &[
     t("commit-prepare", "commit", "prepare", "", "commit prepare"),
     t("commit-run", "commit", "run", "", "commit run"),
     t("handoff-save", "handoff", "save", "", "handoff save"),
-    t("handoff-show", "handoff", "show", "", "handoff show"),
+    t("handoff-load", "handoff", "load", "", "handoff load"),
     t(
         "handoff-template",
         "handoff",

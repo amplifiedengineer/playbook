@@ -84,11 +84,11 @@
     "required": false
   },
   {
-    "intent": "handoff-save",
+    "intent": "handoff-load",
     "required": false
   },
   {
-    "intent": "handoff-show",
+    "intent": "handoff-save",
     "required": false
   },
   {

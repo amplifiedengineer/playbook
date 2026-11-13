@@ -619,7 +619,7 @@ fn table() -> Vec<Case> {
         case("memory context", &["memory", "context"]).out("Memory context").writes(),
         // handoff and statusline
         case("handoff save", &["handoff", "save"]).stdin("# Handoff\n").out("handoff saved").grows(),
-        case("handoff show", &["handoff", "show"]).out("No handoff saved"),
+        case("handoff load", &["handoff", "load"]).out("No handoff saved"),
         case("handoff status", &["handoff", "status"]).out("No SessionStart"),
         case("handoff template", &["handoff", "template"]).plain(),
         case("handoff facts", &["handoff", "facts"]).out("Branch: main"),

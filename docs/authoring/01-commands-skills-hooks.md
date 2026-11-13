@@ -86,7 +86,7 @@ Commands stay visible. The Claude Code docs state `user-invocable` for skills on
 
 ## Names
 
-A command file or a visible skill folder gets one name, and `/playbook:<name>` is what the user types. The name is one lowercase word (`review`, `plan`, `fix`) or a group and a word joined by one hyphen (`pr-create`, `handoff-save`). The groups are `pr` and `handoff`, and they match the binary command groups that the recipe drives, so a recipe reads like the commands it calls. A depth or a mode is a flag, not a second name: one `/playbook:review` takes `--quick` and `--deep`.
+A command file or a visible skill folder gets one name, and `/playbook:<name>` is what the user types. The name is one lowercase word (`review`, `plan`, `fix`) or a group and a word joined by one hyphen (`pr-create`, `pr-comments`). The group is `pr`, and it matches the binary command groups that the recipe drives, so a recipe reads like the commands it calls. A depth or a mode is a flag, not a second name: one `/playbook:review` takes `--quick` and `--deep`.
 
 Names are flat. Claude Code turns `commands/pr/create.md` into a name with a second segment, so a subfolder changes what the user types. The plugin keeps every command file directly under `commands/`, and a check fails on a subfolder.
 

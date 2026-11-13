@@ -35,11 +35,10 @@ mention commands/implement.md finish-pull-request
 mention commands/implement.md plan
 mention commands/plan.md adr
 mention commands/plan.md implement
-mention commands/plan.md handoff-save
+mention commands/plan.md handoff
 mention commands/pr-create.md implement
 mention commands/pr-create.md pr-comments
 mention commands/pr-create.md review
-mention commands/handoff-show.md handoff-save
 mention commands/setup.md doctor
 mention skills/atlassian/references/acli-confluence.md learn
 mention skills/delegating-subagents/references/gate-loop.md adr

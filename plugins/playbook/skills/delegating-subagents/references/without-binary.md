@@ -4,7 +4,7 @@ Read this file only when the session's tool map lacks an intent. A recipe names 
 
 ## Contents
 
-`run-mode`, `config-get`, `route-model`, `pr-stack`, `pr-review-triage`, `effort-resolve`, `effort-choose`, `atlassian-check`, `pr-comments`, `pr-reply`, `handoff-template`, `Where we are now`, `Decisions made`, `Next steps`, `Open questions`, `handoff-facts`, `handoff-check`, `handoff-save`, `handoff-show`
+`run-mode`, `config-get`, `route-model`, `pr-stack`, `pr-review-triage`, `effort-resolve`, `effort-choose`, `atlassian-check`, `pr-comments`, `pr-reply`, `handoff-template`, `Where we are now`, `Decisions made`, `Next steps`, `Open questions`, `handoff-facts`, `handoff-check`, `handoff-save`, `handoff-load`
 
 ## run-mode
 
@@ -114,8 +114,8 @@ Confirm the first three sections are present, in order and not empty, no other `
 - Folder: `~/.config/playbook/repos/<owner>/<repo>/handoff/`. `<owner>/<repo>` is the output of `git remote get-url origin` with the scheme, any `user@`, the host and a trailing `.git` stripped, so `git@github.com:acme/api.git` and `https://github.com/acme/api.git` both give `acme/api`. With no `origin` remote, use `~/.config/playbook/runtime/handoff/`. Create the folder with `mkdir -p -m 700`.
 - File: `<slug>-<epoch>-<pid>.md`. `<slug>` is the absolute directory path with every character that is not a letter or digit turned into `-` (`printf '%s' "$PWD" | tr -c 'A-Za-z0-9' '-'`), `<epoch>` is `date +%s` and `<pid>` is `$$`. Write it through the same quoted heredoc.
 
-## handoff-show
+## handoff-load
 
 - Folder: `~/.config/playbook/repos/<owner>/<repo>/handoff/`, where `<owner>/<repo>` is `git remote get-url origin` with the scheme, any `user@`, the host and a trailing `.git` stripped. With no `origin` remote, use `~/.config/playbook/runtime/handoff/`.
 - Slug: `printf '%s' "$PWD" | tr -c 'A-Za-z0-9' '-'`.
-- Run `ls -t <folder> 2>/dev/null` (no shell glob, since zsh aborts on an unmatched glob), keep the names that start with `<slug>-` or `<slug>_`, and read the first file whose name after the slug is `-<epoch>-<pid>.md` or `_<hash>_<epoch>_<pid>.md` (every such file with `--all`); a longer name belongs to a child or sibling directory. Run `playbook handoff show` as well: it prints a handoff that a session start already loaded and gc keeps for its grace period; say it was already loaded. Skip a file older than 14 days.
+- Run `ls -t <folder> 2>/dev/null` (no shell glob, since zsh aborts on an unmatched glob), keep the names that start with `<slug>-` or `<slug>_`, and read the first file whose name after the slug is `-<epoch>-<pid>.md` or `_<hash>_<epoch>_<pid>.md` (every such file with `--all`); a longer name belongs to a child or sibling directory. Run `playbook handoff load` as well: it prints a handoff that a session start already loaded and gc keeps for its grace period; say it was already loaded. Skip a file older than 14 days.

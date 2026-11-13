@@ -65,7 +65,7 @@ pub fn run(payload: &Payload) {
         "\u{26a0} Context compaction triggered ({message_trigger}). After this point, every turn \
 replays a lossy summary instead of the original transcript, so the cache \
 savings are gone. Strongly consider: finish the current step, ask me to \
-wrap up (a session handoff), then /clear for a fresh session and run /playbook:handoff-show there if the handoff did not load."
+wrap up (a session handoff), then /clear for a fresh session and run /playbook:handoff load there if the handoff did not load."
     );
     emit_system_message(&user_msg);
 }

@@ -7,7 +7,7 @@
 //!
 //! Files live in `repos/<owner>/<repo>/handoff/<key>_<epoch>_<pid>.md`, or in
 //! `runtime_root()/handoff/` outside a repo with an `origin` remote. A handoff
-//! the hook has loaded is tombstoned by gc for the handoff grace period, so `show`
+//! the hook has loaded is tombstoned by gc for the handoff grace period, so `load`
 //! can still print it after the session start consumed it.
 
 pub mod compose;
@@ -335,6 +335,8 @@ pub fn save_for_session(
 
 pub struct Taken {
     pub contents: Vec<String>,
+    /// Where each loaded handoff now lives, in the order of `contents`.
+    pub paths: Vec<PathBuf>,
     pub total: usize,
 }
 
@@ -406,6 +408,15 @@ fn with_production_archive<T>(f: impl FnOnce(&Archive) -> T) -> T {
     })
 }
 
+/// Tombstones a loaded handoff and returns where the full text now is: the
+/// tombstone, or the original path when the move did not happen.
+fn archive_and_locate(a: &Archive, path: PathBuf) -> PathBuf {
+    match a.tombstone(&path) {
+        Moved::To(dest) => dest,
+        Moved::Busy | Moved::NoFolder | Moved::Failed => path,
+    }
+}
+
 /// Tombstones a loaded handoff. Whatever goes wrong, the file stays where it
 /// is and the next start tries again: the injected text may have been cut to
 /// fit, so the file is the only full copy. A kept file expires with the rest
@@ -430,7 +441,8 @@ fn take_in_with(a: &Archive, dir: &Path, slug: &str, now: SystemTime) -> Taken {
     let total = found.len();
     let limit = cutoff(now);
     let mut contents = Vec::new();
-    for entry in &found {
+    let mut paths = Vec::new();
+    for entry in found {
         let mut keep = false;
         if contents.len() < MAX_INJECTED && entry.modified >= limit {
             if let Ok(text) = fs::read_to_string(&entry.path) {
@@ -441,12 +453,16 @@ fn take_in_with(a: &Archive, dir: &Path, slug: &str, now: SystemTime) -> Taken {
             }
         }
         if keep {
-            archive(a, &entry.path);
+            paths.push(archive_and_locate(a, entry.path));
         } else {
             let _ = fs::remove_file(&entry.path);
         }
     }
-    Taken { contents, total }
+    Taken {
+        contents,
+        paths,
+        total,
+    }
 }
 
 fn older_than(now: SystemTime, then: SystemTime, secs: u64) -> bool {
@@ -494,6 +510,30 @@ fn mark_cleared_in(dir: &Path, session_id: &str) {
     if ensure_private_dir(&markers).is_ok() {
         let _ = fs::write(markers.join(tag), "");
     }
+}
+
+/// The heading a handoff opens with, before its topic.
+const TITLE_PREFIX: &str = "# Session Handoff - ";
+
+/// The one line a session start shows the user for a handoff it loaded: the
+/// topic and where the full file lives. The topic is the text after
+/// `TITLE_PREFIX`, else the first heading, else the file name.
+pub fn loaded_line(text: &str, path: &Path) -> String {
+    let heading = text
+        .lines()
+        .map(str::trim)
+        .find(|l| l.starts_with('#'))
+        .map(|l| {
+            l.strip_prefix(TITLE_PREFIX)
+                .unwrap_or_else(|| l.trim_start_matches('#'))
+                .trim()
+        })
+        .filter(|t| !t.is_empty());
+    let title = heading.map(str::to_string).unwrap_or_else(|| {
+        path.file_name()
+            .map_or_else(String::new, |n| n.to_string_lossy().into_owned())
+    });
+    format!("Loaded handoff: {title} ({})", path.display())
 }
 
 /// A session-tagged handoff taken for a start after `/clear` or `/compact`.
@@ -584,10 +624,7 @@ fn load_and_archive(a: &Archive, entry: Entry) -> Option<Resumed> {
         let _ = fs::remove_file(&entry.path);
         return None;
     };
-    let path = match a.tombstone(&entry.path) {
-        Moved::To(dest) => dest,
-        Moved::Busy | Moved::NoFolder | Moved::Failed => entry.path,
-    };
+    let path = archive_and_locate(a, entry.path);
     Some(Resumed { text, path })
 }
 
@@ -622,8 +659,8 @@ fn render(entry: &Entry, label: &str, now: SystemTime) -> String {
     )
 }
 
-/// What `playbook handoff show` prints. Never deletes or moves anything.
-fn show_in(dir: &Path, slug: &str, index: &Path, all: bool, now: SystemTime) -> String {
+/// What `playbook handoff load` prints. Never deletes or moves anything.
+fn load_in(dir: &Path, slug: &str, index: &Path, all: bool, now: SystemTime) -> String {
     let waiting = unread(dir, slug);
     if !waiting.is_empty() {
         let shown = if all { waiting.len() } else { 1 };
@@ -634,7 +671,7 @@ fn show_in(dir: &Path, slug: &str, index: &Path, all: bool, now: SystemTime) -> 
             .collect();
         if waiting.len() > shown {
             parts.push(format!(
-                "({} more waiting for this directory; run `playbook handoff show --all` to print them.)",
+                "({} more waiting for this directory; run `playbook handoff load --all` to print them.)",
                 waiting.len() - shown
             ));
         }
@@ -689,8 +726,8 @@ pub fn run_save(dir: Option<&str>, text: &str, session: Option<&str>) -> Result<
     Ok(format!("handoff saved: {}", path.display()))
 }
 
-/// CLI entry for `handoff show`.
-pub fn run_show(dir: Option<&str>, all: bool) -> Result<String, String> {
+/// CLI entry for `handoff load`.
+pub fn run_load(dir: Option<&str>, all: bool) -> Result<String, String> {
     let (slug, root) = match dir {
         Some(d) => {
             let slug = slug_for_dir(d)?;
@@ -699,7 +736,7 @@ pub fn run_show(dir: Option<&str>, all: bool) -> Result<String, String> {
         }
         None => (current_slug(), root()),
     };
-    Ok(show_in(
+    Ok(load_in(
         &root,
         &slug,
         &production_index(),
@@ -821,7 +858,7 @@ fn status_in(dir: &Path, index: &Path, log: &Path, slug: &str) -> String {
         loaded(dir, slug, index).len()
     ));
     out.push_str(
-        "If you ran /clear and no `clear` row appears above, Claude Code did not run the hook: run /playbook:handoff-show to load the handoff on demand.",
+        "If you ran /clear and no `clear` row appears above, Claude Code did not run the hook: run /playbook:handoff load to load the handoff on demand.",
     );
     out
 }
@@ -900,8 +937,8 @@ mod tests {
         super::loaded(dir, slug, &index_of(dir))
     }
 
-    fn show_in(dir: &Path, slug: &str, all: bool, now: SystemTime) -> String {
-        super::show_in(dir, slug, &index_of(dir), all, now)
+    fn load_in(dir: &Path, slug: &str, all: bool, now: SystemTime) -> String {
+        super::load_in(dir, slug, &index_of(dir), all, now)
     }
 
     fn status_in(dir: &Path, log: &Path, slug: &str) -> String {
@@ -1212,7 +1249,7 @@ mod tests {
         assert_eq!(taken.contents.len(), 1);
         assert!(taken.contents[0].contains("NEXT-STEP"));
         assert_eq!(unread(&dir, SLUG).len(), 0);
-        let shown = show_in(&dir, SLUG, false, SystemTime::now());
+        let shown = load_in(&dir, SLUG, false, SystemTime::now());
         assert!(
             shown.contains("already loaded by the last session start"),
             "{shown}"
@@ -1301,7 +1338,7 @@ mod tests {
         assert!(still_there);
         assert!(!kept.exists());
         assert!(loaded(&dir, SLUG).is_empty());
-        let shown = show_in(&dir, SLUG, false, SystemTime::now());
+        let shown = load_in(&dir, SLUG, false, SystemTime::now());
         assert!(shown.contains("has expired"), "{shown}");
         let _ = fs::remove_dir_all(dir);
     }
@@ -1389,7 +1426,7 @@ mod tests {
         let dir = scratch_dir("handoff-others");
         save_in(&dir, "-Users-me-other", "# Other topic\n", 100, 7, "").unwrap();
 
-        let shown = show_in(&dir, SLUG, false, SystemTime::now());
+        let shown = load_in(&dir, SLUG, false, SystemTime::now());
 
         assert!(
             shown.starts_with("No handoff saved for this directory."),
@@ -1410,8 +1447,8 @@ mod tests {
         save_in(&dir, SLUG, "# one\n", 100, 1, "").unwrap();
         save_in(&dir, SLUG, "# two\n", 100, 2, "").unwrap();
 
-        let one = show_in(&dir, SLUG, false, SystemTime::now());
-        let both = show_in(&dir, SLUG, true, SystemTime::now());
+        let one = load_in(&dir, SLUG, false, SystemTime::now());
+        let both = load_in(&dir, SLUG, true, SystemTime::now());
 
         assert!(one.contains("1 more waiting"), "{one}");
         assert!(both.contains("# one") && both.contains("# two"), "{both}");

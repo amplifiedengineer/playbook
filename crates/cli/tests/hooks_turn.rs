@@ -671,7 +671,7 @@ mod precompact_warn {
             stdout.contains("(auto)"),
             "expected the trigger interpolated, got: {stdout}"
         );
-        assert!(stdout.contains("/playbook:handoff-show"), "{stdout}");
+        assert!(stdout.contains("/playbook:handoff load"), "{stdout}");
     }
 
     #[test]
@@ -1313,8 +1313,8 @@ mod memory_capture {
             serde_json::from_str(&stdout).expect("output should be valid JSON");
         let reason = value["reason"].as_str().unwrap_or_default();
         assert!(
-            reason.contains("/playbook:handoff-save"),
-            "reason should instruct running session-handoff, not just fact capture: {reason}"
+            reason.contains("/playbook:handoff ") && !reason.contains("handoff-save"),
+            "reason should instruct running /playbook:handoff, not just fact capture: {reason}"
         );
     }
 
@@ -1716,7 +1716,7 @@ mod memory_capture {
         fs::write(dir.join("start-ts"), epoch_secs.to_string()).unwrap();
     }
 
-    /// Writes a handoff file the way `commands/handoff-save.md` does:
+    /// Writes a handoff file the way `commands/handoff.md` does:
     /// `<slug>-<suffix>.md` under `~/.config/playbook/runtime/handoff`.
     fn write_handoff(home: &Path, cwd: &Path) -> PathBuf {
         let slug = project_slug(&cwd.to_string_lossy());
