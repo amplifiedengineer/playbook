@@ -732,9 +732,9 @@ Example: `playbook glossary add "WU: Work Unit"`
 
 Save and show notes that carry over to the next session
 
-A handoff is a markdown note for one directory. The next session started there loads it when the SessionStart hook is installed and runs, and `/playbook:handoff-show` loads it on demand.
+A handoff is a markdown note for one directory. The next session started there loads it when the SessionStart hook is installed and runs, and `/playbook:handoff load` loads it on demand.
 
-Subcommands: `check`, `facts`, `save`, `show`, `status`, `template`
+Subcommands: `check`, `facts`, `load`, `save`, `status`, `template`
 
 ### `playbook handoff check`
 
@@ -746,19 +746,19 @@ Print the git facts for the "Where we are now" section
 
 - `--dir <DIR>`: Directory to read (default: the current one)
 
+### `playbook handoff load`
+
+Print this directory's handoff without using it up
+
+- `--all`: Print every waiting handoff, not just the newest
+- `--dir <DIR>`: Directory to load (default: the current one)
+
 ### `playbook handoff save`
 
 Save the handoff note read from stdin for the next session
 
 - `--dir <DIR>`: Directory the handoff belongs to (default: the current one)
 - `--session <SESSION>`: Session id the handoff is for. Only the start that follows that session's `/clear` loads it, so parallel sessions never share one
-
-### `playbook handoff show`
-
-Print this directory's handoff without using it up
-
-- `--all`: Print every waiting handoff, not just the newest
-- `--dir <DIR>`: Directory to show (default: the current one)
 
 ### `playbook handoff status`
 

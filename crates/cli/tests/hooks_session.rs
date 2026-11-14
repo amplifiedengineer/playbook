@@ -845,7 +845,7 @@ fn project_slug(path: &str) -> String {
 
 static HANDOFF_SUFFIX_COUNTER: AtomicU64 = AtomicU64::new(0);
 
-/// Write a handoff file the way `commands/handoff-save.md` does:
+/// Write a handoff file the way `commands/handoff.md` does:
 /// `<slug>-<unique-suffix>.md`, never a single fixed path, so two sessions
 /// in the same directory get distinct files. The counter (rather than a
 /// real timestamp+pid) keeps this deterministic and collision-free across
@@ -946,6 +946,90 @@ fn session_init_no_handoff_file_emits_no_handoff_block_and_no_error() {
 }
 
 #[test]
+fn session_init_tells_the_user_which_handoff_it_loaded() {
+    // Arrange
+    let work = scratch_dir("handoff-visible");
+    let repo_dir = work.join("repo");
+    fs::create_dir_all(&repo_dir).unwrap();
+    let home = work.join("home");
+    write_handoff(
+        &home,
+        &repo_dir,
+        "# Session Handoff - Fix the login redirect\n\nbody\n",
+    );
+
+    // Act
+    let outcome = run_session_init_at(&repo_dir, &home);
+    let message = system_message(&outcome.stdout);
+
+    // Assert
+    let line = message
+        .lines()
+        .find(|l| l.starts_with("Loaded handoff: Fix the login redirect ("))
+        .unwrap_or_else(|| panic!("no loaded line in: {message}"));
+    let path = line
+        .rsplit_once(" (")
+        .and_then(|(_, rest)| rest.strip_suffix(')'))
+        .expect("the line ends with the path in parentheses");
+    assert!(
+        Path::new(path).exists(),
+        "the named path must exist: {path}"
+    );
+    assert!(
+        additional_context(&outcome.stdout).contains("Fix the login redirect"),
+        "the model context still carries the handoff"
+    );
+}
+
+#[test]
+fn session_init_writes_one_loaded_line_per_handoff_and_falls_back_to_the_first_heading() {
+    // Arrange
+    let work = scratch_dir("handoff-visible-two");
+    let repo_dir = work.join("repo");
+    fs::create_dir_all(&repo_dir).unwrap();
+    let home = work.join("home");
+    write_handoff(&home, &repo_dir, "# Session Handoff - First topic\n");
+    write_handoff(&home, &repo_dir, "# Some other heading\n\ntext\n");
+
+    // Act
+    let outcome = run_session_init_at(&repo_dir, &home);
+    let message = system_message(&outcome.stdout);
+
+    // Assert
+    let loaded: Vec<&str> = message
+        .lines()
+        .filter(|l| l.starts_with("Loaded handoff: "))
+        .collect();
+    assert_eq!(loaded.len(), 2, "{message}");
+    assert!(
+        loaded.iter().any(|l| l.contains("First topic (")),
+        "{message}"
+    );
+    assert!(
+        loaded.iter().any(|l| l.contains("Some other heading (")),
+        "{message}"
+    );
+}
+
+#[test]
+fn session_init_with_no_handoff_writes_no_loaded_line() {
+    // Arrange
+    let work = scratch_dir("handoff-visible-none");
+    let repo_dir = work.join("repo");
+    fs::create_dir_all(&repo_dir).unwrap();
+    let home = work.join("home");
+
+    // Act
+    let outcome = run_session_init_at(&repo_dir, &home);
+
+    // Assert
+    assert!(
+        !system_message(&outcome.stdout).contains("Loaded handoff:"),
+        "nothing loaded, so no line"
+    );
+}
+
+#[test]
 fn session_init_reloads_the_handoff_identically_on_clear_and_on_startup() {
     // Arrange: two independent scratch setups, one per source value, since
     // the handoff is consumed (deleted) by the first read.
@@ -1034,7 +1118,7 @@ fn session_init_never_reads_a_handoff_written_under_a_different_worktree() {
 #[test]
 fn session_init_injects_both_handoffs_from_two_concurrent_sessions_in_the_same_directory() {
     // Arrange: two `cc` sessions working the same directory both ran
-    // /playbook:handoff-save close together. Each writes its own
+    // /playbook:handoff close together. Each writes its own
     // uniquely-suffixed file (the `playbook handoff save` design),
     // so neither overwrites the other the way a single fixed path would.
     let work = scratch_dir("handoff-concurrent");

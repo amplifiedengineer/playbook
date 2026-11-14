@@ -57,7 +57,7 @@ found, or a convention confirmed, using the memory tools or store this \
 project keeps. Then continue with the rest of the turn.";
 
 const HANDOFF_NUDGE: &str = "\n\nAlso worth doing now: if this feels like a natural stopping \
-point, run /playbook:handoff-save so the next session can pick up without re-reading \
+point, run /playbook:handoff so the next session can pick up without re-reading \
 this one.";
 
 /// `capture-crossings` value at or above which a re-block escalates with
@@ -65,7 +65,7 @@ this one.";
 const CROSSING_ESCALATION_THRESHOLD: i64 = 3;
 
 const STRONG_HANDOFF_NUDGE: &str = "\n\nThis session has crossed the capture threshold several \
-times with no handoff saved yet; run /playbook:handoff-save now, before continuing, so the \
+times with no handoff saved yet; run /playbook:handoff now, before continuing, so the \
 next session does not have to re-read this one.";
 
 /// Memory graph node count at or above which a re-block also scans

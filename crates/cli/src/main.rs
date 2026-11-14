@@ -2652,7 +2652,7 @@ fn real_main() {
                     let text = read_stdin_to_string();
                     handoff::run_save(dir.as_deref(), &text, session.as_deref())
                 }
-                HandoffCommand::Show { all, dir } => handoff::run_show(dir.as_deref(), all),
+                HandoffCommand::Load { all, dir } => handoff::run_load(dir.as_deref(), all),
                 HandoffCommand::Status => Ok(handoff::run_status()),
                 HandoffCommand::Template => Ok(handoff::compose::TEMPLATE.to_string()),
                 HandoffCommand::Facts { dir } => Ok(handoff::compose::facts(std::path::Path::new(

@@ -845,7 +845,7 @@ pub enum Command {
     ///
     /// A handoff is a markdown note for one directory. The next session started
     /// there loads it when the SessionStart hook is installed and runs, and
-    /// `/playbook:handoff-show` loads it on demand.
+    /// `/playbook:handoff load` loads it on demand.
     Handoff {
         #[command(subcommand)]
         sub: HandoffCommand,
@@ -1230,11 +1230,11 @@ pub enum HandoffCommand {
         session: Option<String>,
     },
     /// Print this directory's handoff without using it up
-    Show {
+    Load {
         /// Print every waiting handoff, not just the newest
         #[arg(long)]
         all: bool,
-        /// Directory to show (default: the current one)
+        /// Directory to load (default: the current one)
         #[arg(long)]
         dir: Option<String>,
     },

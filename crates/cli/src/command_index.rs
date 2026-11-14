@@ -252,8 +252,8 @@ pub(crate) const META: &[Meta] = &[
     free("handoff").for_agents(),
     ro("handoff check"),
     ro("handoff facts"),
+    ro("handoff load"),
     free("handoff save"),
-    ro("handoff show"),
     ro("handoff status"),
     ro("handoff template"),
     ro("hooks")
