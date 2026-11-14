@@ -319,6 +319,8 @@ pub(crate) const META: &[Meta] = &[
         .purpose("Prepare a review: size the diff, pick a depth, run checks")
         .for_agents(),
     free("review checks"),
+    free("review lenses"),
+    ro("review lenses pick"),
     free("review prepare"),
     ro("review size"),
     free("review triage"),
@@ -334,6 +336,7 @@ pub(crate) const META: &[Meta] = &[
     free("segment unit integrate"),
     ro("segment unit resume"),
     free("segment unit start"),
+    free("segment verify"),
     ro("sessions")
         .purpose("List recent sessions with their branch, PR, state and cost")
         .for_users(),

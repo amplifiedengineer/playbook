@@ -97,6 +97,16 @@ const ROWS: &[Row] = &[
         code: 1,
     },
     Row {
+        args: &[
+            "segment", "verify", "--branch", "feat/x", "--files", "a.txt", "--json",
+        ],
+        code: 1,
+    },
+    Row {
+        args: &["review", "lenses", "pick", "--json"],
+        code: 1,
+    },
+    Row {
         args: &["plan", "graph", "check", "missing-plan.md", "--json"],
         code: 1,
     },

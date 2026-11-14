@@ -3,7 +3,8 @@
 
 //! `playbook review checks <dir>`: run the project's own type check, lint and
 //! tests in a review worktree and print what they say, for the deep review's
-//! subagent prompts. A failing check is output, never an error.
+//! subagent prompts. A failing check is output, never an error. `--list`
+//! prints the commands instead of running them.
 
 use std::path::Path;
 use std::process::Command;
@@ -21,6 +22,15 @@ const fn step(program: &'static str, args: &'static [&'static str]) -> Step {
         program,
         args,
         tail: None,
+    }
+}
+
+impl Step {
+    fn command_line(&self) -> String {
+        std::iter::once(self.program)
+            .chain(self.args.iter().copied())
+            .collect::<Vec<_>>()
+            .join(" ")
     }
 }
 
@@ -87,10 +97,25 @@ fn run(dir: &Path, s: &Step) -> String {
     }
 }
 
+const NO_TOOLCHAIN: &str = "[no recognised toolchain; checks skipped]";
+
+/// The commands `run_checks` would run under `dir`, one per line, setup first.
+pub fn list_checks(dir: &Path) -> String {
+    let Some((setup, checks)) = plan(dir) else {
+        return NO_TOOLCHAIN.to_string();
+    };
+    setup
+        .iter()
+        .chain(&checks)
+        .map(Step::command_line)
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
 /// The combined output of the project's checks under `dir`.
 pub fn run_checks(dir: &Path) -> String {
     let Some((setup, checks)) = plan(dir) else {
-        return "[no recognised toolchain; checks skipped]".to_string();
+        return NO_TOOLCHAIN.to_string();
     };
     let mut parts = Vec::new();
     for s in &setup {

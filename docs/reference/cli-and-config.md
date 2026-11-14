@@ -1296,17 +1296,35 @@ Example: `playbook prose check README.md`
 
 Run the mechanical steps behind the review commands
 
-Subcommands: `checks`, `prepare`, `size`, `triage`
+Subcommands: `checks`, `lenses`, `prepare`, `size`, `triage`
 
 ### `playbook review checks`
 
 Run a project's own type check, lint and tests in a directory
 
-Prints their output. A failing check is output, not an error.
+Prints their output. A failing check is output, not an error. With `--list` it prints the commands, one per line, and runs none.
 
 Example: `playbook review checks /tmp/review-wt`
 
 - `<DIR>`: Review worktree to run in
+- `--list`: Print the commands instead of running them
+
+### `playbook review lenses`
+
+Pick the conditional review lenses a diff calls for
+
+Subcommands: `pick`
+
+### `playbook review lenses pick`
+
+Name the conditional review lenses a diff triggers
+
+Applies the deep review's trigger table to `BASE...HEAD` (no network): architecture, big-o, complexity, integration, migration, docs, dedup and adr. Prints one `lens: trigger` line per lens, or `NONE`. With `--json` it prints the shared envelope with a `lenses` array of `{lens, trigger}`.
+
+Example: `playbook review lenses pick --base main --json`
+
+- `--base <BASE>`: Branch the diff starts from. Defaults to the repo's default branch
+- `--json`: Print the picks as the shared JSON envelope
 
 ### `playbook review prepare`
 
@@ -1394,7 +1412,7 @@ Example: `playbook sanitize pr /tmp/body.md`
 
 Run the git recipes `/playbook:implement` uses for a Segment
 
-Subcommands: `branch`, `size`, `unit`
+Subcommands: `branch`, `size`, `unit`, `verify`
 
 ### `playbook segment branch`
 
@@ -1474,6 +1492,20 @@ Example: `playbook segment unit start WU-3 --base abc1234 --path ../wt/plan/wu-3
 - `--path <PATH>`: Where to create the worktree
 - `--dir <DIR>`: Repo directory to run in. Defaults to the current directory
 - `--json`: Print the report as the shared JSON envelope
+
+### `playbook segment verify`
+
+Say whether a branch's files match the fetched default branch
+
+Fetches `origin/<default branch>` and compares the listed files with the branch. Prints `match=true`, or `match=false differing=a,b` and exits 1. After a squash merge the trees match even though the commits do not. With `--json` it prints the shared envelope with `matches` and a `differing` array.
+
+Example: `playbook segment verify --branch feat/my-plan-s1-schema --files a.txt b.txt`
+
+- `--branch <BRANCH>`: Branch that should have landed
+- `--files <FILES>`: Files to compare; nothing else is read
+- `--default-branch <DEFAULT_BRANCH>`: Default branch of the repo
+- `--dir <DIR>`: Repo directory to run in. Defaults to the current directory
+- `--json`: Print the verdict as the shared JSON envelope
 
 ### `playbook sessions`
 

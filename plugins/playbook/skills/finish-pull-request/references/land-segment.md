@@ -112,13 +112,15 @@ gh pr view "$PR" --json state,mergedAt,reviewDecision,mergeStateStatus \
 
 **8. Confirm the content actually landed, then advance (MUST).** A merge command's success message is not evidence, the same way a subagent's `DONE` is not (Verify-by-diff, Step 5):
 
+Intent: segment-verify. If the session's tool map (printed at session start) lists it, run it with `--branch "$SEGMENT_BRANCH" --default-branch "$DEFAULT_BRANCH" --files <the Segment's Files>`: it fetches the default branch and prints `match=true`, or `match=false differing=<files>` and exits 1. Otherwise run:
+
 ```bash
 git fetch origin "$DEFAULT_BRANCH"
 git log --oneline -1 "origin/$DEFAULT_BRANCH"
 git diff "origin/$DEFAULT_BRANCH" "$SEGMENT_BRANCH" -- <the Segment's Files>
 ```
 
-That last diff MUST be empty. A squash-merge collapses the branch's internal shape, so the trees match even though the commits do not. A non-empty diff means either concurrent merges by someone else (re-check scoped to the Segment's own `Files`, which is why the pathspec is there) or content genuinely lost; investigate before continuing, never assume. Record `land: MERGED (<merge-sha>)` in the ledger, then return to Step 5 for Segment N+1, whose branch MUST be created off the `origin/<default-branch>` just fetched.
+The files MUST match: `match=true`, or that last diff empty. A squash-merge collapses the branch's internal shape, so the trees match even though the commits do not. A non-empty diff means either concurrent merges by someone else (re-check scoped to the Segment's own `Files`, which is why the pathspec is there) or content genuinely lost; investigate before continuing, never assume. Record `land: MERGED (<merge-sha>)` in the ledger, then return to Step 5 for Segment N+1, whose branch MUST be created off the `origin/<default-branch>` just fetched.
 
 ## Decision rows for `land`
 

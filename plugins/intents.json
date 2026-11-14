@@ -212,6 +212,10 @@
     "required": false
   },
   {
+    "intent": "review-lenses-pick",
+    "required": false
+  },
+  {
     "intent": "review-prepare",
     "required": false
   },
@@ -249,6 +253,10 @@
   },
   {
     "intent": "segment-unit",
+    "required": false
+  },
+  {
+    "intent": "segment-verify",
     "required": false
   },
   {

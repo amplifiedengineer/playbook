@@ -148,9 +148,13 @@ fn is_lock(path: &str) -> bool {
     LOCKS.contains(&file_name(path))
 }
 
-fn is_manifest(path: &str) -> bool {
+pub(crate) fn is_manifest(path: &str) -> bool {
     let name = file_name(path);
     MANIFESTS.contains(&name) || (name.starts_with("requirements") && name.ends_with(".txt"))
+}
+
+pub(crate) fn is_migration(path: &str) -> bool {
+    PATS.migrations.is_match(path)
 }
 
 fn is_payload(path: &str) -> bool {
@@ -161,7 +165,7 @@ fn is_test(path: &str) -> bool {
     PATS.test.is_match(path)
 }
 
-fn is_doc(path: &str) -> bool {
+pub(crate) fn is_doc(path: &str) -> bool {
     if is_payload(path) || is_manifest(path) {
         return false;
     }
@@ -495,7 +499,7 @@ fn ref_exists(name: &str) -> bool {
 /// The comparison ref for a local diff: the base the caller named, else
 /// `origin/HEAD`, else `main` or `master`. Prefers the `origin/` copy. No
 /// network call.
-fn local_base(base: Option<&str>) -> Result<String, String> {
+pub(crate) fn local_base(base: Option<&str>) -> Result<String, String> {
     let name = match base.filter(|b| !b.is_empty()) {
         Some(b) => b.to_string(),
         None => git(&["symbolic-ref", "--short", "refs/remotes/origin/HEAD"])

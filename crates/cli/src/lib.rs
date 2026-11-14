@@ -2233,12 +2233,21 @@ pub enum ReviewCommand {
     },
     /// Run a project's own type check, lint and tests in a directory
     ///
-    /// Prints their output. A failing check is output, not an error.
+    /// Prints their output. A failing check is output, not an error. With
+    /// `--list` it prints the commands, one per line, and runs none.
     ///
     /// Example: `playbook review checks /tmp/review-wt`
     Checks {
         /// Review worktree to run in
         dir: PathBuf,
+        /// Print the commands instead of running them
+        #[arg(long)]
+        list: bool,
+    },
+    /// Pick the conditional review lenses a diff calls for
+    Lenses {
+        #[command(subcommand)]
+        sub: ReviewLensesCommand,
     },
     /// Measure a diff and say which review path it takes
     ///
@@ -2266,6 +2275,27 @@ pub enum ReviewCommand {
     Triage {
         #[command(subcommand)]
         sub: ReviewTriageCommand,
+    },
+}
+
+/// `playbook review lenses` subcommands.
+#[derive(Subcommand, Debug)]
+pub enum ReviewLensesCommand {
+    /// Name the conditional review lenses a diff triggers
+    ///
+    /// Applies the deep review's trigger table to `BASE...HEAD` (no network):
+    /// architecture, big-o, complexity, integration, migration, docs, dedup and
+    /// adr. Prints one `lens: trigger` line per lens, or `NONE`. With `--json`
+    /// it prints the shared envelope with a `lenses` array of `{lens, trigger}`.
+    ///
+    /// Example: `playbook review lenses pick --base main --json`
+    Pick {
+        /// Branch the diff starts from. Defaults to the repo's default branch
+        #[arg(long)]
+        base: Option<String>,
+        /// Print the picks as the shared JSON envelope
+        #[arg(long)]
+        json: bool,
     },
 }
 
@@ -3438,6 +3468,32 @@ pub enum SegmentCommand {
         /// Repo directory to run in. Defaults to the current directory
         #[arg(long)]
         dir: Option<PathBuf>,
+    },
+    /// Say whether a branch's files match the fetched default branch
+    ///
+    /// Fetches `origin/<default branch>` and compares the listed files with
+    /// the branch. Prints `match=true`, or `match=false differing=a,b` and
+    /// exits 1. After a squash merge the trees match even though the commits
+    /// do not. With `--json` it prints the shared envelope with `matches` and
+    /// a `differing` array.
+    ///
+    /// Example: `playbook segment verify --branch feat/my-plan-s1-schema --files a.txt b.txt`
+    Verify {
+        /// Branch that should have landed
+        #[arg(long)]
+        branch: String,
+        /// Files to compare; nothing else is read
+        #[arg(long, num_args = 1.., required = true)]
+        files: Vec<String>,
+        /// Default branch of the repo
+        #[arg(long, default_value = "main")]
+        default_branch: String,
+        /// Repo directory to run in. Defaults to the current directory
+        #[arg(long)]
+        dir: Option<PathBuf>,
+        /// Print the verdict as the shared JSON envelope
+        #[arg(long)]
+        json: bool,
     },
     /// Run one Work Unit of a parallel wave in its own worktree
     Unit {
