@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Igor Santos
 // SPDX-License-Identifier: Apache-2.0
 
-//! `watch install-service`: a timer that runs `watch once` every 60 seconds,
+//! `watch service install`: a timer that runs `watch once` every 60 seconds,
 //! a launchd agent on macOS and a systemd user timer on Linux. No process
 //! stays resident. Every call to `launchctl` or `systemctl` goes through
 //! [`Manager`], and only `mod.rs` builds the real one.
@@ -30,7 +30,7 @@ pub fn kind_here() -> Result<Kind, String> {
     } else if cfg!(target_os = "linux") {
         Ok(Kind::Systemd)
     } else {
-        Err("install-service supports macOS (launchd) and Linux (systemd) only".to_string())
+        Err("service install supports macOS (launchd) and Linux (systemd) only".to_string())
     }
 }
 

@@ -66,6 +66,31 @@ pub const COMMAND_RENAMES: &[Rename] = &[
         new: "doctor migrations",
         extra: &[],
     },
+    Rename {
+        old: "sanitize commit-msg",
+        new: "sanitize commit",
+        extra: &[],
+    },
+    Rename {
+        old: "sanitize pr-text",
+        new: "sanitize pr",
+        extra: &[],
+    },
+    Rename {
+        old: "watch dry-run",
+        new: "watch once",
+        extra: &["--dry-run"],
+    },
+    Rename {
+        old: "watch install-service",
+        new: "watch service install",
+        extra: &[],
+    },
+    Rename {
+        old: "watch uninstall-service",
+        new: "watch service uninstall",
+        extra: &[],
+    },
 ];
 
 /// Hidden legacy commands that keep their own code and output but print the

@@ -382,3 +382,11 @@ Three config keys were renamed. The old names still read and write for now.
 | `watch.maxCatchupHours` | `watch.catchup.maxHours` |
 | `watch.limits.actionsPerDay` | `watch.limits.dailyActions` |
 | `watch.limits.usdPerDay` | `watch.limits.dailyUsd` |
+
+Three commands were renamed too, and the old names still work for now:
+
+| Old command | New command |
+|---|---|
+| `watch dry-run` | `watch once --dry-run` |
+| `watch install-service` | `watch service install` |
+| `watch uninstall-service` | `watch service uninstall` |

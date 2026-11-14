@@ -575,15 +575,14 @@ fn table() -> Vec<Case> {
         // watch mode: nothing is enabled and no token is set on a fresh home
         case("watch", &["watch"]).out("watch is off"),
         case("watch once", &["watch", "once"]).out("watch is off"),
-        case("watch dry-run", &["watch", "dry-run"]).code(1).err("GITHUB_TOKEN"),
         case("watch approve", &["watch", "approve", "1"]).code(1).err("GITHUB_TOKEN"),
         case("watch reject", &["watch", "reject", "1"]).code(1).err("not waiting").grows(),
         case("watch status", &["watch", "status"]).out("enabled: false").grows(),
         case("watch pause", &["watch", "pause"]).out("watch paused").grows(),
         case("watch resume", &["watch", "resume"]).out("watch resumed").grows(),
         case("watch retry", &["watch", "retry", "1"]).code(1).err("not on the dead list").grows(),
-        case("watch install-service", &["watch", "install-service"]).code(1).err("not changed"),
-        case("watch uninstall-service", &["watch", "uninstall-service"]).code(1).err("not changed"),
+        case("watch service install", &["watch", "service", "install"]).code(1).err("not changed"),
+        case("watch service uninstall", &["watch", "service", "uninstall"]).code(1).err("not changed"),
         case("watch log", &["watch", "log"]).grows(),
         case("sessions sweep", &["sessions", "sweep", "--dry-run"])
             .out("No finished or stale sessions")
@@ -642,8 +641,8 @@ fn table() -> Vec<Case> {
         case("code read", &["code", "read", "src/lib.rs", "1:5"]).code(1).err("no such file"),
         case("code refs", &["code", "refs", "foo"]).code(1).err("no index yet"),
         case("code context", &["code", "context", "foo"]).code(1).err("no index yet"),
-        case( "sanitize commit-msg", &["sanitize", "commit-msg", "{ROOT}/m.txt"], ).file("m.txt", "feat: add a thing\n"),
-        case("sanitize pr-text", &["sanitize", "pr-text", "{ROOT}/m.txt"]).file("m.txt", "A plain description.\n"),
+        case( "sanitize commit", &["sanitize", "commit", "{ROOT}/m.txt"], ).file("m.txt", "feat: add a thing\n"),
+        case("sanitize pr", &["sanitize", "pr", "{ROOT}/m.txt"]).file("m.txt", "A plain description.\n"),
         case("ci", &["ci"]).out("ci: 0 passed"),
         // plans, glossary, skills, adr
         case("plan checkpoint", &["plan", "checkpoint", "smoke"]).stdin("notes\n").writes(),

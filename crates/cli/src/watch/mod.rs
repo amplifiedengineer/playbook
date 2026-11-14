@@ -12,7 +12,7 @@ use serde_json::Value;
 
 use crate::common::time::parse_iso8601_utc_epoch;
 use crate::config::{self, store as config_store};
-use crate::WatchCommand;
+use crate::{WatchCommand, WatchServiceCommand};
 
 pub mod action;
 pub mod address;
@@ -251,7 +251,7 @@ pub fn once<W: GithubWrite + RecoverOps, C: Clock, H: Http>(
     Ok(pass.out)
 }
 
-/// `playbook watch dry-run`: what would be proposed. Reads GitHub and the
+/// `playbook watch once --dry-run`: what would be proposed. Reads GitHub and the
 /// stored cursors, and changes nothing.
 pub fn dry_run<W: GithubWrite, C: Clock, H: Http>(
     ctx: &Ctx<'_, W, C>,
@@ -371,7 +371,7 @@ fn gh_token() -> Option<String> {
     (output.status.success() && !token.is_empty()).then_some(token)
 }
 
-/// `install-service` and `uninstall-service`, which need no token. This is the
+/// `service install` and `service uninstall`, which need no token. This is the
 /// only place that builds the real service manager.
 fn service_command(
     cmd: Option<&WatchCommand>,
@@ -379,8 +379,12 @@ fn service_command(
     data: &Path,
 ) -> Option<Result<String, String>> {
     let delete_log = match cmd {
-        Some(WatchCommand::InstallService) => None,
-        Some(WatchCommand::UninstallService { delete_log }) => Some(*delete_log),
+        Some(WatchCommand::Service {
+            sub: WatchServiceCommand::Install,
+        }) => None,
+        Some(WatchCommand::Service {
+            sub: WatchServiceCommand::Uninstall { delete_log },
+        }) => Some(*delete_log),
         _ => return None,
     };
     Some(service_result(delete_log, home, data))
@@ -420,7 +424,7 @@ pub fn run(cmd: Option<&WatchCommand>) -> Result<String, String> {
     let home = crate::common::session::home_dir();
     let data = playbook_data::data_dir_from(&home);
     let settings = Settings::load(&home)?;
-    if matches!(cmd, None | Some(WatchCommand::Once { .. })) && !settings.enabled {
+    if matches!(cmd, None | Some(WatchCommand::Once { dry_run: false, .. })) && !settings.enabled {
         return Ok(OFF_MESSAGE.to_string());
     }
     if let Some(out) = service_command(cmd, &home, &data) {
@@ -428,9 +432,7 @@ pub fn run(cmd: Option<&WatchCommand>) -> Result<String, String> {
     }
     let needs_token = matches!(
         cmd,
-        None | Some(
-            WatchCommand::Once { .. } | WatchCommand::DryRun { .. } | WatchCommand::Approve { .. }
-        )
+        None | Some(WatchCommand::Once { .. } | WatchCommand::Approve { .. })
     );
     let token = if !needs_token {
         String::new()
@@ -450,7 +452,7 @@ pub fn run(cmd: Option<&WatchCommand>) -> Result<String, String> {
     let write = gh::GhWrite::new(token.clone());
     let clock = SystemClock;
     let me = match cmd {
-        None | Some(WatchCommand::Once { .. } | WatchCommand::DryRun { .. }) => write.login()?,
+        None | Some(WatchCommand::Once { .. }) => write.login()?,
         _ => String::new(),
     };
     let clone = std::env::current_dir().map_err(|e| format!("no current directory: {e}"))?;
@@ -483,18 +485,20 @@ pub fn run(cmd: Option<&WatchCommand>) -> Result<String, String> {
         return Ok(String::new());
     };
     match cmd {
-        WatchCommand::Once { since } => {
-            once(&ctx, since.as_deref(), || http::UreqHttp::new(&token))
-        }
-        WatchCommand::DryRun { since } => {
-            dry_run(&ctx, since.as_deref(), || http::UreqHttp::new(&token))
-        }
+        WatchCommand::Once {
+            since,
+            dry_run: true,
+        } => dry_run(&ctx, since.as_deref(), || http::UreqHttp::new(&token)),
+        WatchCommand::Once {
+            since,
+            dry_run: false,
+        } => once(&ctx, since.as_deref(), || http::UreqHttp::new(&token)),
         WatchCommand::Approve { id } => approve(&ctx, *id),
         WatchCommand::Reject { id } => reject(&ctx, *id),
         WatchCommand::Status { json } => control::status(&ctx, *json),
         WatchCommand::Pause => control::set_paused(&ctx, true),
         WatchCommand::Resume => control::set_paused(&ctx, false),
-        WatchCommand::InstallService | WatchCommand::UninstallService { .. } => {
+        WatchCommand::Service { .. } => {
             Err("service commands are handled before the token is read".to_string())
         }
         WatchCommand::Retry { id } => control::retry(&ctx, *id),
