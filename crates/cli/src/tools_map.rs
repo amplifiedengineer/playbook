@@ -242,6 +242,13 @@ pub const TOOLS: &[Tool] = &[
         "plan graph check plan.md",
     ),
     t(
+        "plan-ledger",
+        "plan ledger",
+        "set",
+        "",
+        "plan ledger set plan.md WU-1 status=DONE",
+    ),
+    t(
         "plan-wave-next",
         "plan wave",
         "next",

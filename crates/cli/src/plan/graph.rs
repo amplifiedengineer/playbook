@@ -135,13 +135,13 @@ fn tables(text: &str) -> Vec<Table> {
     out
 }
 
-fn is_wu_id(token: &str) -> bool {
+pub(crate) fn is_wu_id(token: &str) -> bool {
     token
         .strip_prefix("WU-")
         .is_some_and(|rest| !rest.is_empty())
 }
 
-fn is_segment_id(token: &str) -> bool {
+pub(crate) fn is_segment_id(token: &str) -> bool {
     token
         .strip_prefix('S')
         .is_some_and(|rest| !rest.is_empty() && rest.chars().all(|c| c.is_ascii_digit()))

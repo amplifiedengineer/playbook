@@ -12,10 +12,10 @@ use playbook::{
     AtlassianCommand, CcCacheCommand, CcCommand, Cli, Command, CommitCommand, ConfigCommand,
     DepsCommand, DocCommand, DoctorCommand, EvalCommand, GateCommand, GlossaryCommand,
     HandoffCommand, LearnCommand, ManifestCommand, MemoryClaudeCommand, MemoryCommand, ModeArg,
-    ModeCommand, PlanCommand, PlanGraphCommand, PlanWaveCommand, PluginCommand, PrCommand,
-    PrReviewCommand, ProseCommand, ReviewCommand, ReviewTriageCommand, ReviewWorktreeCommand,
-    SanitizeCommand, SegmentCommand, SegmentTopology, SegmentUnitCommand, SessionsCommand,
-    SettingsCommand, SkillsCommand, ToolsCommand, WorktreeCommand,
+    ModeCommand, PlanCommand, PlanGraphCommand, PlanLedgerCommand, PlanWaveCommand, PluginCommand,
+    PrCommand, PrReviewCommand, ProseCommand, ReviewCommand, ReviewTriageCommand,
+    ReviewWorktreeCommand, SanitizeCommand, SegmentCommand, SegmentTopology, SegmentUnitCommand,
+    SessionsCommand, SettingsCommand, SkillsCommand, ToolsCommand, WorktreeCommand,
 };
 use std::io::{IsTerminal, Read, Write};
 
@@ -1996,6 +1996,18 @@ fn real_main() {
                     sub: PlanGraphCommand::Check { plan, json },
                 },
         } => std::process::exit(playbook::plan::graph::run_check(&plan, json)),
+        Command::Plan {
+            sub:
+                PlanCommand::Ledger {
+                    sub: PlanLedgerCommand::Show { plan, json },
+                },
+        } => std::process::exit(playbook::plan::ledger::run_show(&plan, json)),
+        Command::Plan {
+            sub:
+                PlanCommand::Ledger {
+                    sub: PlanLedgerCommand::Set { plan, id, pairs },
+                },
+        } => std::process::exit(playbook::plan::ledger::run_set(&plan, &id, &pairs)),
         Command::Plan {
             sub:
                 PlanCommand::Wave {

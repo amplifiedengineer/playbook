@@ -933,7 +933,7 @@ Example: `playbook path plans`
 
 Save plan checkpoints, write Work Unit briefs, clear scratch files
 
-Subcommands: `brief`, `checkpoint`, `cleanup`, `graph`, `list`, `wave`
+Subcommands: `brief`, `checkpoint`, `cleanup`, `graph`, `ledger`, `list`, `wave`
 
 ### `playbook plan brief`
 
@@ -995,6 +995,35 @@ Example: `playbook plan graph check docs/plan.md`
 
 - `<PLAN>`: Plan file
 - `--json`: Print the report as the shared JSON envelope
+
+### `playbook plan ledger`
+
+Show or set the run state kept beside a plan
+
+Subcommands: `set`, `show`
+
+### `playbook plan ledger set`
+
+Set fields on a Work Unit or Segment, keeping the others
+
+Fields: status, base, commit, branch, pr, land, review, ci_fix_attempts, ci_rerun_attempts, merge_attempts, parked_reason, parked_at. Concurrent calls are safe: each write holds the advisory lock `plan checkpoint` uses. Nothing is written when an id, field or pair is invalid.
+
+Example: `playbook plan ledger set docs/plan.md WU-3 status=DONE`
+
+- `<PLAN>`: Plan file
+- `<ID>`: Item to update, for example `WU-3` or `S2`
+- `<PAIRS>`: Fields as key=value
+
+### `playbook plan ledger show`
+
+Print the run state kept beside a plan
+
+Reads `<plan stem>.ledger.json` beside the plan and prints each id with its `key=value` fields, or `NONE` when nothing was set. With `--json` it prints the shared envelope with an `entries` object.
+
+Example: `playbook plan ledger show docs/plan.md`
+
+- `<PLAN>`: Plan file
+- `--json`: Print the ledger as the shared JSON envelope
 
 ### `playbook plan list`
 

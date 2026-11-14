@@ -11,6 +11,9 @@ use std::time::Duration;
 
 use crate::common::atomic::{atomic_append, with_dir_lock, write_atomic};
 
+const LOCK_RETRIES: u32 = 20;
+const LOCK_DELAY: Duration = Duration::from_millis(50);
+
 /// A slug is one kebab-case file stem: no separators and no leading dot.
 pub fn valid_slug(slug: &str) -> bool {
     !slug.is_empty()
@@ -30,17 +33,20 @@ pub fn checkpoint_path(plans_dir: &Path, slug: &str) -> Result<PathBuf, String> 
     Ok(plans_dir.join(format!("{slug}.checkpoint.md")))
 }
 
-/// Replaces the checkpoint under a directory lock. The lock is advisory: when
-/// it cannot be taken the write still happens.
-pub fn write_checkpoint(path: &Path, content: &str) -> io::Result<()> {
+/// Runs `f` holding the directory lock `<path>.lock`. The lock is advisory:
+/// when it cannot be taken `f` still runs.
+pub fn with_file_lock<T>(path: &Path, f: impl FnOnce() -> T) -> T {
     let lock = PathBuf::from(format!("{}.lock", path.display()));
-    let (acquired, result) = with_dir_lock(&lock, 20, Duration::from_millis(50), || {
-        write_atomic(path, content)
-    });
+    let (acquired, result) = with_dir_lock(&lock, LOCK_RETRIES, LOCK_DELAY, f);
     if acquired {
         let _ = fs::remove_dir(&lock);
     }
     result
+}
+
+/// Replaces the checkpoint under the advisory lock of [`with_file_lock`].
+pub fn write_checkpoint(path: &Path, content: &str) -> io::Result<()> {
+    with_file_lock(path, || write_atomic(path, content))
 }
 
 /// Appends one entry to `<root>/GLOSSARY.md` under a directory lock.

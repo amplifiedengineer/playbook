@@ -1863,6 +1863,11 @@ pub enum PlanCommand {
         #[command(subcommand)]
         sub: PlanGraphCommand,
     },
+    /// Show or set the run state kept beside a plan
+    Ledger {
+        #[command(subcommand)]
+        sub: PlanLedgerCommand,
+    },
     /// Pick the Work Units to run next
     Wave {
         #[command(subcommand)]
@@ -1930,6 +1935,42 @@ pub enum PlanGraphCommand {
         /// Print the report as the shared JSON envelope
         #[arg(long)]
         json: bool,
+    },
+}
+
+/// `playbook plan ledger` subcommands.
+#[derive(Subcommand, Debug)]
+pub enum PlanLedgerCommand {
+    /// Print the run state kept beside a plan
+    ///
+    /// Reads `<plan stem>.ledger.json` beside the plan and prints each id with
+    /// its `key=value` fields, or `NONE` when nothing was set. With `--json` it
+    /// prints the shared envelope with an `entries` object.
+    ///
+    /// Example: `playbook plan ledger show docs/plan.md`
+    Show {
+        /// Plan file
+        plan: PathBuf,
+        /// Print the ledger as the shared JSON envelope
+        #[arg(long)]
+        json: bool,
+    },
+    /// Set fields on a Work Unit or Segment, keeping the others
+    ///
+    /// Fields: status, base, commit, branch, pr, land, review, ci_fix_attempts,
+    /// ci_rerun_attempts, merge_attempts, parked_reason, parked_at. Concurrent
+    /// calls are safe: each write holds the advisory lock `plan checkpoint`
+    /// uses. Nothing is written when an id, field or pair is invalid.
+    ///
+    /// Example: `playbook plan ledger set docs/plan.md WU-3 status=DONE`
+    Set {
+        /// Plan file
+        plan: PathBuf,
+        /// Item to update, for example `WU-3` or `S2`
+        id: String,
+        /// Fields as key=value
+        #[arg(required = true)]
+        pairs: Vec<String>,
     },
 }
 
