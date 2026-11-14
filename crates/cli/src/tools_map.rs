@@ -199,6 +199,13 @@ pub const TOOLS: &[Tool] = &[
         "segment size --base main",
     ),
     t(
+        "segment-unit",
+        "segment unit",
+        "start",
+        "",
+        "segment unit start WU-1 --base abc --path wt",
+    ),
+    t(
         "gate-record",
         "gate",
         "record",

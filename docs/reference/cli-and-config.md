@@ -1330,7 +1330,7 @@ Example: `playbook sanitize pr /tmp/body.md`
 
 Run the git recipes `/playbook:implement` uses for a Segment
 
-Subcommands: `branch`, `size`
+Subcommands: `branch`, `size`, `unit`
 
 ### `playbook segment branch`
 
@@ -1360,6 +1360,56 @@ Example: `playbook segment size --base main`
 
 - `--base <BASE>`: Base ref of the Segment
 - `--dir <DIR>`: Repo directory to run in. Defaults to the current directory
+
+### `playbook segment unit`
+
+Run one Work Unit of a parallel wave in its own worktree
+
+Subcommands: `integrate`, `resume`, `start`
+
+### `playbook segment unit integrate`
+
+Squash a unit's checkpoints onto the Segment branch
+
+Soft resets the worktree to `--base`, commits only `--files` with the signing and sign-off the `commit run` path uses, cherry-picks that commit onto `--branch` (the checkout in `--dir` must be on it) and removes the worktree. Prints `integrated=<sha> branch=<branch>`. On a cherry-pick conflict it restores the checkout, keeps the worktree, writes a `.playbook-conflict-stop` marker there and exits 1.
+
+Example: `playbook segment unit integrate WU-3 --base abc1234 --path ../wt/plan/wu-3 --branch feat/plan-s1-core -m "feat(core): add the parser" --files docs/a.md docs/b.md`
+
+- `<WU>`: Id of the Work Unit
+- `--base <BASE>`: Commit the unit started from
+- `--path <PATH>`: Worktree of the unit
+- `--branch <BRANCH>`: Segment branch to cherry-pick onto
+- `-m, --message <MESSAGE>`: Commit message of the squashed commit
+- `--files <FILES>`: Files of the unit; nothing else is committed
+- `--dir <DIR>`: Checkout of the Segment branch. Defaults to the current directory
+- `--json`: Print the report as the shared JSON envelope
+
+### `playbook segment unit resume`
+
+Say which TDD step comes next for a unit
+
+Reads the `wip(<wu>): red|green|refactor - <scenario>` commits between `--base` and HEAD of `--dir`. Prints `last=<step> scenario=<id> next=<step>`, or `last=none next=red` with no checkpoint. After a refactor, `next=red` starts the following scenario.
+
+Example: `playbook segment unit resume WU-3 --base abc1234 --dir ../wt/plan/wu-3`
+
+- `<WU>`: Id of the Work Unit
+- `--base <BASE>`: Commit the unit started from
+- `--dir <DIR>`: Worktree of the unit. Defaults to the current directory
+- `--json`: Print the report as the shared JSON envelope
+
+### `playbook segment unit start`
+
+Add a Work Unit's worktree at its base commit
+
+Runs `git worktree add --detach` at `--base` and prints `worktree=<path> base=<sha>`. A worktree already at the path is reported, not recreated.
+
+Example: `playbook segment unit start WU-3 --base abc1234 --path ../wt/plan/wu-3`
+
+- `<WU>`: Id of the Work Unit
+- `--base <BASE>`: Commit the unit starts from: the Segment branch tip
+- `--path <PATH>`: Where to create the worktree
+- `--dir <DIR>`: Repo directory to run in. Defaults to the current directory
+- `--json`: Print the report as the shared JSON envelope
 
 ### `playbook sessions`
 

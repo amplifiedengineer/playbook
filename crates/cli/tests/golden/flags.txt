@@ -646,7 +646,7 @@ command playbook review triage merge subcommands=- aliases=- groups=Merge[lenses
 arg playbook review triage merge id=lenses long=lenses short=- value_names=LENSES possible=- defaults=- aliases=- required=true hidden=false global=false action=Append num_args=- parser=alloc::string::String conflicts=-
 arg playbook review triage merge id=tiers long=tiers short=- value_names=TIERS possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
 arg playbook review triage merge id=forced long=force short=- value_names=FORCED possible=- defaults=- aliases=- required=false hidden=false global=false action=Append num_args=- parser=alloc::string::String conflicts=-
-command playbook segment subcommands=branch,size aliases=- groups=Segment[-]
+command playbook segment subcommands=branch,size,unit aliases=- groups=Segment[-]
 command playbook segment branch subcommands=- aliases=- groups=Branch[-],SegmentNaming[kind,plan_slug,n,title,default_branch,dir]
 arg playbook segment branch id=kind long=type short=- value_names=KIND possible=- defaults=- aliases=- required=true hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
 arg playbook segment branch id=plan_slug long=plan-slug short=- value_names=PLAN_SLUG possible=- defaults=- aliases=- required=true hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
@@ -660,5 +660,26 @@ arg playbook segment branch id=land long=land short=- value_names=LAND possible=
 command playbook segment size subcommands=- aliases=- groups=Size[base,dir]
 arg playbook segment size id=base long=base short=- value_names=BASE possible=- defaults=- aliases=- required=true hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
 arg playbook segment size id=dir long=dir short=- value_names=DIR possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=std::path::PathBuf conflicts=-
+command playbook segment unit subcommands=start,integrate,resume aliases=- groups=Unit[-]
+command playbook segment unit start subcommands=- aliases=- groups=Start[wu,base,path,dir,json]
+arg playbook segment unit start id=wu long=- short=- value_names=WU possible=- defaults=- aliases=- required=true hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
+arg playbook segment unit start id=base long=base short=- value_names=BASE possible=- defaults=- aliases=- required=true hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
+arg playbook segment unit start id=path long=path short=- value_names=PATH possible=- defaults=- aliases=- required=true hidden=false global=false action=Set num_args=- parser=std::path::PathBuf conflicts=-
+arg playbook segment unit start id=dir long=dir short=- value_names=DIR possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=std::path::PathBuf conflicts=-
+arg playbook segment unit start id=json long=json short=- value_names=JSON possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
+command playbook segment unit integrate subcommands=- aliases=- groups=Integrate[wu,base,path,branch,message,files,dir,json]
+arg playbook segment unit integrate id=wu long=- short=- value_names=WU possible=- defaults=- aliases=- required=true hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
+arg playbook segment unit integrate id=base long=base short=- value_names=BASE possible=- defaults=- aliases=- required=true hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
+arg playbook segment unit integrate id=path long=path short=- value_names=PATH possible=- defaults=- aliases=- required=true hidden=false global=false action=Set num_args=- parser=std::path::PathBuf conflicts=-
+arg playbook segment unit integrate id=branch long=branch short=- value_names=BRANCH possible=- defaults=- aliases=- required=true hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
+arg playbook segment unit integrate id=message long=message short=m value_names=MESSAGE possible=- defaults=- aliases=- required=true hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
+arg playbook segment unit integrate id=files long=files short=- value_names=FILES possible=- defaults=- aliases=- required=true hidden=false global=false action=Append num_args=1.. parser=alloc::string::String conflicts=-
+arg playbook segment unit integrate id=dir long=dir short=- value_names=DIR possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=std::path::PathBuf conflicts=-
+arg playbook segment unit integrate id=json long=json short=- value_names=JSON possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
+command playbook segment unit resume subcommands=- aliases=- groups=Resume[wu,base,dir,json]
+arg playbook segment unit resume id=wu long=- short=- value_names=WU possible=- defaults=- aliases=- required=true hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
+arg playbook segment unit resume id=base long=base short=- value_names=BASE possible=- defaults=- aliases=- required=true hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-
+arg playbook segment unit resume id=dir long=dir short=- value_names=DIR possible=- defaults=- aliases=- required=false hidden=false global=false action=Set num_args=- parser=std::path::PathBuf conflicts=-
+arg playbook segment unit resume id=json long=json short=- value_names=JSON possible=true,false defaults=- aliases=- required=false hidden=false global=false action=SetTrue num_args=- parser=bool conflicts=-
 command playbook trust subcommands=- aliases=- groups=Trust[path]
 arg playbook trust id=path long=- short=- value_names=PATH possible=- defaults=- aliases=- required=true hidden=false global=false action=Set num_args=- parser=alloc::string::String conflicts=-

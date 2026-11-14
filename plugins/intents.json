@@ -236,6 +236,10 @@
     "required": false
   },
   {
+    "intent": "segment-unit",
+    "required": false
+  },
+  {
     "intent": "work-unit-briefs",
     "required": false
   },
