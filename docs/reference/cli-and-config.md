@@ -79,7 +79,7 @@ Configure and support Claude Code from the command line.
 
 playbook installs hooks and a session launcher, shows the Agent Budget Dashboard, and helps with PRs, reviews, worktrees and session handoffs.
 
-Subcommands: `adr`, `agents`, `atlassian`, `cc`, `ccd`, `ci`, `code`, `commands`, `commit`, `completions`, `config`, `deps`, `doc`, `doctor`, `effort`, `eval`, `gate`, `gc`, `glossary`, `handoff`, `hooks`, `learn`, `manifest`, `memory`, `migrate`, `mode`, `path`, `plan`, `plans`, `plugin`, `pr`, `prose`, `review`, `route`, `sanitize`, `segment`, `sessions`, `settings`, `setup`, `skills`, `state`, `statusline`, `sync`, `tools`, `trust`, `uninstall`, `upgrade`, `usage`, `version`, `watch`, `worktree`
+Subcommands: `adr`, `agents`, `atlassian`, `cc`, `ccd`, `ci`, `code`, `commands`, `commit`, `completions`, `config`, `deps`, `doc`, `doctor`, `effort`, `eval`, `gate`, `gc`, `glossary`, `handoff`, `hooks`, `learn`, `manifest`, `memory`, `migrate`, `mode`, `path`, `plan`, `plugin`, `pr`, `prose`, `review`, `route`, `sanitize`, `segment`, `sessions`, `settings`, `setup`, `skills`, `state`, `statusline`, `sync`, `tools`, `trust`, `uninstall`, `upgrade`, `usage`, `version`, `watch`, `worktree`
 
 ### `playbook adr`
 
@@ -933,7 +933,7 @@ Example: `playbook path plans`
 
 Save plan checkpoints, write Work Unit briefs, clear scratch files
 
-Subcommands: `brief`, `checkpoint`, `cleanup`
+Subcommands: `brief`, `checkpoint`, `cleanup`, `list`
 
 ### `playbook plan brief`
 
@@ -979,7 +979,7 @@ Example: `playbook plan cleanup my-topic --dry-run`
 - `--older-than <OLDER_THAN>`: Only clear files at least this many days old. Needs `--stale`. By default a plan being re-planned today is left alone, because files under one day old are kept
 - `--yes`: With `--stale`, actually delete
 
-### `playbook plans`
+### `playbook plan list`
 
 List the plans and ADR blueprints `/playbook:implement` can run
 

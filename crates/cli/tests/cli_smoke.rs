@@ -676,7 +676,7 @@ fn table() -> Vec<Case> {
         case( "review triage merge", &["review", "triage", "merge", "--lenses", "logic"], ).out("Triage:"),
         case( "segment branch", &[ "segment", "branch", "--type", "feat", "--plan-slug", "smoke", "--n", "1", "--title", "add a thing", "--topology", "independent", ], ).commit().writes().then(1, "already exists"),
         case("segment size", &["segment", "size", "--base", "main"]).commit(),
-        case("plans", &["plans"]).out("NO_PLANS"),
+        case("plan list", &["plan", "list"]).out("NO_PLANS"),
         case("trust", &["trust", "{ROOT}/repo"]).writes(),
         case("trust", &["trust"]).code(2).err("required arguments").err("Usage: playbook trust"),
         case("route", &["route"]).code(2).err("required arguments").err("Usage: playbook route"),

@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Igor Santos
 // SPDX-License-Identifier: Apache-2.0
 
-//! `playbook plans`: the plan picker list that `commands/implement.md` used to
+//! `playbook plan list`: the plan picker list that `commands/implement.md` used to
 //! build with a bash loop. One row per plan file under the plans folder and
 //! per `docs/adr/*-blueprint.md`.
 

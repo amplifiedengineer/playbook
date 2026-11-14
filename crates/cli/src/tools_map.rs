@@ -99,7 +99,7 @@ pub const TOOLS: &[Tool] = &[
         "KEY",
         "config get pr.review.enabled",
     ),
-    t("list-plans", "plans", "", "--json", "plans --json"),
+    t("list-plans", "plan", "list", "--json", "plan list --json"),
     t(
         "pr-prepare",
         "pr",
@@ -450,6 +450,13 @@ mod tests {
         assert!(fits_budget(&of_tokens(TOKEN_BUDGET - 1)));
         assert!(fits_budget(&of_tokens(TOKEN_BUDGET)));
         assert!(!fits_budget(&of_tokens(TOKEN_BUDGET + 1)));
+    }
+
+    #[test]
+    fn list_plans_maps_to_plan_list() {
+        let text = render();
+        assert!(text.contains("plan list --json"), "{text}");
+        assert!(!text.contains("\nplans"), "{text}");
     }
 
     #[test]

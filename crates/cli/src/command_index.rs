@@ -283,12 +283,12 @@ pub(crate) const META: &[Meta] = &[
         .purpose("Print a playbook storage directory of this repo, or the plugin directory")
         .for_agents(),
     free("plan")
-        .purpose("Plan helpers: checkpoints, Work Unit briefs and scratch cleanup")
+        .purpose("Plan helpers: the plan list, checkpoints, Work Unit briefs and scratch cleanup")
         .for_agents(),
     free("plan brief"),
     free("plan checkpoint"),
     free("plan cleanup"),
-    ro("plans").for_agents(),
+    ro("plan list"),
     ro("plugin").for_users(),
     user("plugin install"),
     user("plugin upgrade"),
@@ -845,7 +845,7 @@ mod tests {
     #[test]
     fn a_line_is_read_only_only_when_every_name_on_it_is() {
         let text = overview();
-        for name in ["sessions", "hooks", "route", "plans", "prose"] {
+        for name in ["sessions", "hooks", "route", "prose"] {
             assert!(
                 line_of(&text, name).ends_with("(read-only)"),
                 "{name}: {text}"
@@ -967,7 +967,6 @@ mod tests {
         "pr",
         "review",
         "commit",
-        "plans",
         "worktree",
         "handoff",
         "adr",

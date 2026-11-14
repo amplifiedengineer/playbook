@@ -259,6 +259,93 @@ fn the_nested_watch_commands_parse() {
     }
 }
 
+/// The plans row this table must carry, as (old, new).
+const PLANS_ROW: (&str, &str) = ("plans", "plan list");
+
+#[test]
+fn plans_is_an_alias_row_for_plan_list() {
+    // Arrange
+    let (old, new) = PLANS_ROW;
+
+    // Act
+    let row = playbook::renames::COMMAND_RENAMES
+        .iter()
+        .find(|row| row.old == old);
+
+    // Assert
+    let row = row.unwrap_or_else(|| panic!("`{old}` has no alias row"));
+    assert_eq!(row.new, new);
+    assert!(row.extra.is_empty());
+}
+
+#[test]
+fn root_help_lists_plan_once_and_not_plans() {
+    // Arrange
+    let root = Cli::command();
+
+    // Act
+    let names: Vec<&str> = root
+        .get_subcommands()
+        .filter(|c| !c.is_hide_set())
+        .map(Command::get_name)
+        .collect();
+
+    // Assert
+    assert_eq!(names.iter().filter(|n| **n == "plan").count(), 1);
+    assert!(!names.contains(&"plans"), "{names:?}");
+}
+
+#[test]
+fn plan_list_and_plans_agree_on_a_plans_folder_fixture() {
+    // Arrange
+    let root = scratch("plans-fixture");
+    let repo = root.join("repo");
+    std::fs::create_dir_all(repo.join("docs/adr")).unwrap();
+    for args in [
+        &["init", "-q"][..],
+        &["remote", "add", "origin", "https://github.com/o/r.git"],
+    ] {
+        let status = std::process::Command::new("git")
+            .args(args)
+            .current_dir(&repo)
+            .status()
+            .unwrap();
+        assert!(status.success(), "git {args:?}");
+    }
+    std::fs::write(
+        repo.join("docs/adr/0001-a-blueprint.md"),
+        "# Do a thing\nStatus: accepted\n",
+    )
+    .unwrap();
+    let run_in_repo = |words: &[&str]| {
+        std::process::Command::new(env!("CARGO_BIN_EXE_playbook"))
+            .args(words)
+            .current_dir(&repo)
+            .env_clear()
+            .env("PATH", "/usr/bin:/bin")
+            .env("HOME", &root)
+            .env("XDG_CONFIG_HOME", root.join(".config"))
+            .env("XDG_STATE_HOME", root.join("state"))
+            .env("XDG_DATA_HOME", root.join("data"))
+            .env("TMPDIR", &root)
+            .output()
+            .expect("playbook binary should spawn")
+    };
+
+    for flags in [&[][..], &["--json"]] {
+        // Act
+        let old = run_in_repo(&[&["plans"][..], flags].concat());
+        let new = run_in_repo(&[&["plan", "list"][..], flags].concat());
+
+        // Assert
+        assert_eq!(old.status.code(), Some(0), "{flags:?}");
+        assert_eq!(old.status.code(), new.status.code(), "{flags:?}");
+        assert_eq!(old.stdout, new.stdout, "{flags:?}");
+        let text = String::from_utf8_lossy(&new.stdout);
+        assert!(text.contains("0001-a-blueprint.md"), "{text}");
+    }
+}
+
 const ATTRIBUTION_LINE: &str = "Co-Authored-By: Claude <noreply@anthropic.com>";
 
 #[test]
