@@ -933,7 +933,7 @@ Example: `playbook path plans`
 
 Save plan checkpoints, write Work Unit briefs, clear scratch files
 
-Subcommands: `brief`, `checkpoint`, `cleanup`, `list`
+Subcommands: `brief`, `checkpoint`, `cleanup`, `graph`, `list`, `wave`
 
 ### `playbook plan brief`
 
@@ -979,6 +979,23 @@ Example: `playbook plan cleanup my-topic --dry-run`
 - `--older-than <OLDER_THAN>`: Only clear files at least this many days old. Needs `--stale`. By default a plan being re-planned today is left alone, because files under one day old are kept
 - `--yes`: With `--stale`, actually delete
 
+### `playbook plan graph`
+
+Check a plan's Work Unit dependency graph
+
+Subcommands: `check`
+
+### `playbook plan graph check`
+
+Check a plan's Work Unit graph for cycles, order and unsafe groups
+
+Reads the plan's Segments and Work Units tables and reports one line per finding: `cycle` (Work Units that never resolve), `order` (a Work Unit needing one from a later Segment), `coverage` (a Work Unit in no Segment, or a Segment listing a missing one), `unknown` (a `Requires` naming no Work Unit) and `parallel` (members of one Parallel group that depend on each other, share files, or both touch a lockfile or migration folder). Ends with `PASS` or `FAIL` and a `topology=` hint (`stacked`, `independent` or `single`). Exit 1 on a finding. With `--json` it always exits 0 and the envelope carries the findings.
+
+Example: `playbook plan graph check docs/plan.md`
+
+- `<PLAN>`: Plan file
+- `--json`: Print the report as the shared JSON envelope
+
 ### `playbook plan list`
 
 List the plans and ADR blueprints `/playbook:implement` can run
@@ -986,6 +1003,24 @@ List the plans and ADR blueprints `/playbook:implement` can run
 Prints `path<TAB>[status]<TAB>title` per file, or `NO_PLANS`.
 
 - `--json`: Print JSON instead of text
+
+### `playbook plan wave`
+
+Pick the Work Units to run next
+
+Subcommands: `next`
+
+### `playbook plan wave next`
+
+Print the Work Units that are safe to run together next
+
+Takes the Work Units whose `Requires` are all in `--done`, in the first Segment that still has work, and keeps each one whose files stay clear of those already picked (no shared path, and not two lockfile or migration editors). Prints one id per line, or `NONE` when nothing can start. Always exits 0 for a readable plan.
+
+Example: `playbook plan wave next docs/plan.md --done WU-1,WU-2`
+
+- `<PLAN>`: Plan file
+- `--done <DONE>`: Finished Work Unit ids, separated by commas
+- `--json`: Print the wave as the shared JSON envelope
 
 ### `playbook plugin`
 

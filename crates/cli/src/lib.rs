@@ -86,6 +86,7 @@ pub mod models;
 pub mod notices;
 pub mod parse;
 pub mod pending;
+pub mod plan;
 pub mod plan_cleanup;
 pub mod planning;
 pub mod plans;
@@ -1857,6 +1858,16 @@ pub enum PlanCommand {
         #[arg(long, requires = "stale")]
         yes: bool,
     },
+    /// Check a plan's Work Unit dependency graph
+    Graph {
+        #[command(subcommand)]
+        sub: PlanGraphCommand,
+    },
+    /// Pick the Work Units to run next
+    Wave {
+        #[command(subcommand)]
+        sub: PlanWaveCommand,
+    },
     /// Write the brief file for each Work Unit
     ///
     /// `/playbook:implement` gives these files to its subagents. Each `<OUT>/<wu-id>.brief.md` holds a short header (plan, worktree,
@@ -1894,6 +1905,55 @@ pub enum PlanCommand {
         /// Most tokens of code facts to add to each brief; 0 adds none
         #[arg(long, value_name = "N", default_value_t = 0)]
         facts_tokens: usize,
+    },
+}
+
+/// `playbook plan graph` subcommands.
+#[derive(Subcommand, Debug)]
+pub enum PlanGraphCommand {
+    /// Check a plan's Work Unit graph for cycles, order and unsafe groups
+    ///
+    /// Reads the plan's Segments and Work Units tables and reports one line per
+    /// finding: `cycle` (Work Units that never resolve), `order` (a Work Unit
+    /// needing one from a later Segment), `coverage` (a Work Unit in no Segment,
+    /// or a Segment listing a missing one), `unknown` (a `Requires` naming no
+    /// Work Unit) and `parallel` (members of one Parallel group that depend on
+    /// each other, share files, or both touch a lockfile or migration folder).
+    /// Ends with `PASS` or `FAIL` and a `topology=` hint (`stacked`,
+    /// `independent` or `single`). Exit 1 on a finding. With `--json` it always
+    /// exits 0 and the envelope carries the findings.
+    ///
+    /// Example: `playbook plan graph check docs/plan.md`
+    Check {
+        /// Plan file
+        plan: PathBuf,
+        /// Print the report as the shared JSON envelope
+        #[arg(long)]
+        json: bool,
+    },
+}
+
+/// `playbook plan wave` subcommands.
+#[derive(Subcommand, Debug)]
+pub enum PlanWaveCommand {
+    /// Print the Work Units that are safe to run together next
+    ///
+    /// Takes the Work Units whose `Requires` are all in `--done`, in the first
+    /// Segment that still has work, and keeps each one whose files stay clear
+    /// of those already picked (no shared path, and not two lockfile or
+    /// migration editors). Prints one id per line, or `NONE` when nothing can
+    /// start. Always exits 0 for a readable plan.
+    ///
+    /// Example: `playbook plan wave next docs/plan.md --done WU-1,WU-2`
+    Next {
+        /// Plan file
+        plan: PathBuf,
+        /// Finished Work Unit ids, separated by commas
+        #[arg(long, value_delimiter = ',')]
+        done: Vec<String>,
+        /// Print the wave as the shared JSON envelope
+        #[arg(long)]
+        json: bool,
     },
 }
 

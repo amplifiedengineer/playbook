@@ -165,7 +165,7 @@ Before proceeding past this gate, run the check. Only continue to Step 4.5 if it
 - If the plan has a **Segments** table (a `/playbook:plan` plan does), use it: each Segment is an ordered group of Work Units, and the WU table's `Segment` column assigns every WU.
 - If it does NOT (an older plan, an issue, or a spec), **derive** Segments here: pack the Work Units into groups that are self-contained by area or feature and as small as possible (tests do not count toward size), in dependency order, one concern per group where the WU titles make the boundary obvious. A tiny plan may be a single Segment.
 
-Either way, confirm the Segment ordering respects the WU `Requires` graph (no forward cross-Segment dependency) before continuing; reorder if needed.
+Either way, confirm the Segment ordering respects the WU `Requires` graph (no forward cross-Segment dependency) before continuing; reorder if needed. Intent: plan-graph-check. If the session's tool map (printed at session start) lists it, run `plan graph check <plan>` (exit 1 prints each finding); otherwise check by hand.
 
 **2. Choose the delivery strategy.** In interactive mode you MUST ask the user before any code is written (this is the "always ask before implementing" gate). Do this by **calling the `AskUserQuestion` tool** with the three questions below in a single call, each option's recommended choice listed first and labelled, recommended per the plan's scope. Do NOT infer the answers, and do NOT start executing Step 5 until the user has answered. The three questions:
 
@@ -218,7 +218,7 @@ On a **ledger-driven resume** (Step 5 ledger, e.g. after `/clear`, a crash, or a
 
 **Parallel-by-default scheduler (MUST).** Don't wait for the plan to pre-label groups. Build the WU dependency graph from the `Requires` column and run the acyclicity check (the procedure in Step 6) now, before executing. Then execute in waves until every WU is done:
 
-1. **Ready set.** The WUs whose `Requires` are all complete.
+1. **Ready set.** The WUs whose `Requires` are all complete. Intent: plan-wave-next. If the session's tool map lists it, `plan wave next <plan> --done <finished WU ids, comma separated>` prints the ready set and the safe wave of step 2 in one go (`NONE` when nothing can start); otherwise work them out as below.
 2. **Form a wave.** Take the largest subset of the ready set that's safe to run together. Parallel is the default. Two ready WUs run sequentially ONLY when one of these forces it:
    - a real dependency edge between them (transitive `Requires`),
    - their `Files` lists intersect,

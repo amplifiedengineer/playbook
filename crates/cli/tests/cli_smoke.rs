@@ -682,6 +682,8 @@ fn table() -> Vec<Case> {
         case("segment unit integrate", &["segment", "unit", "integrate", "WU-1", "--base", "main", "--path", "{ROOT}/wt/wu-1", "--branch", "feat/none", "-m", "feat: x", "--files", "a.rs"]).commit().code(1).err("not the Segment branch"),
         case("segment unit resume", &["segment", "unit", "resume", "WU-1", "--base", "main"]).commit().out("last=none next=red"),
         case("plan list", &["plan", "list"]).out("NO_PLANS"),
+        case("plan graph check", &["plan", "graph", "check", "{ROOT}/missing.md"]).code(1).err("missing.md"),
+        case("plan wave next", &["plan", "wave", "next", "{ROOT}/missing.md"]).code(1).err("missing.md"),
         case("trust", &["trust", "{ROOT}/repo"]).writes(),
         case("trust", &["trust"]).code(2).err("required arguments").err("Usage: playbook trust"),
         case("route", &["route"]).code(2).err("required arguments").err("Usage: playbook route"),

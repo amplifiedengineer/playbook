@@ -235,6 +235,20 @@ pub const TOOLS: &[Tool] = &[
         "plan cleanup my-topic --dry-run",
     ),
     t(
+        "plan-graph-check",
+        "plan graph",
+        "check",
+        "",
+        "plan graph check plan.md",
+    ),
+    t(
+        "plan-wave-next",
+        "plan wave",
+        "next",
+        "",
+        "plan wave next plan.md --done WU-1",
+    ),
+    t(
         "work-unit-briefs",
         "plan",
         "brief",

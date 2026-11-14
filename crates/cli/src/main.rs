@@ -12,10 +12,10 @@ use playbook::{
     AtlassianCommand, CcCacheCommand, CcCommand, Cli, Command, CommitCommand, ConfigCommand,
     DepsCommand, DocCommand, DoctorCommand, EvalCommand, GateCommand, GlossaryCommand,
     HandoffCommand, LearnCommand, ManifestCommand, MemoryClaudeCommand, MemoryCommand, ModeArg,
-    ModeCommand, PlanCommand, PluginCommand, PrCommand, PrReviewCommand, ProseCommand,
-    ReviewCommand, ReviewTriageCommand, ReviewWorktreeCommand, SanitizeCommand, SegmentCommand,
-    SegmentTopology, SegmentUnitCommand, SessionsCommand, SettingsCommand, SkillsCommand,
-    ToolsCommand, WorktreeCommand,
+    ModeCommand, PlanCommand, PlanGraphCommand, PlanWaveCommand, PluginCommand, PrCommand,
+    PrReviewCommand, ProseCommand, ReviewCommand, ReviewTriageCommand, ReviewWorktreeCommand,
+    SanitizeCommand, SegmentCommand, SegmentTopology, SegmentUnitCommand, SessionsCommand,
+    SettingsCommand, SkillsCommand, ToolsCommand, WorktreeCommand,
 };
 use std::io::{IsTerminal, Read, Write};
 
@@ -1990,6 +1990,18 @@ fn real_main() {
                 }
             }
         }
+        Command::Plan {
+            sub:
+                PlanCommand::Graph {
+                    sub: PlanGraphCommand::Check { plan, json },
+                },
+        } => std::process::exit(playbook::plan::graph::run_check(&plan, json)),
+        Command::Plan {
+            sub:
+                PlanCommand::Wave {
+                    sub: PlanWaveCommand::Next { plan, done, json },
+                },
+        } => std::process::exit(playbook::plan::graph::run_next(&plan, &done, json)),
         Command::Plan {
             sub: PlanCommand::List { json },
         } => {

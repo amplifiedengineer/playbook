@@ -136,6 +136,14 @@
     "required": false
   },
   {
+    "intent": "plan-graph-check",
+    "required": false
+  },
+  {
+    "intent": "plan-wave-next",
+    "required": false
+  },
+  {
     "intent": "plans-dir",
     "required": false
   },
