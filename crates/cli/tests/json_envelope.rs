@@ -46,6 +46,24 @@ const ROWS: &[Row] = &[
         args: &["pr", "checks", "1", "--json"],
         code: 5,
     },
+    Row {
+        args: &[
+            "pr",
+            "review",
+            "post",
+            "1",
+            "--findings",
+            "none.json",
+            "--json",
+        ],
+        code: 1,
+    },
+    Row {
+        args: &[
+            "pr", "review", "submit", "1", "9", "--event", "comment", "--json",
+        ],
+        code: 5,
+    },
 ];
 
 fn scratch(tag: &str) -> PathBuf {

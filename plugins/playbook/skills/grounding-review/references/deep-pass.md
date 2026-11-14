@@ -257,26 +257,24 @@ Otherwise, **print every finding first (MUST).** Before asking anything, print a
 
 Then ask **one question at a time**:
 
-- **Q1:** "Post which findings as a pending review?" Read `skills/grounding-review/references/pick-list.md` in this plugin and follow it: ask with `AskUserQuestion` checkboxes, or its typed list when the tool is not available. Number the findings in the order of the list above, so a number and its code (F1, F2) match. `--self` and `--no-post` still skip the question. If the choice is `none`, stop.
-- Build the payload at `$REVIEW_JSON` (`{"commit_id": "<HEAD_SHA>", "comments": [{"path","line","side","body"}, ...]}`, no review `body`). Build each inline comment's `body` from that finding's previewed `Draft:` block verbatim, anchored to the finding's `file:line`. Post the previewed bodies as they are, never a rewording. Skip any finding marked `Report-only`. Then create the pending review:
+- **Q1:** "Post which findings as a pending review?" Read `skills/grounding-review/references/pick-list.md` in this plugin and follow it: ask with `AskUserQuestion` checkboxes, or its typed list when the tool is not available. Number the findings in the order of the list above. `--self` and `--no-post` still skip the question. If the choice is `none`, stop.
+- Build the payload at `$REVIEW_JSON` (the `quick-pass.md` findings format, no review `body`). Build each inline comment's `body` from that finding's previewed `Draft:` block verbatim, anchored to the finding's `file:line`. Post the previewed bodies as they are, never a rewording. Skip any finding marked `Report-only`. Then create the pending review (intent pr-review-post: `"$PR_NUMBER" --findings "$REVIEW_JSON" --json`), or without the tool run:
 
 ```bash
 gh api -X POST /repos/$REPO/pulls/$PR_NUMBER/reviews --input "$REVIEW_JSON" --jq '{id, state, html_url}'
 ```
 
-- **Pre-post verification (MUST):** the Step 4b sweep already settled each finding's truth, label and anchor. Before this call, only confirm the PR is still OPEN and not CONFLICTING (`gh pr view "$PR_NUMBER" --json state,mergeable`). Don't post on a merged/closed/conflicting PR.
+- **Pre-post verification (MUST):** Step 4b settled each finding. Before this call, only confirm the PR is still OPEN and not CONFLICTING (`gh pr view "$PR_NUMBER" --json state,mergeable`). Don't post on a merged/closed/conflicting PR.
 - **Q2:** "Submit verb? approve / comment / request-changes / skip." When `SELF_REVIEW` is true, offer only `comment` and `skip`, because GitHub rejects approve and request-changes on your own PR. On `skip`, leave it PENDING. Otherwise:
 - **Q3:** "Add a comment for the review?" (optional free text, blank to skip). Leave `BODY` empty on a blank answer, except: on `approve` with a blank answer, default `BODY` to `LGTM`.
 
+Submit (intent pr-review-submit: `"$PR_NUMBER" "$REVIEW_ID" --event <approve|comment|request-changes> --json`, `--body "$BODY"` when set), or without the tool run:
+
 ```bash
-if [ -n "$BODY" ]; then
-  gh api -X POST /repos/$REPO/pulls/$PR_NUMBER/reviews/$REVIEW_ID/events -f event=<APPROVE|COMMENT|REQUEST_CHANGES> -f body="$BODY"
-else
-  gh api -X POST /repos/$REPO/pulls/$PR_NUMBER/reviews/$REVIEW_ID/events -f event=<APPROVE|COMMENT|REQUEST_CHANGES>
-fi
+gh api -X POST /repos/$REPO/pulls/$PR_NUMBER/reviews/$REVIEW_ID/events -f event=<APPROVE|COMMENT|REQUEST_CHANGES> ${BODY:+-f body="$BODY"}
 ```
 
-Never fabricate URLs; use the `html_url` the API returns.
+Never invent URLs; use the returned `html_url`.
 
 ## Step 7: Capture and wrap up
 

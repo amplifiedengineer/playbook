@@ -566,6 +566,8 @@ mod tests {
             "playbook pr land-wait 12",
             "playbook pr checks 12 --watch",
             "playbook pr checks 12 --json --watch --fail-fast",
+            "playbook pr review post 12 --findings f.json",
+            "playbook pr review submit 12 99 --event comment --json",
             "playbook pr create --ready",
             "cargo build",
             "npm test",

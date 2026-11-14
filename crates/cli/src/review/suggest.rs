@@ -11,9 +11,9 @@
 //! is only used when a PR number is given.
 
 use crate::common::re::static_regex;
+use crate::pr::review::triage::Review;
 use crate::pr::shared::{gh, git, reject_option_like};
 use crate::pr::stack::{detect, Gh, StackPr, State, DEFAULT_MAX_PRS};
-use crate::pr::triage::Review;
 use regex::Regex;
 use serde::Serialize;
 use std::collections::BTreeSet;

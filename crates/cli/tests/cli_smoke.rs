@@ -594,6 +594,8 @@ fn table() -> Vec<Case> {
         case( "pr create", &["pr", "create", "--title", "t", "--body-file", "{ROOT}/b.md"], ).file("b.md", "body").code(3).err("feature branch"),
         case("pr status", &["pr", "status", "1", "--json"]).out("\"ok\":false"),
         case("pr review triage", &["pr", "review", "triage"]).out("review="),
+        case("pr review post", &["pr", "review", "post", "1", "--findings", "none.json", "--json"]).out("\"ok\":false"),
+        case("pr review submit", &["pr", "review", "submit", "1", "9", "--event", "comment", "--json"]).out("\"ok\":false"),
         case("pr rules", &["pr", "rules"]).writes().grows().out("extracted and verified").err("embedded"),
         case("pr comments", &["pr", "comments"]).code(1).err("no PR"),
         case( "pr reply", &[ "pr", "reply", "--pr", "1", "--body-file", "{ROOT}/b.md", "--thread", "1", ], ).file("b.md", "body").code(1).err("gh repo view"),
